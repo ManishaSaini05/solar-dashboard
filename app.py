@@ -12737,7 +12737,6 @@ active_plant   = st.session_state.get("active_plant", "All Plants")
 
 @st.cache_data(ttl=REFRESH_INTERVAL_SECONDS)
 def load(brands, plants):
-    # Fetch for all login-selected plants
     result = fetch_all_brands(list(brands))
     if not result:
         raise RuntimeError("empty")
@@ -12745,15 +12744,28 @@ def load(brands, plants):
         result = [r for r in result if r.get("plant_name") in plants]
     return result
 
+_fetch_errors = []
+
 with st.spinner("Fetching live data…"):
     try:
         records = load(tuple(sel_brands), tuple(all_sel_plants))
     except Exception:
-        records = fetch_all_brands(list(sel_brands))
+        st.cache_data.clear()
+        records = []
+        for _brand in sel_brands:
+            try:
+                from utils import solis_api as _sapi, growatt_api as _gapi
+                if _brand == "Solis":
+                    _recs = _sapi.fetch_all()
+                elif _brand == "Growatt":
+                    _recs = _gapi.fetch_all()
+                else:
+                    _recs = []
+                records.extend(_recs)
+            except Exception as _e:
+                _fetch_errors.append(f"{_brand}: {_e}")
         if all_sel_plants:
             records = [r for r in records if r.get("plant_name") in all_sel_plants]
-        if not records:
-            st.cache_data.clear()
 
 # Filter to active plant chosen in sidebar
 if active_plant and active_plant != "All Plants":
@@ -12814,7 +12826,17 @@ if page == "Plants":
 </div>""", unsafe_allow_html=True)
 
     if not records:
-        st.warning("No plant data. Check API credentials in config.py and refresh.")
+        st.warning("No plant data — API returned no inverters. Check credentials and click **Refresh Now**.")
+        if _fetch_errors:
+            for _fe in _fetch_errors:
+                st.error(f"🔴 {_fe}")
+        # Show what credentials are actually loaded (helps diagnose secrets issues)
+        from config import SOLIS_API_KEY, GROWATT_USERNAME
+        st.info(
+            f"Loaded credentials — "
+            f"Solis key: `{'✅ set' if SOLIS_API_KEY else '❌ empty'}` · "
+            f"Growatt user: `{'✅ set' if GROWATT_USERNAME else '❌ empty'}`"
+        )
     else:
         # ── Build per-plant summary ───────────────────────────
         _pdf = pd.DataFrame(records)
