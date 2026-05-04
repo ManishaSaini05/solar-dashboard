@@ -1083,6 +1083,30 @@ def get_all_plants_daily(month_str):
     return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 
+def _fetch_inverter_day_chart(sn, date_str):
+    """
+    Call inverterPowerOneDayChart with fallback param variants.
+    Returns raw records list (may be empty).
+    """
+    date_nodash = date_str.replace("-", "")   # "20260503"
+    # Try variants: YYYY-MM-DD with timeZone, without timeZone, YYYYMMDD
+    for body in [
+        {"sn": sn, "time": date_str,     "timeZone": 8},
+        {"sn": sn, "time": date_str,     "timeZone": 5},
+        {"sn": sn, "time": date_nodash,  "timeZone": 8},
+        {"sn": sn, "time": date_str},
+    ]:
+        d = _post("/v1/api/inverterPowerOneDayChart", body)
+        data_obj = (d or {}).get("data") or {}
+        if isinstance(data_obj, list):
+            recs = data_obj
+        else:
+            recs = data_obj.get("records") or data_obj.get("data") or []
+        if recs:
+            return recs
+    return []
+
+
 def get_plant_intraday_power(plant_id, date_str):
     """
     5-minute power curve for all inverters in a plant on a given day.
@@ -1099,17 +1123,7 @@ def get_plant_intraday_power(plant_id, date_str):
         sn = inv.get("inverterSn", "")
         if not sn:
             continue
-        d = _post("/v1/api/inverterPowerOneDayChart", {
-            "sn":   sn,
-            "time": date_str,
-        })
-        # Handle multiple possible response structures
-        data_obj = (d or {}).get("data") or {}
-        if isinstance(data_obj, list):
-            recs = data_obj
-        else:
-            recs = (data_obj.get("records") or data_obj.get("data") or [])
-        for r in recs:
+        for r in _fetch_inverter_day_chart(sn, date_str):
             t_raw = r.get("time") or r.get("dataTimestamp") or r.get("ts") or ""
             pwr   = float(r.get("power") or r.get("pac") or r.get("activePower") or 0)
             key   = str(t_raw)

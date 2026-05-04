@@ -13526,7 +13526,7 @@ elif page == "Overview":
             # Secondary: call inverterPowerOneDayChart directly using SNs from df
             if _dp.empty and not df.empty and (_chart_brand or "Solis") == "Solis":
                 try:
-                    from utils.solis_api import _post as _sp
+                    from utils.solis_api import _fetch_inverter_day_chart as _fidc
                     from datetime import datetime as _dtt
                     _inv_col = df["inverter_sn"] if "inverter_sn" in df.columns else pd.Series()
                     if active_plant != "All Plants":
@@ -13534,15 +13534,7 @@ elif page == "Overview":
                     _sns = [str(s) for s in _inv_col.dropna().unique() if s and str(s) not in ("—", "nan", "")]
                     _pw = {}
                     for _sn in _sns:
-                        _dr = _sp("/v1/api/inverterPowerOneDayChart",
-                                  {"sn": _sn, "time": _day_str_api})
-                        # Try multiple response paths
-                        _recs = ((_dr or {}).get("data") or {})
-                        if isinstance(_recs, list):
-                            _recs_list = _recs
-                        else:
-                            _recs_list = _recs.get("records") or _recs.get("data") or []
-                        for _r in _recs_list:
+                        for _r in _fidc(_sn, _day_str_api):
                             _t = str(_r.get("time") or _r.get("dataTimestamp") or "")
                             _p = float(_r.get("power") or _r.get("pac") or _r.get("activePower") or 0)
                             if _t:
@@ -13551,10 +13543,12 @@ elif page == "Overview":
                         _pts = []
                         for _t, _p in sorted(_pw.items()):
                             try:
-                                if ":" in _t:
+                                if ":" in _t and len(_t) <= 5:
                                     _dt = _dtt.strptime(f"{_day_str_api} {_t}", "%Y-%m-%d %H:%M")
-                                else:
+                                elif _t.isdigit() and len(_t) > 8:
                                     _dt = _dtt.fromtimestamp(int(_t) / 1000)
+                                else:
+                                    _dt = _dtt.strptime(f"{_day_str_api} {_t}", "%Y-%m-%d %H:%M:%S")
                                 _pts.append({"fetched_at": _dt, "power_kw": _p})
                             except Exception:
                                 continue
