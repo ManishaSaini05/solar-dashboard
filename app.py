@@ -13539,14 +13539,64 @@ elif page == "Overview":
             _dp      = pd.DataFrame()
             _day_src = "db"
             _day_str_api = _sel_date.strftime("%Y-%m-%d")
-
-            # ── Step 1: read from intraday_power DB table (primary) ──────
-            from utils.database import get_intraday as _get_id
             _pname_q = active_plant if active_plant != "All Plants" else ""
+
+            # ── Step 1: pull full-day history from Solis API ─────────────
+            # inverterPowerOneDayChart returns all 5-min intervals from
+            # sunrise to current time for today, or complete data for past days.
+            if not df.empty and (_chart_brand or "Solis") == "Solis":
+                try:
+                    from utils.solis_api import _post as _spc
+                    from utils.database import save_intraday as _sv_api
+                    from datetime import datetime as _dttA
+                    _col_sn = "inverter_sn"
+                    _inv_s = (df.loc[df["plant_name"] == active_plant, _col_sn]
+                              if active_plant != "All Plants" and _col_sn in df.columns
+                              else df.get(_col_sn, pd.Series()))
+                    _sns_a = [str(s) for s in _inv_s.dropna().unique()
+                              if s and str(s) not in ("—", "nan", "")]
+                    _pw_a = {}
+                    for _sn_a in _sns_a:
+                        _dr_a = _spc("/v1/api/inverterPowerOneDayChart",
+                                     {"sn": _sn_a, "time": _day_str_api, "timeZone": 8})
+                        _data_a = (_dr_a or {}).get("data") or {}
+                        _recs_a = (_data_a.get("records") or
+                                   (_data_a if isinstance(_data_a, list) else []))
+                        for _r_a in _recs_a:
+                            _t_a = str(_r_a.get("time") or "")
+                            _p_a = float(_r_a.get("power") or 0)
+                            if _t_a and ":" in _t_a:
+                                _k_a = _t_a[:5]
+                                _pw_a[_k_a] = _pw_a.get(_k_a, 0.0) + _p_a
+                    if _pw_a:
+                        _pts_a = []
+                        for _t_a, _p_a in sorted(_pw_a.items()):
+                            try:
+                                _dt_a = _dttA.strptime(f"{_day_str_api} {_t_a}", "%Y-%m-%d %H:%M")
+                                _pts_a.append({"fetched_at": _dt_a, "power_kw": _p_a})
+                            except Exception:
+                                continue
+                        if _pts_a:
+                            _dp = pd.DataFrame(_pts_a)
+                            _dp["fetched_at"] = pd.to_datetime(_dp["fetched_at"])
+                            _day_src = "api"
+                            # Persist all API points to DB for future history
+                            if _pname_q:
+                                try:
+                                    _sv_api(_pname_q, _day_str_api,
+                                            [{"time_hm": r["fetched_at"].strftime("%H:%M"),
+                                              "power_kw": r["power_kw"]}
+                                             for _, r in _dp.iterrows()])
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
+
+            # ── Step 2: merge with / fallback to intraday_power DB ───────
+            from utils.database import get_intraday as _get_id
             if _pname_q:
                 _id_df = _get_id(_pname_q, _day_str_api)
             else:
-                # All plants: union from DB
                 try:
                     from utils.database import _conn as _dbc2
                     _c2 = _dbc2()
@@ -13560,8 +13610,8 @@ elif page == "Overview":
                 except Exception:
                     _id_df = pd.DataFrame()
 
-            # ── Step 2: build chart DataFrame from DB records ───────────────
-            if not _id_df.empty:
+            if not _id_df.empty and _dp.empty:
+                # API returned nothing — use DB only
                 from datetime import datetime as _dtt0
                 _dp = pd.DataFrame({
                     "fetched_at": pd.to_datetime(
@@ -13571,9 +13621,9 @@ elif page == "Overview":
                     "power_kw": pd.to_numeric(_id_df["power_kw"], errors="coerce").fillna(0),
                 })
 
-            # ── Step 3: fallback to inverter_data snapshots (also our own DB) ──
+            # ── Step 3: final fallback — inverter_data 5-min snapshots ───
             if _dp.empty:
-                _hd = get_history(hours=168)   # 7 days back
+                _hd = get_history(hours=168)
                 if not _hd.empty:
                     _hd["fetched_at"] = pd.to_datetime(_hd["fetched_at"])
                     _hd["power_kw"]   = pd.to_numeric(_hd["power_kw"], errors="coerce")
