@@ -1083,6 +1083,47 @@ def get_all_plants_daily(month_str):
     return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 
+def get_plant_intraday_power(plant_id, date_str):
+    """
+    5-minute power curve for all inverters in a plant on a given day.
+    date_str: "2026-05-03"
+    Returns list of dicts: [{time: datetime, power_kw: float}]
+    """
+    from datetime import datetime as _dt
+    inverters = get_inverters(plant_id)
+    if not inverters:
+        return []
+
+    power_by_key = {}
+    for inv in inverters:
+        sn = inv.get("inverterSn", "")
+        if not sn:
+            continue
+        d = _post("/v1/api/inverterPowerOneDayChart", {
+            "sn":       sn,
+            "time":     date_str,
+            "timeZone": 8,
+        })
+        records = ((d or {}).get("data") or {}).get("records") or []
+        for r in records:
+            t_raw = r.get("time", "")
+            pwr   = float(r.get("power", 0) or 0)
+            key   = str(t_raw)
+            power_by_key[key] = power_by_key.get(key, 0.0) + pwr
+
+    result = []
+    for t_raw, pwr in sorted(power_by_key.items()):
+        try:
+            if ":" in str(t_raw):
+                dt = _dt.strptime(f"{date_str} {t_raw}", "%Y-%m-%d %H:%M")
+            else:
+                dt = _dt.fromtimestamp(int(t_raw) / 1000)
+            result.append({"time": dt, "power_kw": pwr})
+        except Exception:
+            continue
+    return result
+
+
 def get_all_plants_monthly(year_str):
     """
     Monthly energy for all plants in a given year.

@@ -13492,8 +13492,11 @@ elif page == "Overview":
                 "Select Date", value=_today, max_value=_today,
                 key="chart_day_date"
             )
+            _dp      = pd.DataFrame()
+            _day_src = "db"
+
+            # Primary: local DB (5-min records collected while app runs)
             _hd = get_history(hours=48)
-            _dp = pd.DataFrame()
             if not _hd.empty:
                 _hd["fetched_at"] = pd.to_datetime(_hd["fetched_at"])
                 _hd["power_kw"]   = pd.to_numeric(_hd["power_kw"],  errors="coerce")
@@ -13503,6 +13506,23 @@ elif page == "Overview":
                 _hd = _hd[_hd["fetched_at"].dt.date == _sel_date]
                 if not _hd.empty:
                     _dp = _hd.groupby("fetched_at")["power_kw"].sum().reset_index()
+
+            # Fallback: API — inverterPowerOneDayChart
+            if _dp.empty and _chart_pid:
+                try:
+                    _day_str_api = _sel_date.strftime("%Y-%m-%d")
+                    if _chart_brand == "Solis":
+                        from utils.solis_api import get_plant_intraday_power as _gip
+                    else:
+                        from utils.growatt_api import get_plant_intraday_power as _gip
+                    _api_pts = _gip(_chart_pid, _day_str_api)
+                    if _api_pts:
+                        _dp = pd.DataFrame(_api_pts).rename(
+                            columns={"time": "fetched_at", "power_kw": "power_kw"})
+                        _dp["fetched_at"] = pd.to_datetime(_dp["fetched_at"])
+                        _day_src = "api"
+                except Exception:
+                    pass
 
             _flh = round(daily_kwh / _cap_kw, 2) if _cap_kw > 0 else 0.0
             _ds1, _ds2, _ds3 = st.columns(3)
@@ -13548,9 +13568,11 @@ elif page == "Overview":
                 )
                 st.plotly_chart(_fd, use_container_width=True,
                                 config={"displayModeBar": True, "scrollZoom": True})
+                st.caption(f"Source: {'API' if _day_src == 'api' else 'Local DB'} — "
+                           f"{len(_dp)} data points")
             else:
-                st.info(f"No intraday data for {_sel_date.strftime('%d %b %Y')} — "
-                        "data collects every 5 min while the app runs.")
+                st.info(f"No intraday data for {_sel_date.strftime('%d %b %Y')}. "
+                        "Verify API credentials or select today's date.")
 
         with _tab_mon:
             # Year picker — shows monthly totals for the selected year

@@ -2231,3 +2231,23 @@ def get_plant_monthly_history(plant_id, year_str):
         {"month": m, "energy_kwh": _sf(v) or 0, "income": 0.0}
         for m, v in sorted(month_map.items())
     ]
+
+
+def get_plant_intraday_power(plant_id, date_str):
+    """
+    Hourly/5-min power curve for a Growatt plant on a given day.
+    date_str: "2026-05-03"
+    Returns list of dicts: [{time: datetime, power_kw: float}]
+    Uses param=day → {"day": {"HH:MM": kw_value, ...}}
+    """
+    from datetime import datetime as _dt
+    data    = _chart_data(plant_id, "day", date_str, date_str)
+    day_map = data.get("day", {})
+    result  = []
+    for t_str, pwr in sorted(day_map.items()):
+        try:
+            dt = _dt.strptime(f"{date_str} {t_str}", "%Y-%m-%d %H:%M")
+            result.append({"time": dt, "power_kw": float(pwr or 0)})
+        except Exception:
+            continue
+    return result
