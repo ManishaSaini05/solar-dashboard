@@ -13657,14 +13657,21 @@ elif page == "Overview":
                     x=_dp["fetched_at"], y=_dp["power_kw"],
                     fill="tozeroy", fillcolor="rgba(245,158,11,.15)",
                     line=dict(color="#f59e0b", width=2.5),
-                    mode="lines", name="Power",
-                    hovertemplate="%{x|%H:%M}<br><b>%{y:.2f} kW</b><extra></extra>",
+                    mode="lines+markers",
+                    marker=dict(size=5, color="#f59e0b",
+                                line=dict(width=1, color="#d97706")),
+                    name="Power",
+                    hovertemplate=(
+                        "<b>%{x|%H:%M}</b><br>"
+                        "Power: <b>%{y:.3f} kW</b>"
+                        "<extra></extra>"
+                    ),
                 ))
                 _fd.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font_family="Inter", font_color="#64748b",
                     margin=dict(l=0, r=0, t=8, b=50), height=310,
-                    hovermode="x unified", showlegend=False,
+                    hovermode="closest", showlegend=False,
                     xaxis=dict(
                         showgrid=False, tickformat="%H:%M",
                         title="Time", zeroline=False,

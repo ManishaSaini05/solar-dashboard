@@ -1086,22 +1086,37 @@ def get_all_plants_daily(month_str):
 def _fetch_inverter_day_chart(sn, date_str):
     """
     Call inverterPowerOneDayChart with fallback param variants.
-    Returns raw records list (may be empty).
+    Handles both response formats Solis uses:
+      Format A – array of objects: [{time, power}, ...]
+      Format B – parallel arrays:  {time:[...], watt:[...]}
+    Returns list of {"time": "HH:MM", "power": float} dicts.
     """
-    date_nodash = date_str.replace("-", "")   # "20260503"
-    # Try variants: YYYY-MM-DD with timeZone, without timeZone, YYYYMMDD
+    date_nodash = date_str.replace("-", "")
+    # Try India timezone (5) first, then China (8), then no-tz, then YYYYMMDD
     for body in [
-        {"sn": sn, "time": date_str,     "timeZone": 8},
-        {"sn": sn, "time": date_str,     "timeZone": 5},
-        {"sn": sn, "time": date_nodash,  "timeZone": 8},
+        {"sn": sn, "time": date_str,    "timeZone": 5},
+        {"sn": sn, "time": date_str,    "timeZone": 8},
+        {"sn": sn, "time": date_nodash, "timeZone": 5},
         {"sn": sn, "time": date_str},
     ]:
         d = _post("/v1/api/inverterPowerOneDayChart", body)
         data_obj = (d or {}).get("data") or {}
+
+        # Format A: array of objects at the top level or in a "records"/"data" key
         if isinstance(data_obj, list):
             recs = data_obj
         else:
             recs = data_obj.get("records") or data_obj.get("data") or []
+
+        # Format B: parallel arrays {time:[...], watt:[...]}  ← most common Solis format
+        if not recs:
+            t_arr = data_obj.get("time") or []
+            w_arr = (data_obj.get("watt") or data_obj.get("power")
+                     or data_obj.get("pac") or [])
+            if t_arr and w_arr:
+                recs = [{"time": str(t), "power": float(w or 0)}
+                        for t, w in zip(t_arr, w_arr)]
+
         if recs:
             return recs
     return []
