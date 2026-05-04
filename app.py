@@ -12933,12 +12933,14 @@ with st.spinner("Fetching live data…"):
         if all_sel_plants:
             records = [r for r in records if r.get("plant_name") in all_sel_plants]
 
-# ── Save today's 5-min intraday data to DB on every refresh ──
-# This accumulates a permanent historical record for the Day chart.
-def _save_today_intraday_to_db():
+# ── Save today's intraday data to DB — rate-limited to once per refresh cycle ──
+import time as _time
+_now_ts = _time.time()
+_last_id_save = st.session_state.get("_last_intraday_save", 0)
+if _now_ts - _last_id_save >= REFRESH_INTERVAL_SECONDS:
     try:
         from datetime import date as _date2
-        from utils.solis_api import get_plants as _sgp2, _fetch_inverter_day_chart as _fidc2
+        from utils.solis_api import _post as _spost2, get_plants as _sgp2, get_inverters as _ginv2
         from utils.database import save_intraday as _sv_id
         _today2 = _date2.today().strftime("%Y-%m-%d")
         for _p2 in _sgp2():
@@ -12946,26 +12948,26 @@ def _save_today_intraday_to_db():
             _pid2   = (_p2.get("id") or _p2.get("stationId") or "")
             if not (_pname2 and _pid2):
                 continue
-            from utils.solis_api import get_inverters as _ginv2
             for _inv2 in _ginv2(_pid2):
                 _sn2 = _inv2.get("inverterSn", "")
                 if not _sn2:
                     continue
+                _dr2 = _spost2("/v1/api/inverterPowerOneDayChart",
+                                {"sn": _sn2, "time": _today2, "timeZone": 8})
+                _data2 = (_dr2 or {}).get("data") or {}
+                _recs2 = (_data2.get("records") or _data2.get("data") or
+                          _data2 if isinstance(_data2, list) else [])
                 _pts2 = []
-                for _r2 in _fidc2(_sn2, _today2):
+                for _r2 in _recs2:
                     _t2 = str(_r2.get("time") or _r2.get("dataTimestamp") or "")
                     _p2v = float(_r2.get("power") or _r2.get("pac") or _r2.get("activePower") or 0)
                     if _t2 and ":" in _t2:
                         _pts2.append({"time_hm": _t2[:5], "power_kw": _p2v})
                 if _pts2:
                     _sv_id(_pname2, _today2, _pts2)
+        st.session_state["_last_intraday_save"] = _now_ts
     except Exception:
         pass
-
-try:
-    _save_today_intraday_to_db()
-except Exception:
-    pass
 
 # Filter to active plant chosen in sidebar
 if active_plant and active_plant != "All Plants":
