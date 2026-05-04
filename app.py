@@ -13520,6 +13520,7 @@ elif page == "Overview":
                     mode="lines", name="Power",
                     hovertemplate="%{x|%H:%M}<br><b>%{y:.1f} kW</b><extra></extra>",
                 ))
+                _day_str = _sel_date.strftime("%Y-%m-%d")
                 _fd.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font_family="Inter", font_color="#64748b",
@@ -13528,6 +13529,7 @@ elif page == "Overview":
                     xaxis=dict(
                         showgrid=False, tickformat="%H:%M",
                         title="Time", zeroline=False,
+                        range=[f"{_day_str} 06:00:00", f"{_day_str} 18:00:00"],
                         rangeslider=dict(visible=True, thickness=0.08),
                         rangeselector=dict(
                             buttons=[
@@ -13551,80 +13553,83 @@ elif page == "Overview":
                         "data collects every 5 min while the app runs.")
 
         with _tab_mon:
-            # Month + Year pickers
+            # Year picker — shows monthly totals for the selected year
+            import calendar as _cal
             _now = datetime.now()
-            _mc1, _mc2 = st.columns(2)
-            _sel_mon_idx = _mc1.selectbox(
-                "Month",
-                options=list(range(1, 13)),
-                format_func=lambda m: datetime(2000, m, 1).strftime("%B"),
-                index=_now.month - 1, key="chart_mon_month"
-            )
-            _sel_mon_yr = _mc2.selectbox(
+            _sel_mon_yr = st.selectbox(
                 "Year",
                 options=list(range(_now.year - 2, _now.year + 1)),
                 index=2, key="chart_mon_year"
             )
-            _sel_mon_str = f"{_sel_mon_yr}-{_sel_mon_idx:02d}"
+            _sel_yr_str = str(_sel_mon_yr)
 
             _mon_rows = []
-            _mon_src  = "db"
+            _mon_src  = "api"
+            # Primary: API — per-month totals for the year
             if _chart_pid:
                 try:
                     if _chart_brand == "Solis":
-                        from utils.solis_api import get_plant_daily_history as _spdh
-                        _mon_rows = _spdh(_chart_pid, _sel_mon_str)
+                        from utils.solis_api import get_plant_monthly_history as _spmh2
+                        _mon_rows = _spmh2(_chart_pid, _sel_yr_str)
                     else:
-                        from utils.growatt_api import get_plant_daily_history as _gpdh
-                        _mon_rows = _gpdh(_chart_pid, _sel_mon_str)
-                    if _mon_rows:
-                        _mon_src = "api"
+                        from utils.growatt_api import get_plant_monthly_history as _gpmh2
+                        _mon_rows = _gpmh2(_chart_pid, _sel_yr_str)
                 except Exception:
                     pass
 
+            # Fallback: DB grouped by month for the year
             if not _mon_rows:
-                _hm = get_history(hours=24 * 31 * 3)
+                _mon_src = "db"
+                _hm = get_history(hours=8760 * 2)
                 if not _hm.empty and "today_kwh" in _hm.columns:
                     _hm["fetched_at"] = pd.to_datetime(_hm["fetched_at"])
                     _hm["today_kwh"]  = pd.to_numeric(_hm["today_kwh"], errors="coerce")
                     if active_plant != "All Plants":
                         _hm = _hm[_hm["plant_name"] == active_plant]
-                    _hm = _hm[(_hm["fetched_at"].dt.year  == _sel_mon_yr) &
-                               (_hm["fetched_at"].dt.month == _sel_mon_idx)]
+                    _hm = _hm[_hm["fetched_at"].dt.year == _sel_mon_yr]
                     if not _hm.empty:
-                        _dmdb = (_hm.groupby([_hm["fetched_at"].dt.date, "inverter_sn"])
-                                 ["today_kwh"].max().groupby(level=0).sum().reset_index())
-                        _dmdb.columns = ["date", "energy_kwh"]
-                        _dmdb["date"] = _dmdb["date"].astype(str)
-                        _mon_rows = _dmdb.to_dict("records")
+                        _dmdb = (_hm.groupby([_hm["fetched_at"].dt.year.rename("_yr"),
+                                              _hm["fetched_at"].dt.month.rename("_mo"),
+                                              "inverter_sn"])["today_kwh"]
+                                 .max().groupby(level=[0, 1]).sum().reset_index())
+                        _dmdb.columns = ["_yr", "_mo", "energy_kwh"]
+                        _dmdb["month"] = _dmdb.apply(
+                            lambda r: f"{int(r['_yr'])}-{int(r['_mo']):02d}", axis=1)
+                        _mon_rows = _dmdb[["month", "energy_kwh"]].to_dict("records")
 
             _ms1, _ms2 = st.columns(2)
-            _ms1.metric("Month Total", f"{monthly_mwh:.3f} MWh")
-            _ms2.metric("Month Earning", earn(monthly_kwh))
+            _ms1.metric("Annual Total", f"{annual_mwh:.3f} MWh")
+            _ms2.metric("Annual Earning", earn(annual_mwh * 1000))
 
             if _mon_rows:
                 _dm_df = pd.DataFrame(_mon_rows)
-                _dx = "date" if "date" in _dm_df.columns else _dm_df.columns[0]
-                _dm_df[_dx] = pd.to_datetime(_dm_df[_dx], errors="coerce")
-                _dm_df = _dm_df.dropna(subset=[_dx]).sort_values(_dx)
+                _mx = "month" if "month" in _dm_df.columns else _dm_df.columns[0]
+                _dm_df = _dm_df.dropna(subset=[_mx]).sort_values(_mx)
+                # Convert "2026-01" → "Jan", "Feb" etc. for readable labels
+                def _mo_label(m):
+                    try: return _cal.month_abbr[int(str(m).split("-")[1])]
+                    except Exception: return str(m)
+                _dm_df["_label"] = _dm_df[_mx].apply(_mo_label)
                 _fm = go.Figure()
                 _fm.add_trace(go.Bar(
-                    x=_dm_df[_dx], y=_dm_df["energy_kwh"],
-                    marker_color="rgba(234,88,12,.65)", name="Daily",
+                    x=_dm_df["_label"], y=_dm_df["energy_kwh"],
+                    marker_color="rgba(234,88,12,.65)", name="Monthly",
                     marker_cornerradius=3,
-                    hovertemplate="%{x|%d %b}<br><b>%{y:.1f} kWh</b><extra></extra>",
+                    hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
                 ))
                 _fm.add_trace(go.Scatter(
-                    x=_dm_df[_dx], y=_dm_df["energy_kwh"],
+                    x=_dm_df["_label"], y=_dm_df["energy_kwh"],
                     line=dict(color="#ea580c", width=2), mode="lines+markers",
-                    marker=dict(size=4), name="Trend",
+                    marker=dict(size=5), name="Trend",
                 ))
                 _fm.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font_family="Inter", font_color="#64748b",
                     margin=dict(l=0, r=0, t=8, b=0), height=270,
                     bargap=0.28, hovermode="x unified", showlegend=False,
-                    xaxis=dict(showgrid=False, tickformat="%d %b", zeroline=False),
+                    xaxis=dict(showgrid=False, zeroline=False,
+                               categoryorder="array",
+                               categoryarray=[_cal.month_abbr[i] for i in range(1, 13)]),
                     yaxis=dict(showgrid=True, gridcolor="#f8fafc",
                                title="kWh", zeroline=False),
                 )
@@ -13633,94 +13638,88 @@ elif page == "Overview":
                 _mon_tot = float(_dm_df["energy_kwh"].sum())
                 st.caption(
                     f"Source: {'API' if _mon_src == 'api' else 'Local DB'} — "
-                    f"{_sel_mon_str} total: {_mon_tot:.1f} kWh")
+                    f"{_sel_yr_str} total: {_mon_tot/1000:.3f} MWh")
             else:
-                st.info(f"No data for {_sel_mon_str}. Data collects every 5 min while "
-                        "the app runs, or verify API credentials.")
+                st.info(f"No monthly data for {_sel_yr_str}. Check API credentials or "
+                        "wait for data to collect.")
 
         with _tab_yr:
-            # Year picker
-            _now_yr = datetime.now().year
-            _sel_yr = st.selectbox(
-                "Year",
-                options=list(range(_now_yr - 3, _now_yr + 1)),
-                index=3, key="chart_yr_year"
-            )
-            _yr_str  = str(_sel_yr)
-            _yr_rows = []
-            _yr_src  = "db"
+            # Yearly totals — aggregate all available years from API
+            _now_yr   = datetime.now().year
+            _yr_range = list(range(_now_yr - 4, _now_yr + 1))  # last 5 years
+            _yearly_rows = []
+            _yr_src      = "api"
 
-            # Primary: DB grouped by month (fast, always available)
-            _hy = get_history(hours=8760)
-            if not _hy.empty and "today_kwh" in _hy.columns:
-                _hy["fetched_at"] = pd.to_datetime(_hy["fetched_at"])
-                _hy["today_kwh"]  = pd.to_numeric(_hy["today_kwh"], errors="coerce")
-                if active_plant != "All Plants":
-                    _hy = _hy[_hy["plant_name"] == active_plant]
-                _hy = _hy[_hy["fetched_at"].dt.year == _sel_yr]
-                if not _hy.empty:
-                    _ym = (_hy.groupby([_hy["fetched_at"].dt.year.rename("_yr"),
-                                        _hy["fetched_at"].dt.month.rename("_mo"),
-                                        "inverter_sn"])["today_kwh"]
-                           .max().groupby(level=[0, 1]).sum().reset_index())
-                    _ym.columns = ["_yr", "_mo", "energy_kwh"]
-                    _ym["month"] = _ym.apply(
-                        lambda r: f"{int(r['_yr'])}-{int(r['_mo']):02d}", axis=1)
-                    _yr_rows = _ym[["month", "energy_kwh"]].to_dict("records")
+            # Primary: API — sum monthly values for each year
+            if _chart_pid:
+                for _y in _yr_range:
+                    try:
+                        if _chart_brand == "Solis":
+                            from utils.solis_api import get_plant_monthly_history as _spmhy
+                            _mrows = _spmhy(_chart_pid, str(_y))
+                        else:
+                            from utils.growatt_api import get_plant_monthly_history as _gpmhy
+                            _mrows = _gpmhy(_chart_pid, str(_y))
+                        _ytotal = sum(float(r.get("energy_kwh", 0)) for r in (_mrows or []))
+                        if _ytotal > 0:
+                            _yearly_rows.append({"year": str(_y), "energy_kwh": _ytotal})
+                    except Exception:
+                        pass
 
-            # Secondary: API when DB is empty (e.g. fresh install or past years)
-            if not _yr_rows and _chart_pid:
-                try:
-                    if _chart_brand == "Solis":
-                        from utils.solis_api import get_plant_monthly_history as _spmhy
-                        _yr_rows = _spmhy(_chart_pid, _yr_str)
-                    else:
-                        from utils.growatt_api import get_plant_monthly_history as _gpmhy
-                        _yr_rows = _gpmhy(_chart_pid, _yr_str)
-                    if _yr_rows:
-                        _yr_src = "api"
-                except Exception:
-                    pass
+            # Fallback: DB grouped by year
+            if not _yearly_rows:
+                _yr_src = "db"
+                _hyy = get_history(hours=8760 * 5)
+                if not _hyy.empty and "today_kwh" in _hyy.columns:
+                    _hyy["fetched_at"] = pd.to_datetime(_hyy["fetched_at"])
+                    _hyy["today_kwh"]  = pd.to_numeric(_hyy["today_kwh"], errors="coerce")
+                    if active_plant != "All Plants":
+                        _hyy = _hyy[_hyy["plant_name"] == active_plant]
+                    if not _hyy.empty:
+                        _ydb = (_hyy.groupby([_hyy["fetched_at"].dt.year.rename("_yr"),
+                                              _hyy["fetched_at"].dt.month.rename("_mo"),
+                                              "inverter_sn"])["today_kwh"]
+                                .max().groupby(level=[0, 1]).sum()
+                                .groupby(level=0).sum().reset_index())
+                        _ydb.columns = ["year", "energy_kwh"]
+                        _ydb["year"] = _ydb["year"].astype(str)
+                        _yearly_rows = _ydb.to_dict("records")
 
             _ys1, _ys2 = st.columns(2)
-            _ys1.metric("Annual Estimate", f"{annual_mwh:.3f} MWh")
-            _ys2.metric("Annual Earning",  earn(annual_mwh * 1000))
+            _ys1.metric("This Year", f"{annual_mwh:.3f} MWh")
+            _ys2.metric("Annual Earning", earn(annual_mwh * 1000))
 
-            if _yr_rows:
-                _yr_df = pd.DataFrame(_yr_rows)
-                _xc = "month" if "month" in _yr_df.columns else _yr_df.columns[0]
-                if "energy_kwh" in _yr_df.columns:
-                    _yr_df = _yr_df.sort_values(_xc)
-                    _yr_tot = float(_yr_df["energy_kwh"].sum())
-                    _fy = go.Figure()
-                    _fy.add_trace(go.Bar(
-                        x=_yr_df[_xc], y=_yr_df["energy_kwh"],
-                        marker_color="rgba(245,158,11,.65)", name="Monthly",
-                        marker_cornerradius=3,
-                        hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
-                    ))
-                    _fy.add_trace(go.Scatter(
-                        x=_yr_df[_xc], y=_yr_df["energy_kwh"],
-                        line=dict(color="#f59e0b", width=2), mode="lines+markers",
-                        marker=dict(size=5), name="Trend",
-                    ))
-                    _fy.update_layout(
-                        plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font_family="Inter", font_color="#64748b",
-                        margin=dict(l=0, r=0, t=8, b=0), height=270,
-                        bargap=0.3, hovermode="x unified", showlegend=False,
-                        xaxis=dict(showgrid=False, zeroline=False),
-                        yaxis=dict(showgrid=True, gridcolor="#f8fafc",
-                                   title="kWh", zeroline=False),
-                    )
-                    st.plotly_chart(_fy, use_container_width=True,
-                                    config={"displayModeBar": False})
-                    st.caption(
-                        f"Source: {'API' if _yr_src == 'api' else 'Local DB'} — "
-                        f"{_yr_str} total: {_yr_tot/1000:.3f} MWh")
+            if _yearly_rows:
+                _yr_df = pd.DataFrame(_yearly_rows).sort_values("year")
+                _yr_df["energy_kwh"] = pd.to_numeric(_yr_df["energy_kwh"], errors="coerce").fillna(0)
+                _fy = go.Figure()
+                _fy.add_trace(go.Bar(
+                    x=_yr_df["year"], y=_yr_df["energy_kwh"],
+                    marker_color="rgba(245,158,11,.65)", name="Yearly",
+                    marker_cornerradius=3,
+                    hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
+                    text=_yr_df["energy_kwh"].apply(lambda v: f"{v/1000:.2f} MWh"),
+                    textposition="outside",
+                    textfont=dict(size=11, color="#78716c"),
+                ))
+                _fy.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font_family="Inter", font_color="#64748b",
+                    margin=dict(l=0, r=0, t=30, b=0), height=280,
+                    bargap=0.35, hovermode="x unified", showlegend=False,
+                    xaxis=dict(showgrid=False, zeroline=False, type="category",
+                               tickfont=dict(size=13, color="#1c1917")),
+                    yaxis=dict(showgrid=True, gridcolor="#f8fafc",
+                               title="kWh", zeroline=False),
+                )
+                st.plotly_chart(_fy, use_container_width=True,
+                                config={"displayModeBar": False})
+                _grand_tot = float(_yr_df["energy_kwh"].sum())
+                st.caption(
+                    f"Source: {'API' if _yr_src == 'api' else 'Local DB'} — "
+                    f"lifetime total: {_grand_tot/1000:.3f} MWh across {len(_yr_df)} yr(s)")
             else:
-                st.info(f"No annual data for {_yr_str}. Data collects every 5 min "
-                        "while the app runs, or verify API credentials.")
+                st.info("No yearly data available. Verify API credentials and plant selection.")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
