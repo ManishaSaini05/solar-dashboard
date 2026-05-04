@@ -13535,7 +13535,7 @@ elif page == "Overview":
                     _pw = {}
                     for _sn in _sns:
                         _dr = _sp("/v1/api/inverterPowerOneDayChart",
-                                  {"sn": _sn, "time": _day_str_api, "timeZone": 8})
+                                  {"sn": _sn, "time": _day_str_api})
                         # Try multiple response paths
                         _recs = ((_dr or {}).get("data") or {})
                         if isinstance(_recs, list):
@@ -13586,13 +13586,22 @@ elif page == "Overview":
             _ds3.metric("Full Load Hours", f"{_flh:.2f} h" if _cap_kw > 0 else "—")
 
             if not _dp.empty:
+                # Auto-detect data time range for sensible default zoom
+                _t_min = _dp["fetched_at"].min()
+                _t_max = _dp["fetched_at"].max()
+                # Filter to only include points with actual power > 0 for range calc
+                _dp_nonzero = _dp[_dp["power_kw"] > 0]
+                if not _dp_nonzero.empty:
+                    _t_min = _dp_nonzero["fetched_at"].min() - pd.Timedelta(minutes=30)
+                    _t_max = _dp_nonzero["fetched_at"].max() + pd.Timedelta(minutes=30)
+
                 _fd = go.Figure()
                 _fd.add_trace(go.Scatter(
                     x=_dp["fetched_at"], y=_dp["power_kw"],
                     fill="tozeroy", fillcolor="rgba(245,158,11,.15)",
                     line=dict(color="#f59e0b", width=2.5),
                     mode="lines", name="Power",
-                    hovertemplate="%{x|%H:%M}<br><b>%{y:.1f} kW</b><extra></extra>",
+                    hovertemplate="%{x|%H:%M}<br><b>%{y:.2f} kW</b><extra></extra>",
                 ))
                 _fd.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
@@ -13602,13 +13611,13 @@ elif page == "Overview":
                     xaxis=dict(
                         showgrid=False, tickformat="%H:%M",
                         title="Time", zeroline=False,
-                        range=[f"{_day_str_api} 06:00:00", f"{_day_str_api} 18:00:00"],
+                        range=[_t_min, _t_max],
                         rangeslider=dict(visible=True, thickness=0.08),
                         rangeselector=dict(
                             buttons=[
-                                dict(count=6,  label="6h",       step="hour",
+                                dict(count=4,  label="4h",       step="hour",
                                      stepmode="backward"),
-                                dict(count=12, label="12h",      step="hour",
+                                dict(count=8,  label="8h",       step="hour",
                                      stepmode="backward"),
                                 dict(step="all", label="Full Day"),
                             ],
@@ -13622,7 +13631,8 @@ elif page == "Overview":
                 st.plotly_chart(_fd, use_container_width=True,
                                 config={"displayModeBar": True, "scrollZoom": True})
                 _src_lbl = "API" if _day_src == "api" else "Local DB"
-                st.caption(f"Source: {_src_lbl} — {len(_dp)} data points"
+                _pts_info = f"{len(_dp)} pts"
+                st.caption(f"Source: {_src_lbl} — {_pts_info}"
                            + (f" | plant_id: {_chart_pid}" if show_debug else ""))
                 if _day_src != "api" and _day_api_err:
                     st.caption(f"⚠ API error: {_day_api_err}")

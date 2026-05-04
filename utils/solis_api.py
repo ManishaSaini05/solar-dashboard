@@ -1100,9 +1100,8 @@ def get_plant_intraday_power(plant_id, date_str):
         if not sn:
             continue
         d = _post("/v1/api/inverterPowerOneDayChart", {
-            "sn":       sn,
-            "time":     date_str,
-            "timeZone": 8,
+            "sn":   sn,
+            "time": date_str,
         })
         # Handle multiple possible response structures
         data_obj = (d or {}).get("data") or {}
