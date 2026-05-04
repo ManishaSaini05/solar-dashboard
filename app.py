@@ -12933,38 +12933,34 @@ with st.spinner("Fetching live data…"):
         if all_sel_plants:
             records = [r for r in records if r.get("plant_name") in all_sel_plants]
 
-# ── Save today's intraday data to DB — rate-limited to once per refresh cycle ──
+# ── Persist every refresh's live data to DB (runs on each 5-min auto-refresh) ──
+# Save current power snapshot from `records` — no extra API calls needed.
+# Over time this builds a complete day-by-day history in the DB.
 import time as _time
 _now_ts = _time.time()
 _last_id_save = st.session_state.get("_last_intraday_save", 0)
-if _now_ts - _last_id_save >= REFRESH_INTERVAL_SECONDS:
+if records and (_now_ts - _last_id_save >= 60):   # at most once per minute
     try:
-        from datetime import date as _date2
-        from utils.solis_api import _post as _spost2, get_plants as _sgp2, get_inverters as _ginv2
-        from utils.database import save_intraday as _sv_id
-        _today2 = _date2.today().strftime("%Y-%m-%d")
-        for _p2 in _sgp2():
-            _pname2 = _p2.get("stationName", "")
-            _pid2   = (_p2.get("id") or _p2.get("stationId") or "")
-            if not (_pname2 and _pid2):
-                continue
-            for _inv2 in _ginv2(_pid2):
-                _sn2 = _inv2.get("inverterSn", "")
-                if not _sn2:
-                    continue
-                _dr2 = _spost2("/v1/api/inverterPowerOneDayChart",
-                                {"sn": _sn2, "time": _today2, "timeZone": 8})
-                _data2 = (_dr2 or {}).get("data") or {}
-                _recs2 = (_data2.get("records") or _data2.get("data") or
-                          _data2 if isinstance(_data2, list) else [])
-                _pts2 = []
-                for _r2 in _recs2:
-                    _t2 = str(_r2.get("time") or _r2.get("dataTimestamp") or "")
-                    _p2v = float(_r2.get("power") or _r2.get("pac") or _r2.get("activePower") or 0)
-                    if _t2 and ":" in _t2:
-                        _pts2.append({"time_hm": _t2[:5], "power_kw": _p2v})
-                if _pts2:
-                    _sv_id(_pname2, _today2, _pts2)
+        from datetime import datetime as _dtnow
+        from utils.database import save_readings as _sv_r, save_intraday as _sv_id
+        _snap_time = _dtnow.now()
+        _snap_hm   = _snap_time.strftime("%H:%M")
+        _snap_date = _snap_time.strftime("%Y-%m-%d")
+        _snap_ts   = _snap_time.isoformat(sep=" ", timespec="seconds")
+
+        # 1) save to inverter_data table (full record with today_kwh, status, etc.)
+        _recs_to_save = [{**r, "fetched_at": _snap_ts} for r in records]
+        _sv_r(_recs_to_save)
+
+        # 2) save per-plant power to intraday_power (for Day chart)
+        _plant_pwr = {}
+        for _r in records:
+            _pn = _r.get("plant_name", "")
+            if _pn:
+                _plant_pwr[_pn] = _plant_pwr.get(_pn, 0.0) + float(_r.get("power_kw") or 0)
+        for _pn, _pwr in _plant_pwr.items():
+            _sv_id(_pn, _snap_date, [{"time_hm": _snap_hm, "power_kw": _pwr}])
+
         st.session_state["_last_intraday_save"] = _now_ts
     except Exception:
         pass
@@ -13564,6 +13560,7 @@ elif page == "Overview":
                 except Exception:
                     _id_df = pd.DataFrame()
 
+            # ── Step 2: build chart DataFrame from DB records ───────────────
             if not _id_df.empty:
                 from datetime import datetime as _dtt0
                 _dp = pd.DataFrame({
@@ -13573,56 +13570,10 @@ elif page == "Overview":
                         )),
                     "power_kw": pd.to_numeric(_id_df["power_kw"], errors="coerce").fillna(0),
                 })
-                _day_src = "db"
 
-            # ── Step 2: if DB empty, try API directly with inverter SNs ──
-            if _dp.empty and not df.empty and (_chart_brand or "Solis") == "Solis":
-                try:
-                    from utils.solis_api import _fetch_inverter_day_chart as _fidc
-                    from datetime import datetime as _dtt
-                    _inv_col = df["inverter_sn"] if "inverter_sn" in df.columns else pd.Series()
-                    if active_plant != "All Plants":
-                        _inv_col = df.loc[df["plant_name"] == active_plant, "inverter_sn"] if "inverter_sn" in df.columns else pd.Series()
-                    _sns = [str(s) for s in _inv_col.dropna().unique() if s and str(s) not in ("—", "nan", "")]
-                    _pw = {}
-                    for _sn in _sns:
-                        for _r in _fidc(_sn, _day_str_api):
-                            _t = str(_r.get("time") or _r.get("dataTimestamp") or "")
-                            _p = float(_r.get("power") or _r.get("pac") or _r.get("activePower") or 0)
-                            if _t:
-                                _pw[_t] = _pw.get(_t, 0.0) + _p
-                    if _pw:
-                        _pts = []
-                        for _t, _p in sorted(_pw.items()):
-                            try:
-                                if ":" in _t and len(_t) <= 5:
-                                    _dt = _dtt.strptime(f"{_day_str_api} {_t}", "%Y-%m-%d %H:%M")
-                                elif _t.isdigit() and len(_t) > 8:
-                                    _dt = _dtt.fromtimestamp(int(_t) / 1000)
-                                else:
-                                    _dt = _dtt.strptime(f"{_day_str_api} {_t}", "%Y-%m-%d %H:%M:%S")
-                                _pts.append({"fetched_at": _dt, "power_kw": _p})
-                            except Exception:
-                                continue
-                        if _pts:
-                            _dp = pd.DataFrame(_pts)
-                            _dp["fetched_at"] = pd.to_datetime(_dp["fetched_at"])
-                            _day_src = "api"
-                            # Also save this to DB for future use
-                            try:
-                                from utils.database import save_intraday as _sv_id2
-                                _sv_pts2 = [{"time_hm": r["fetched_at"].strftime("%H:%M"),
-                                             "power_kw": r["power_kw"]}
-                                            for _, r in _dp.iterrows()]
-                                _sv_id2(_pname_q or "All", _day_str_api, _sv_pts2)
-                            except Exception:
-                                pass
-                except Exception:
-                    pass
-
-            # ── Step 3: final fallback — inverter_data table (5-min snapshots) ──
+            # ── Step 3: fallback to inverter_data snapshots (also our own DB) ──
             if _dp.empty:
-                _hd = get_history(hours=72)
+                _hd = get_history(hours=168)   # 7 days back
                 if not _hd.empty:
                     _hd["fetched_at"] = pd.to_datetime(_hd["fetched_at"])
                     _hd["power_kw"]   = pd.to_numeric(_hd["power_kw"], errors="coerce")
@@ -13631,7 +13582,6 @@ elif page == "Overview":
                     _hd = _hd[_hd["fetched_at"].dt.date == _sel_date]
                     if not _hd.empty:
                         _dp = _hd.groupby("fetched_at")["power_kw"].sum().reset_index()
-                        _day_src = "db"
 
             _flh = round(daily_kwh / _cap_kw, 2) if _cap_kw > 0 else 0.0
             _ds1, _ds2, _ds3 = st.columns(3)

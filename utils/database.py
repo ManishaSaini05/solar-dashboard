@@ -196,14 +196,17 @@ def get_intraday(plant_name, date_str):
 
 def save_readings(records):
     if not records: return
-    c = _conn(); now = datetime.now().isoformat(sep=" ", timespec="seconds")
+    c = _conn()
+    now = datetime.now().isoformat(sep=" ", timespec="seconds")
     for r in records:
+        # use fetched_at from record if caller already set it, else use now
+        fa = r.get("fetched_at") or now
         c.execute("""INSERT INTO inverter_data
             (brand,plant_name,plant_id,inverter_sn,power_kw,today_kwh,total_kwh,
              status,temperature,voltage,current_a,last_update,fetched_at)
             VALUES(:brand,:plant_name,:plant_id,:inverter_sn,:power_kw,:today_kwh,
                    :total_kwh,:status,:temperature,:voltage,:current_a,:last_update,:fa)""",
-            {**r, "fa": now})
+            {**r, "fa": fa})
     c.commit(); c.close()
 
 def log_alert(brand, plant, sn, issue):
