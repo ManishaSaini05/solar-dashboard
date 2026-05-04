@@ -162,6 +162,14 @@ def init_db():
             power_kw REAL NOT NULL DEFAULT 0,
             UNIQUE(plant_name, date, time_hm)
         );
+        CREATE TABLE IF NOT EXISTS daily_yield (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_name TEXT NOT NULL,
+            date       TEXT NOT NULL,
+            energy_kwh REAL NOT NULL DEFAULT 0,
+            saved_at   TEXT NOT NULL,
+            UNIQUE(plant_name, date)
+        );
     """)
     c.commit(); c.close()
 
@@ -191,6 +199,30 @@ def get_intraday(plant_name, date_str):
         "SELECT time_hm, power_kw FROM intraday_power "
         "WHERE plant_name=? AND date=? ORDER BY time_hm",
         c, params=(plant_name, date_str))
+    c.close()
+    return df
+
+def save_daily_yield(plant_name, date_str, energy_kwh):
+    """Upsert the daily yield (kWh) for a plant on a given date."""
+    c = _conn()
+    c.execute("""
+        INSERT INTO daily_yield (plant_name, date, energy_kwh, saved_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(plant_name, date)
+        DO UPDATE SET energy_kwh = excluded.energy_kwh,
+                      saved_at   = excluded.saved_at
+    """, (plant_name, date_str, float(energy_kwh or 0),
+          datetime.now().isoformat(sep=" ", timespec="seconds")))
+    c.commit(); c.close()
+
+def get_daily_yield(plant_name, days=30):
+    """Return stored daily yield rows as a DataFrame."""
+    c = _conn()
+    df = pd.read_sql(
+        "SELECT date, energy_kwh FROM daily_yield "
+        "WHERE plant_name=? AND date >= date('now', ? || ' days') "
+        "ORDER BY date",
+        c, params=(plant_name, f"-{days}"))
     c.close()
     return df
 

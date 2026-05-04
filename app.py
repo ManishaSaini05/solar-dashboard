@@ -12953,13 +12953,20 @@ if records and (_now_ts - _last_id_save >= 60):   # at most once per minute
         _sv_r(_recs_to_save)
 
         # 2) save per-plant power to intraday_power (for Day chart)
+        #    and daily yield to daily_yield table (for Month chart fallback)
+        from utils.database import save_daily_yield as _sv_dy
         _plant_pwr = {}
+        _plant_kwh = {}
         for _r in records:
             _pn = _r.get("plant_name", "")
             if _pn:
                 _plant_pwr[_pn] = _plant_pwr.get(_pn, 0.0) + float(_r.get("power_kw") or 0)
+                _plant_kwh[_pn] = _plant_kwh.get(_pn, 0.0) + float(_r.get("today_kwh") or 0)
         for _pn, _pwr in _plant_pwr.items():
             _sv_id(_pn, _snap_date, [{"time_hm": _snap_hm, "power_kw": _pwr}])
+        for _pn, _kwh in _plant_kwh.items():
+            if _kwh > 0:
+                _sv_dy(_pn, _snap_date, _kwh)
 
         st.session_state["_last_intraday_save"] = _now_ts
     except Exception:
@@ -13411,8 +13418,9 @@ elif page == "Overview":
             st.session_state["_pending_page"] = "Plants"
             st.rerun()
     with _th3:
-        _do_export = st.button("📥 Export Report", use_container_width=True,
-                               type="primary", key="dash_export_btn")
+        if st.button("📥 Export Report", use_container_width=True,
+                     type="primary", key="dash_export_btn"):
+            st.session_state["_export_requested"] = True
 
     if df.empty:
         st.warning("⚠️ No data. Check credentials in config.py and click Refresh.")
@@ -13542,11 +13550,11 @@ elif page == "Overview":
             _pname_q = active_plant if active_plant != "All Plants" else ""
 
             # ── Step 1: pull full-day history from Solis API ─────────────
-            # inverterPowerOneDayChart returns all 5-min intervals from
-            # sunrise to current time for today, or complete data for past days.
+            # Uses _fetch_inverter_day_chart which tries multiple timeZone/format
+            # variants to maximise the number of 5-min points returned.
             if not df.empty and (_chart_brand or "Solis") == "Solis":
                 try:
-                    from utils.solis_api import _post as _spc
+                    from utils.solis_api import _fetch_inverter_day_chart as _fdayc
                     from utils.database import save_intraday as _sv_api
                     from datetime import datetime as _dttA
                     _col_sn = "inverter_sn"
@@ -13557,14 +13565,12 @@ elif page == "Overview":
                               if s and str(s) not in ("—", "nan", "")]
                     _pw_a = {}
                     for _sn_a in _sns_a:
-                        _dr_a = _spc("/v1/api/inverterPowerOneDayChart",
-                                     {"sn": _sn_a, "time": _day_str_api, "timeZone": 8})
-                        _data_a = (_dr_a or {}).get("data") or {}
-                        _recs_a = (_data_a.get("records") or
-                                   (_data_a if isinstance(_data_a, list) else []))
-                        for _r_a in _recs_a:
-                            _t_a = str(_r_a.get("time") or "")
-                            _p_a = float(_r_a.get("power") or 0)
+                        for _r_a in _fdayc(_sn_a, _day_str_api):
+                            # handle all known field name variants from Solis API
+                            _t_a = str(_r_a.get("time") or _r_a.get("dataTimestamp")
+                                       or _r_a.get("ts") or "")
+                            _p_a = float(_r_a.get("power") or _r_a.get("pac")
+                                         or _r_a.get("activePower") or 0)
                             if _t_a and ":" in _t_a:
                                 _k_a = _t_a[:5]
                                 _pw_a[_k_a] = _pw_a.get(_k_a, 0.0) + _p_a
@@ -13641,14 +13647,10 @@ elif page == "Overview":
             _ds3.metric("Full Load Hours", f"{_flh:.2f} h" if _cap_kw > 0 else "—")
 
             if not _dp.empty:
-                # Auto-detect data time range for sensible default zoom
-                _t_min = _dp["fetched_at"].min()
-                _t_max = _dp["fetched_at"].max()
-                # Filter to only include points with actual power > 0 for range calc
-                _dp_nonzero = _dp[_dp["power_kw"] > 0]
-                if not _dp_nonzero.empty:
-                    _t_min = _dp_nonzero["fetched_at"].min() - pd.Timedelta(minutes=30)
-                    _t_max = _dp_nonzero["fetched_at"].max() + pd.Timedelta(minutes=30)
+                # Fixed full-day range: always show 06:00–18:30 so chart context
+                # matches the real solar day regardless of how much data is loaded
+                _day_range_start = f"{_day_str_api} 06:00:00"
+                _day_range_end   = f"{_day_str_api} 18:30:00"
 
                 _fd = go.Figure()
                 _fd.add_trace(go.Scatter(
@@ -13666,7 +13668,7 @@ elif page == "Overview":
                     xaxis=dict(
                         showgrid=False, tickformat="%H:%M",
                         title="Time", zeroline=False,
-                        range=[_t_min, _t_max],
+                        range=[_day_range_start, _day_range_end],
                         rangeslider=dict(visible=True, thickness=0.08),
                         rangeselector=dict(
                             buttons=[
@@ -14071,7 +14073,7 @@ elif page == "Overview":
             st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Excel Export ──────────────────────────────────────────
-    if _do_export:
+    if st.session_state.get("_export_requested", False):
         _xbuf = _io.BytesIO()
         try:
             with pd.ExcelWriter(_xbuf, engine="openpyxl") as _xw:
@@ -14094,14 +14096,17 @@ elif page == "Overview":
                         _hexp = _hexp[_hexp["plant_name"] == active_plant]
                     _hexp.to_excel(_xw, sheet_name="History (30d)", index=False)
             _xbuf.seek(0)
+            st.success("Report ready — click below to download.")
             st.download_button(
                 "📥 Download Excel Report",
                 data=_xbuf,
                 file_name=f"{_plant_lbl.replace(' ','_')}_report_{datetime.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 key="export_download_btn",
+                on_click=lambda: st.session_state.update({"_export_requested": False}),
             )
         except Exception as _xe:
+            st.session_state["_export_requested"] = False
             st.error(f"Export failed: {_xe}. Install openpyxl: pip install openpyxl")
 
 
