@@ -154,8 +154,45 @@ def init_db():
             brand TEXT, plant_name TEXT, inverter_sn TEXT,
             issue TEXT, alerted_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS intraday_power (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            plant_name TEXT NOT NULL,
+            date     TEXT NOT NULL,
+            time_hm  TEXT NOT NULL,
+            power_kw REAL NOT NULL DEFAULT 0,
+            UNIQUE(plant_name, date, time_hm)
+        );
     """)
     c.commit(); c.close()
+
+
+def save_intraday(plant_name, date_str, points):
+    """
+    Upsert 5-min power points into intraday_power table.
+    points: list of dicts with keys 'time_hm' (HH:MM) and 'power_kw'.
+    """
+    if not points:
+        return
+    c = _conn()
+    for p in points:
+        c.execute("""
+            INSERT INTO intraday_power (plant_name, date, time_hm, power_kw)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(plant_name, date, time_hm)
+            DO UPDATE SET power_kw = excluded.power_kw
+        """, (plant_name, date_str, p["time_hm"], float(p["power_kw"] or 0)))
+    c.commit(); c.close()
+
+
+def get_intraday(plant_name, date_str):
+    """Return intraday power rows for plant+date as a DataFrame."""
+    c = _conn()
+    df = pd.read_sql(
+        "SELECT time_hm, power_kw FROM intraday_power "
+        "WHERE plant_name=? AND date=? ORDER BY time_hm",
+        c, params=(plant_name, date_str))
+    c.close()
+    return df
 
 def save_readings(records):
     if not records: return
