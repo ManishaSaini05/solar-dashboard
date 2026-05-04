@@ -4154,7 +4154,7 @@
 #   border:1px solid var(--border);box-shadow:var(--shadow);
 #   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
 # }
-# .inv-card:hover{border-color:var(--teal);box-shadow:var(--shadow-teal);}
+# .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
 # .inv-card.alert-card{border-left:3px solid var(--red);}
 # .inv-header{
 #   display:flex;justify-content:space-between;align-items:flex-start;
@@ -4194,7 +4194,7 @@
 # .tbl-row:hover{background:#f8fafc;}
 # .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 # .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-# .cell-link{color:var(--teal);font-weight:700;cursor:pointer;font-size:13px;}
+# .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
 # /* ══ BADGES ═══════════════════════════════════════════════ */
 # .badge{
@@ -4396,7 +4396,7 @@
 # def chart_style(fig, h=300):
 #     fig.update_layout(
 #         plot_bgcolor="#fff", paper_bgcolor="#fff",
-#         font_color="#64748b", font_family="Plus Jakarta Sans",
+#         font_color="#64748b", font_family="Inter",
 #         margin=dict(l=0,r=0,t=16,b=0), height=h,
 #         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
 #         bargap=0.28,
@@ -4602,7 +4602,7 @@
 #         ))
 #         fig2.update_layout(
 #             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-#             font_family="Plus Jakarta Sans", font_color="#64748b",
+#             font_family="Inter", font_color="#64748b",
 #             margin=dict(l=60, r=60, t=20, b=20), height=290,
 #             showlegend=False,
 #             annotations=[dict(text=f"<b>{f(pief['today_kwh'].sum(),1)}</b><br>kWh",
@@ -5208,7 +5208,7 @@
 #   border:1px solid var(--border);box-shadow:var(--shadow);
 #   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
 # }
-# .inv-card:hover{border-color:var(--teal);box-shadow:var(--shadow-teal);}
+# .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
 # .inv-card.alert-card{border-left:3px solid var(--red);}
 # .inv-header{
 #   display:flex;justify-content:space-between;align-items:flex-start;
@@ -5248,7 +5248,7 @@
 # .tbl-row:hover{background:#f8fafc;}
 # .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 # .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-# .cell-link{color:var(--teal);font-weight:700;cursor:pointer;font-size:13px;}
+# .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
 # /* ══ BADGES ═══════════════════════════════════════════════ */
 # .badge{
@@ -5450,7 +5450,7 @@
 # def chart_style(fig, h=300):
 #     fig.update_layout(
 #         plot_bgcolor="#fff", paper_bgcolor="#fff",
-#         font_color="#64748b", font_family="Plus Jakarta Sans",
+#         font_color="#64748b", font_family="Inter",
 #         margin=dict(l=0,r=0,t=16,b=0), height=h,
 #         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
 #         bargap=0.28,
@@ -5670,7 +5670,7 @@
 #         ))
 #         fig2.update_layout(
 #             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-#             font_family="Plus Jakarta Sans", font_color="#64748b",
+#             font_family="Inter", font_color="#64748b",
 #             margin=dict(l=60, r=60, t=20, b=20), height=290,
 #             showlegend=False,
 #             annotations=[dict(text=f"<b>{f(pief['today_kwh'].sum(),1)}</b><br>kWh",
@@ -5973,7 +5973,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=60,t=16,b=0), height=380,
 #                 hovermode="x unified", bargap=0.25,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
@@ -6034,7 +6034,7 @@
 #             ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                 hovermode="x unified", bargap=0.3,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -6068,7 +6068,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=340,
 #                 showlegend=False, bargap=0.35,
 #                 yaxis=dict(title="MWh", showgrid=True, gridcolor="#f1f5f9",
@@ -6404,7 +6404,7 @@
 #   border:1px solid var(--border);box-shadow:var(--shadow);
 #   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
 # }
-# .inv-card:hover{border-color:var(--teal);box-shadow:var(--shadow-teal);}
+# .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
 # .inv-card.alert-card{border-left:3px solid var(--red);}
 # .inv-header{
 #   display:flex;justify-content:space-between;align-items:flex-start;
@@ -6444,7 +6444,7 @@
 # .tbl-row:hover{background:#f8fafc;}
 # .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 # .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-# .cell-link{color:var(--teal);font-weight:700;cursor:pointer;font-size:13px;}
+# .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
 # /* ══ BADGES ═══════════════════════════════════════════════ */
 # .badge{
@@ -6646,7 +6646,7 @@
 # def chart_style(fig, h=300):
 #     fig.update_layout(
 #         plot_bgcolor="#fff", paper_bgcolor="#fff",
-#         font_color="#64748b", font_family="Plus Jakarta Sans",
+#         font_color="#64748b", font_family="Inter",
 #         margin=dict(l=0,r=0,t=16,b=0), height=h,
 #         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
 #         bargap=0.28,
@@ -6878,7 +6878,7 @@
 #         ))
 #         fig2.update_layout(
 #             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-#             font_family="Plus Jakarta Sans", font_color="#64748b",
+#             font_family="Inter", font_color="#64748b",
 #             margin=dict(l=60, r=60, t=20, b=20), height=290,
 #             showlegend=False,
 #             annotations=[dict(text=f"<b>{f(pief['today_kwh'].sum(),1)}</b><br>kWh",
@@ -7274,7 +7274,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=60,t=16,b=0), height=380,
 #                 hovermode="x unified", bargap=0.25,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
@@ -7334,7 +7334,7 @@
 #             ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                 hovermode="x unified", bargap=0.3,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -7368,7 +7368,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=340,
 #                 showlegend=False, bargap=0.35,
 #                 yaxis=dict(title="MWh", showgrid=True, gridcolor="#f1f5f9",
@@ -7704,7 +7704,7 @@
 #   border:1px solid var(--border);box-shadow:var(--shadow);
 #   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
 # }
-# .inv-card:hover{border-color:var(--teal);box-shadow:var(--shadow-teal);}
+# .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
 # .inv-card.alert-card{border-left:3px solid var(--red);}
 # .inv-header{
 #   display:flex;justify-content:space-between;align-items:flex-start;
@@ -7744,7 +7744,7 @@
 # .tbl-row:hover{background:#f8fafc;}
 # .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 # .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-# .cell-link{color:var(--teal);font-weight:700;cursor:pointer;font-size:13px;}
+# .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
 # /* ══ BADGES ═══════════════════════════════════════════════ */
 # .badge{
@@ -8076,7 +8076,7 @@
 # def chart_style(fig, h=300):
 #     fig.update_layout(
 #         plot_bgcolor="#fff", paper_bgcolor="#fff",
-#         font_color="#64748b", font_family="Plus Jakarta Sans",
+#         font_color="#64748b", font_family="Inter",
 #         margin=dict(l=0,r=0,t=16,b=0), height=h,
 #         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
 #         bargap=0.28,
@@ -8310,7 +8310,7 @@
 #         ))
 #         fig2.update_layout(
 #             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-#             font_family="Plus Jakarta Sans", font_color="#64748b",
+#             font_family="Inter", font_color="#64748b",
 #             margin=dict(l=60, r=60, t=20, b=20), height=290,
 #             showlegend=False,
 #             annotations=[dict(text=f"<b>{f(pief['today_kwh'].sum(),1)}</b><br>kWh",
@@ -8595,7 +8595,7 @@
 #                 ))
 #                 fig.update_layout(
 #                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Plus Jakarta Sans", font_color="#64748b",
+#                     font_family="Inter", font_color="#64748b",
 #                     margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                     hovermode="x unified", bargap=0.25,
 #                     legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -8698,7 +8698,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=60,t=16,b=0), height=380,
 #                 hovermode="x unified", bargap=0.25,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
@@ -8758,7 +8758,7 @@
 #             ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                 hovermode="x unified", bargap=0.3,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -8792,7 +8792,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=340,
 #                 showlegend=False, bargap=0.35,
 #                 yaxis=dict(title="MWh", showgrid=True, gridcolor="#f1f5f9",
@@ -9425,7 +9425,7 @@
 #   border:1px solid var(--border);box-shadow:var(--shadow);
 #   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
 # }
-# .inv-card:hover{border-color:var(--teal);box-shadow:var(--shadow-teal);}
+# .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
 # .inv-card.alert-card{border-left:3px solid var(--red);}
 # .inv-header{
 #   display:flex;justify-content:space-between;align-items:flex-start;
@@ -9465,7 +9465,7 @@
 # .tbl-row:hover{background:#f8fafc;}
 # .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 # .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-# .cell-link{color:var(--teal);font-weight:700;cursor:pointer;font-size:13px;}
+# .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
 # /* ══ BADGES ═══════════════════════════════════════════════ */
 # .badge{
@@ -9800,7 +9800,7 @@
 # def chart_style(fig, h=300):
 #     fig.update_layout(
 #         plot_bgcolor="#fff", paper_bgcolor="#fff",
-#         font_color="#64748b", font_family="Plus Jakarta Sans",
+#         font_color="#64748b", font_family="Inter",
 #         margin=dict(l=0,r=0,t=16,b=0), height=h,
 #         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
 #         bargap=0.28,
@@ -10045,7 +10045,7 @@
 #         ))
 #         fig2.update_layout(
 #             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-#             font_family="Plus Jakarta Sans", font_color="#64748b",
+#             font_family="Inter", font_color="#64748b",
 #             margin=dict(l=60, r=60, t=20, b=20), height=290,
 #             showlegend=False,
 #             annotations=[dict(text=f"<b>{f(pief['today_kwh'].sum(),1)}</b><br>kWh",
@@ -10330,7 +10330,7 @@
 #                 ))
 #                 fig.update_layout(
 #                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Plus Jakarta Sans", font_color="#64748b",
+#                     font_family="Inter", font_color="#64748b",
 #                     margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                     hovermode="x unified", bargap=0.25,
 #                     legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -10433,7 +10433,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=60,t=16,b=0), height=380,
 #                 hovermode="x unified", bargap=0.25,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
@@ -10493,7 +10493,7 @@
 #             ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                 hovermode="x unified", bargap=0.3,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -10527,7 +10527,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=340,
 #                 showlegend=False, bargap=0.35,
 #                 yaxis=dict(title="MWh", showgrid=True, gridcolor="#f1f5f9",
@@ -10865,7 +10865,7 @@
 #   border:1px solid var(--border);box-shadow:var(--shadow);
 #   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
 # }
-# .inv-card:hover{border-color:var(--teal);box-shadow:var(--shadow-teal);}
+# .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
 # .inv-card.alert-card{border-left:3px solid var(--red);}
 # .inv-header{
 #   display:flex;justify-content:space-between;align-items:flex-start;
@@ -10905,7 +10905,7 @@
 # .tbl-row:hover{background:#f8fafc;}
 # .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 # .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-# .cell-link{color:var(--teal);font-weight:700;cursor:pointer;font-size:13px;}
+# .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
 # /* ══ BADGES ═══════════════════════════════════════════════ */
 # .badge{
@@ -11240,7 +11240,7 @@
 # def chart_style(fig, h=300):
 #     fig.update_layout(
 #         plot_bgcolor="#fff", paper_bgcolor="#fff",
-#         font_color="#64748b", font_family="Plus Jakarta Sans",
+#         font_color="#64748b", font_family="Inter",
 #         margin=dict(l=0,r=0,t=16,b=0), height=h,
 #         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
 #         bargap=0.28,
@@ -11507,7 +11507,7 @@
 #         ))
 #         fig2.update_layout(
 #             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-#             font_family="Plus Jakarta Sans", font_color="#64748b",
+#             font_family="Inter", font_color="#64748b",
 #             margin=dict(l=60, r=60, t=20, b=20), height=290,
 #             showlegend=False,
 #             annotations=[dict(text=f"<b>{f(pief['today_kwh'].sum(),1)}</b><br>kWh",
@@ -11796,7 +11796,7 @@
 #                 ))
 #                 fig.update_layout(
 #                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Plus Jakarta Sans", font_color="#64748b",
+#                     font_family="Inter", font_color="#64748b",
 #                     margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                     hovermode="x unified", bargap=0.25,
 #                     legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -11899,7 +11899,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=60,t=16,b=0), height=380,
 #                 hovermode="x unified", bargap=0.25,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
@@ -11959,7 +11959,7 @@
 #             ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=360,
 #                 hovermode="x unified", bargap=0.3,
 #                 legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -11993,7 +11993,7 @@
 #                 ))
 #             fig.update_layout(
 #                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Plus Jakarta Sans", font_color="#64748b",
+#                 font_family="Inter", font_color="#64748b",
 #                 margin=dict(l=0,r=0,t=16,b=0), height=340,
 #                 showlegend=False, bargap=0.35,
 #                 yaxis=dict(title="MWh", showgrid=True, gridcolor="#f1f5f9",
@@ -12138,51 +12138,71 @@ st.set_page_config(page_title="Solar Dashboard · Fractal Energy",
 # ══════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
 :root{
-  /* ── Palette ── */
-  --navy:      #0a1628;
-  --navy2:     #0f2044;
-  --navy3:     #1a2f5a;
-  --teal:      #0d9488;
-  --teal-l:    #ccfbf1;
-  --teal-d:    #0f766e;
+  /* ── Orange / Amber / Warm palette ── */
+  --primary:   #ea580c;
+  --primary-l: #fff7ed;
+  --primary-d: #c2410c;
   --amber:     #f59e0b;
-  --amber-l:   #fef3c7;
-  --amber-d:   #d97706;
-  --orange:    #f97316;
-  --orange-l:  #ffedd5;
-  --red:       #ef4444;
+  --amber-l:   #fffbeb;
+  --amber-d:   #b45309;
+  --yellow:    #eab308;
+  --yellow-l:  #fefce8;
+
+  /* ── Semantic ── */
+  --green:     #16a34a;
+  --green-l:   #dcfce7;
+  --red:       #dc2626;
   --red-l:     #fee2e2;
-  --green:     #10b981;
-  --green-l:   #d1fae5;
-  --sky:       #38bdf8;
-  --sky-l:     #e0f2fe;
+  --blue:      #2563eb;
+  --blue-l:    #eff6ff;
 
   /* ── Surfaces ── */
-  --bg:        #f0f4f8;
+  --bg:        #faf7f3;
   --card:      #ffffff;
-  --border:    #e2e8f0;
-  --border2:   #cbd5e1;
+  --border:    #e7e5e4;
+  --border2:   #d6d3d1;
 
   /* ── Text ── */
-  --text:      #0f172a;
-  --text2:     #475569;
-  --text3:     #94a3b8;
+  --text:      #1c1917;
+  --text2:     #57534e;
+  --text3:     #a8a29e;
+
+  /* ── Sidebar ── */
+  --sb-bg:     #1c1917;
+  --sb-border: rgba(255,255,255,.07);
+
+  /* ── Shadows ── */
+  --shadow:    0 1px 3px rgba(28,25,23,.04),0 4px 16px rgba(28,25,23,.04);
+  --shadow-lg: 0 8px 32px rgba(28,25,23,.10);
+  --shadow-p:  0 4px 20px rgba(234,88,12,.22);
+
+  /* ── legacy aliases for old inline HTML ── */
+  --navy:      #1c1917;
+  --navy2:     #292524;
+  --navy3:     #292524;
+  --teal:      #ea580c;
+  --teal-l:    #fff7ed;
+  --teal-d:    #c2410c;
+  --orange:    #f59e0b;
+  --orange-l:  #fffbeb;
+  --sky:       #f59e0b;
+  --sky-l:     #fffbeb;
 
   /* ── Shadows ── */
   --shadow:    0 1px 4px rgba(10,22,40,.06),0 4px 20px rgba(10,22,40,.05);
   --shadow-lg: 0 8px 40px rgba(10,22,40,.12);
-  --shadow-teal:0 4px 20px rgba(13,148,136,.25);
+  --shadow-teal:0 4px 20px rgba(234,88,12,.25);
 }
 
 /* ── Fonts ── */
 html,body,[data-testid="stAppViewContainer"]{
   background:var(--bg)!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:'Inter',sans-serif!important;
   color:var(--text);
 }
 [data-testid="stHeader"]{background:transparent!important;display:none;}
@@ -12192,114 +12212,206 @@ html,body,[data-testid="stAppViewContainer"]{
 
 /* ══ SIDEBAR ══════════════════════════════════════════════ */
 [data-testid="stSidebar"]{
-  background:var(--navy)!important;
-  border-right:1px solid rgba(255,255,255,.06)!important;
+  background:var(--sb-bg)!important;
+  border-right:1px solid var(--sb-border)!important;
 }
 [data-testid="stSidebar"]>div{padding-top:0!important;}
 section[data-testid="stSidebarContent"]{padding:0!important;}
 
 .sb-logo{
-  padding:24px 20px 18px;
-  border-bottom:1px solid rgba(255,255,255,.07);
-  margin-bottom:6px;
-  display:flex;align-items:center;gap:12px;
+  padding:22px 18px 16px;
+  border-bottom:1px solid var(--sb-border);
+  margin-bottom:4px;
+  display:flex;align-items:center;gap:11px;
 }
 .sb-logo-icon{
-  width:42px;height:42px;background:linear-gradient(135deg,var(--teal),var(--teal-d));
-  border-radius:12px;display:flex;align-items:center;justify-content:center;
-  font-size:20px;flex-shrink:0;box-shadow:var(--shadow-teal);
+  width:40px;height:40px;
+  background:linear-gradient(135deg,var(--primary),var(--amber));
+  border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;box-shadow:var(--shadow-p);
 }
-.sb-logo-title{color:#fff;font-weight:800;font-size:15px;letter-spacing:-.3px;}
-.sb-logo-sub{color:#64748b;font-size:11px;margin-top:1px;}
+.sb-logo-title{color:#fafaf9;font-weight:700;font-size:14px;letter-spacing:-.2px;}
+.sb-logo-sub{color:#78716c;font-size:11px;margin-top:1px;}
 .sb-section{
-  padding:14px 20px 4px;
-  font-size:10px;font-weight:700;color:#334155;
-  text-transform:uppercase;letter-spacing:.12em;
+  padding:16px 18px 5px;
+  font-size:9.5px;font-weight:700;color:#57534e;
+  text-transform:uppercase;letter-spacing:.13em;
 }
 .sb-time{
-  padding:14px 20px;font-size:11px;color:#475569;
-  border-top:1px solid rgba(255,255,255,.06);margin-top:6px;
-  font-family:'JetBrains Mono',monospace;
+  padding:12px 18px;font-size:10.5px;color:#57534e;
+  border-top:1px solid var(--sb-border);margin-top:6px;
+  font-family:'JetBrains Mono',monospace;line-height:1.6;
+}
+
+/* ── Sidebar radio nav ── */
+[data-testid="stSidebar"] [data-testid="stRadio"]>div{gap:2px!important;}
+[data-testid="stSidebar"] [data-testid="stRadio"] label{
+  border-radius:8px!important;padding:9px 14px!important;
+  font-size:13px!important;font-weight:500!important;
+  color:#a8a29e!important;transition:all .15s!important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{
+  background:rgba(255,255,255,.06)!important;color:#fafaf9!important;
 }
 
 /* ══ LOGIN PAGE ═══════════════════════════════════════════ */
-.login-wrap{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 50%,#0d2b4e 100%);
-  padding:20px;
+.login-split{min-height:100vh;display:flex;}
+.login-left{
+  flex:0 0 42%;
+  background:linear-gradient(160deg,#1c1917 0%,#292524 60%,#1a1816 100%);
+  padding:60px 48px;display:flex;flex-direction:column;justify-content:center;
+  position:relative;overflow:hidden;
 }
-.login-card{
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.1);
-  border-radius:20px;padding:48px 44px;width:100%;max-width:420px;
-  backdrop-filter:blur(20px);
-  box-shadow:0 20px 60px rgba(0,0,0,.4);
+.login-left::before{
+  content:'';position:absolute;top:-120px;right:-80px;width:380px;height:380px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(234,88,12,.18) 0%,transparent 70%);
 }
-.login-logo{
-  width:60px;height:60px;
-  background:linear-gradient(135deg,var(--teal),var(--teal-d));
-  border-radius:16px;display:flex;align-items:center;justify-content:center;
-  font-size:28px;margin:0 auto 20px;
-  box-shadow:0 8px 24px rgba(13,148,136,.4);
+.login-left::after{
+  content:'';position:absolute;bottom:-100px;left:-60px;width:300px;height:300px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);
 }
-.login-title{
-  font-size:24px;font-weight:800;color:#fff;text-align:center;
+.login-brand-icon{
+  width:54px;height:54px;
+  background:linear-gradient(135deg,var(--primary),var(--amber));
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:26px;margin-bottom:18px;
+  box-shadow:0 8px 24px rgba(234,88,12,.3);position:relative;z-index:1;
+}
+.login-brand-name{
+  font-size:28px;font-weight:800;color:#fafaf9;letter-spacing:-.5px;
+  margin-bottom:6px;position:relative;z-index:1;
+}
+.login-brand-sub{
+  font-size:14px;color:#78716c;line-height:1.6;margin-bottom:44px;
+  max-width:280px;position:relative;z-index:1;
+}
+.login-stat-row{display:flex;gap:14px;flex-wrap:wrap;position:relative;z-index:1;}
+.login-stat-card{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
+  border-radius:12px;padding:16px 18px;min-width:86px;
+}
+.login-stat-val{font-size:22px;font-weight:800;color:#fb923c;line-height:1;}
+.login-stat-lbl{font-size:11px;color:#78716c;margin-top:4px;line-height:1.3;}
+.login-right{
+  flex:1;background:#fff;padding:60px 52px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.login-right-inner{max-width:360px;}
+.login-right-title{
+  font-size:24px;font-weight:800;color:var(--text);
   letter-spacing:-.4px;margin-bottom:6px;
 }
-.login-sub{font-size:13px;color:#64748b;text-align:center;margin-bottom:32px;}
-.login-label{font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:6px;}
-.login-error{
-  background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
-  border-radius:8px;padding:10px 14px;font-size:13px;color:#fca5a5;
-  margin-bottom:16px;text-align:center;
+.login-right-sub{font-size:14px;color:var(--text3);margin-bottom:28px;}
+.login-roles{
+  margin-top:18px;font-size:12px;color:var(--text3);
+  padding-top:14px;border-top:1px solid var(--border);
+}
+/* right panel input styles */
+.login-right [data-testid="stTextInput"] input{
+  background:#faf7f3!important;border:1.5px solid var(--border2)!important;
+  border-radius:9px!important;font-size:14px!important;
+  transition:border-color .15s!important;
+}
+.login-right [data-testid="stTextInput"] input:focus{
+  border-color:var(--primary)!important;
+  box-shadow:0 0 0 3px rgba(234,88,12,.1)!important;
+}
+.login-right .stButton>button{
+  width:100%!important;padding:13px!important;font-size:15px!important;
 }
 
 /* ══ PAGE HEADER ══════════════════════════════════════════ */
 .page-hdr{margin-bottom:24px;}
-.page-hdr h1{
-  font-size:24px;font-weight:800;color:var(--text);
-  letter-spacing:-.5px;line-height:1.2;
-}
+.page-hdr h1{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.5px;}
 .page-hdr p{font-size:13px;color:var(--text3);margin-top:4px;}
+
+/* ══ TOP NAV BAR ══════════════════════════════════════════ */
+.top-nav{
+  background:var(--sb-bg);border-radius:12px;
+  padding:0 20px;margin-bottom:22px;height:50px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 10px rgba(0,0,0,.12);
+}
+.top-nav-brand{
+  display:flex;align-items:center;gap:9px;
+  font-size:14px;font-weight:700;color:#fafaf9;
+}
+.top-nav-brand span{
+  width:28px;height:28px;
+  background:linear-gradient(135deg,var(--primary),var(--amber));
+  border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;
+}
+.top-nav-page{
+  font-size:13px;font-weight:600;color:#a8a29e;
+}
+.top-nav-user{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,var(--primary),var(--amber));
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;
+}
 
 /* ══ KPI CARDS ════════════════════════════════════════════ */
 .kpi-card{
-  background:var(--card);border-radius:16px;padding:24px 22px;
+  background:var(--card);border-radius:14px;padding:22px 20px;
   border:1px solid var(--border);box-shadow:var(--shadow);
-  display:flex;gap:16px;align-items:flex-start;
-  transition:transform .15s,box-shadow .15s;
-  position:relative;overflow:hidden;
+  position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;
 }
 .kpi-card::after{
   content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--teal),var(--sky));
-  border-radius:16px 16px 0 0;
+  background:linear-gradient(90deg,var(--primary),var(--amber));
+  border-radius:14px 14px 0 0;
 }
-.kpi-card.amber::after{background:linear-gradient(90deg,var(--amber),var(--orange));}
-.kpi-card.green::after{background:linear-gradient(90deg,var(--green),var(--teal));}
-.kpi-card.navy::after{background:linear-gradient(90deg,var(--navy3),var(--sky));}
+.kpi-card.amber::after{background:linear-gradient(90deg,var(--amber),var(--yellow));}
+.kpi-card.green::after{background:linear-gradient(90deg,#16a34a,#4ade80);}
+.kpi-card.blue::after {background:linear-gradient(90deg,#2563eb,#60a5fa);}
+.kpi-card.navy::after {background:linear-gradient(90deg,var(--primary),var(--amber));}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
 
 .kpi-icon{
-  width:50px;height:50px;border-radius:13px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:22px;
+  width:46px;height:46px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  margin-bottom:12px;
 }
-.kpi-icon.teal  {background:var(--teal-l);color:var(--teal);}
+.kpi-icon.teal  {background:var(--primary-l);color:var(--primary);}
+.kpi-icon.orange{background:var(--primary-l);color:var(--primary);}
 .kpi-icon.amber {background:var(--amber-l);color:var(--amber-d);}
 .kpi-icon.green {background:var(--green-l);color:var(--green);}
-.kpi-icon.navy  {background:var(--sky-l);color:#0284c7;}
+.kpi-icon.navy  {background:var(--amber-l);color:var(--amber-d);}
 
 .kpi-label{
-  font-size:11px;color:var(--text3);font-weight:700;
-  text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;
+  font-size:10.5px;color:var(--text3);font-weight:600;
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;
 }
-.kpi-value{
-  font-size:28px;font-weight:800;color:var(--text);
-  line-height:1;letter-spacing:-.5px;
-}
+.kpi-value{font-size:28px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-.5px;}
 .kpi-unit{font-size:14px;font-weight:600;color:var(--text2);margin-left:3px;}
 .kpi-meta{font-size:12px;color:var(--text3);margin-top:8px;line-height:1.4;}
-.kpi-meta b{color:var(--teal);font-weight:600;}
+.kpi-meta b{color:var(--primary);font-weight:600;}
+
+/* ══ ALARM CARDS ══════════════════════════════════════════ */
+.alarm-card{
+  background:var(--card);border-radius:12px;padding:14px 16px;
+  border:1px solid var(--border);border-left:4px solid var(--border2);
+  margin-bottom:9px;display:flex;gap:12px;align-items:flex-start;
+  box-shadow:var(--shadow);
+}
+.alarm-card.critical{border-left-color:var(--red);background:linear-gradient(90deg,#fff5f5,#fff);}
+.alarm-card.warning {border-left-color:var(--amber);background:linear-gradient(90deg,#fffbf0,#fff);}
+.alarm-card.info    {border-left-color:var(--blue);background:linear-gradient(90deg,#f0f7ff,#fff);}
+.alarm-icon{width:30px;height:30px;border-radius:7px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.alarm-icon.critical{background:var(--red-l);color:var(--red);}
+.alarm-icon.warning {background:var(--amber-l);color:var(--amber-d);}
+.alarm-icon.info    {background:var(--blue-l);color:var(--blue);}
+.alarm-title{font-size:13px;font-weight:700;color:var(--text);}
+.alarm-meta{font-size:11px;color:var(--text3);margin-top:3px;}
+.alarm-badge{margin-left:auto;padding:3px 9px;border-radius:6px;
+  font-size:11px;font-weight:700;flex-shrink:0;}
+.alarm-badge.critical{background:var(--red-l);color:var(--red);}
+.alarm-badge.warning {background:var(--amber-l);color:var(--amber-d);}
+.alarm-badge.info    {background:var(--blue-l);color:var(--blue);}
 
 /* ══ SECTION HEADER ═══════════════════════════════════════ */
 .sec-hdr{
@@ -12310,7 +12422,7 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
 }
 .sec-hdr-dot{
   width:8px;height:8px;border-radius:50%;
-  background:linear-gradient(135deg,var(--teal),var(--sky));
+  background:linear-gradient(135deg,var(--primary),var(--amber));
   flex-shrink:0;
 }
 
@@ -12326,7 +12438,7 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
   border:1px solid var(--border);box-shadow:var(--shadow);
   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
 }
-.inv-card:hover{border-color:var(--teal);box-shadow:var(--shadow-teal);}
+.inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
 .inv-card.alert-card{border-left:3px solid var(--red);}
 .inv-header{
   display:flex;justify-content:space-between;align-items:flex-start;
@@ -12366,7 +12478,7 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
 .tbl-row:hover{background:#f8fafc;}
 .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-.cell-link{color:var(--teal);font-weight:700;cursor:pointer;font-size:13px;}
+.cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
 /* ══ BADGES ═══════════════════════════════════════════════ */
 .badge{
@@ -12424,15 +12536,15 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
 
 /* ══ STREAMLIT OVERRIDES ══════════════════════════════════ */
 .stButton>button{
-  background:linear-gradient(135deg,var(--teal),var(--teal-d))!important;
+  background:linear-gradient(135deg,var(--primary),var(--primary-d))!important;
   color:#fff!important;border:none!important;border-radius:10px!important;
-  font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-family:'Inter',sans-serif!important;
   font-weight:700!important;font-size:13px!important;
   padding:10px 24px!important;letter-spacing:.01em!important;
-  box-shadow:0 4px 12px rgba(13,148,136,.3)!important;
+  box-shadow:0 4px 12px rgba(234,88,12,.3)!important;
   transition:all .15s!important;
 }
-.stButton>button:hover{transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(13,148,136,.4)!important;}
+.stButton>button:hover{transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(234,88,12,.4)!important;}
 div[data-testid="stSelectbox"]>label,
 div[data-testid="stTextInput"]>label{
   font-size:12px!important;font-weight:700!important;
@@ -12443,7 +12555,7 @@ div[data-testid="stTextInput"]>label{
 .stAlert{border-radius:12px!important;}
 div[data-testid="stTextInput"] input{
   border-radius:10px!important;border-color:var(--border2)!important;
-  font-size:14px!important;font-family:'Plus Jakarta Sans',sans-serif!important;
+  font-size:14px!important;font-family:'Inter',sans-serif!important;
 }
 div[data-testid="stSelectbox"]>div>div{
   border-radius:10px!important;border-color:var(--border2)!important;
@@ -12451,14 +12563,24 @@ div[data-testid="stSelectbox"]>div>div{
 }
 
 /* ══ LOGIN STREAMLIT INPUT OVERRIDES ═══════════════════════ */
-.login-page [data-testid="stTextInput"] input{
-  background:rgba(255,255,255,.08)!important;
-  border:1px solid rgba(255,255,255,.15)!important;
-  border-radius:10px!important;color:#fff!important;
+/* Applied when sidebar is hidden = login / loading screens */
+[data-testid="stSidebar"]:not([style*="visible"]) ~ * div[data-testid="stTextInput"] input,
+.login-inputs div[data-testid="stTextInput"] input{
+  background:rgba(255,255,255,.07)!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:10px!important;color:#fafaf9!important;
   font-size:14px!important;padding:12px 14px!important;
 }
-.login-page .stButton>button{
+.login-inputs div[data-testid="stTextInput"] input:focus{
+  border-color:rgba(234,88,12,.6)!important;
+  box-shadow:0 0 0 3px rgba(234,88,12,.15)!important;
+}
+.login-inputs div[data-testid="stTextInput"]>label{
+  color:rgba(255,255,255,.5)!important;
+}
+.login-inputs .stButton>button{
   width:100%!important;padding:14px!important;font-size:15px!important;
+  box-shadow:0 6px 20px rgba(234,88,12,.4)!important;
 }
 
 /* ══ DIVIDER ══════════════════════════════════════════════ */
@@ -12508,31 +12630,72 @@ if not st.session_state.logged_in:
     st.markdown(DARK_PAGE_CSS, unsafe_allow_html=True)
     st.markdown("""
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#0a1628 0%,#0f2044 55%,#0d2b4e 100%);padding:20px;">
-      <div style="width:100%;max-width:420px;">
-        <div style="text-align:center;margin-bottom:32px;">
-          <div style="width:68px;height:68px;background:linear-gradient(135deg,#0d9488,#0f766e);
-            border-radius:18px;display:flex;align-items:center;justify-content:center;
-            font-size:32px;margin:0 auto 16px;box-shadow:0 8px 24px rgba(13,148,136,.4);">☀️</div>
-          <div style="font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px;">Solar Dashboard</div>
-          <div style="font-size:13px;color:#64748b;margin-top:6px;">Fractal Energy · Monitoring Platform</div>
+    background:linear-gradient(135deg,#1c1917 0%,#292524 55%,#1a1816 100%);padding:20px;
+    position:fixed;top:0;left:0;right:0;bottom:0;">
+      <!-- ambient glows -->
+      <div style="position:absolute;top:10%;left:50%;transform:translateX(-50%);
+        width:500px;height:500px;border-radius:50%;
+        background:radial-gradient(circle,rgba(234,88,12,.08) 0%,transparent 65%);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:5%;right:10%;width:350px;height:350px;border-radius:50%;
+        background:radial-gradient(circle,rgba(245,158,11,.06) 0%,transparent 65%);pointer-events:none;"></div>
+      <div style="width:100%;max-width:440px;position:relative;z-index:1;">
+        <!-- icon + brand -->
+        <div style="text-align:center;margin-bottom:28px;">
+          <div style="width:72px;height:72px;
+            background:linear-gradient(135deg,#ea580c,#f59e0b);
+            border-radius:20px;display:flex;align-items:center;justify-content:center;
+            font-size:34px;margin:0 auto 18px;
+            box-shadow:0 10px 32px rgba(234,88,12,.45);">☀️</div>
+          <div style="font-size:27px;font-weight:800;color:#fafaf9;letter-spacing:-.5px;">Solar Dashboard</div>
+          <div style="font-size:13px;color:#78716c;margin-top:6px;">Fractal Energy · Monitoring Platform</div>
         </div>
-        <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
-          border-radius:20px;padding:36px 32px;backdrop-filter:blur(20px);
-          box-shadow:0 20px 60px rgba(0,0,0,.4);">
+        <!-- stat pills -->
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:28px;">
+          <div style="background:rgba(234,88,12,.13);border:1px solid rgba(234,88,12,.25);
+            border-radius:10px;padding:10px 18px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#fb923c;line-height:1;">Live</div>
+            <div style="font-size:10px;color:#78716c;margin-top:3px;">Monitoring</div>
+          </div>
+          <div style="background:rgba(234,88,12,.13);border:1px solid rgba(234,88,12,.25);
+            border-radius:10px;padding:10px 18px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#fb923c;line-height:1;">24/7</div>
+            <div style="font-size:10px;color:#78716c;margin-top:3px;">Uptime</div>
+          </div>
+          <div style="background:rgba(234,88,12,.13);border:1px solid rgba(234,88,12,.25);
+            border-radius:10px;padding:10px 18px;text-align:center;">
+            <div style="font-size:16px;font-weight:800;color:#fb923c;line-height:1;">Auto</div>
+            <div style="font-size:10px;color:#78716c;margin-top:3px;">Refresh</div>
+          </div>
+        </div>
+        <!-- form card -->
+        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+          border-radius:20px;padding:36px 34px;backdrop-filter:blur(20px);
+          box-shadow:0 24px 64px rgba(0,0,0,.5);">
+          <div style="font-size:16px;font-weight:700;color:#e7e5e4;margin-bottom:18px;">Sign in to continue</div>
     """, unsafe_allow_html=True)
-    email    = st.text_input("Email Address", placeholder="your@email.com")
-    password = st.text_input("Password",      placeholder="••••••••", type="password")
-    if st.button("Sign In →", use_container_width=True):
-        if email in USERS and USERS[email] == password:
-            st.session_state.logged_in = True
-            st.session_state.user      = email
-            st.rerun()
-        else:
-            st.error("Invalid email or password.")
-    st.markdown("""<div style="text-align:center;margin-top:20px;font-size:12px;color:#475569;">
-      Secured by Fractal Energy · v2.0</div></div></div></div>""",
-    unsafe_allow_html=True)
+
+    with st.container():
+        st.markdown('<div class="login-inputs">', unsafe_allow_html=True)
+        email    = st.text_input("Email Address", placeholder="your@email.com",
+                                 label_visibility="visible")
+        password = st.text_input("Password", placeholder="••••••••", type="password",
+                                 label_visibility="visible")
+        if st.button("Sign In →", use_container_width=True):
+            if email in USERS and USERS[email] == password:
+                st.session_state.logged_in = True
+                st.session_state.user      = email
+                st.rerun()
+            else:
+                st.error("Invalid email or password.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+          <div style="text-align:center;margin-top:18px;font-size:11.5px;color:#57534e;
+            padding-top:14px;border-top:1px solid rgba(255,255,255,.07);">
+            Secured by Fractal Energy &nbsp;·&nbsp; v2.0</div>
+        </div>
+      </div>
+    </div>""", unsafe_allow_html=True)
     st.stop()
 
 # ══════════════════════════════════════════════════════════════
@@ -12575,11 +12738,14 @@ if not st.session_state.plant_selected:
 
     st.markdown("""
     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#0a1628 0%,#0f2044 55%,#0d2b4e 100%);">
+    background:linear-gradient(135deg,#1c1917 0%,#292524 55%,#1a1816 100%);
+    position:fixed;top:0;left:0;right:0;bottom:0;">
       <div style="text-align:center;color:#fff;">
-        <div style="font-size:40px;margin-bottom:16px;">☀️</div>
-        <div style="font-size:20px;font-weight:700;">Loading your plants…</div>
-        <div style="font-size:13px;color:#64748b;margin-top:8px;">Connecting to Solis & Growatt</div>
+        <div style="width:72px;height:72px;background:linear-gradient(135deg,#ea580c,#f59e0b);
+          border-radius:20px;display:flex;align-items:center;justify-content:center;
+          font-size:34px;margin:0 auto 20px;box-shadow:0 10px 32px rgba(234,88,12,.4);">☀️</div>
+        <div style="font-size:20px;font-weight:700;color:#fafaf9;">Loading your plants…</div>
+        <div style="font-size:13px;color:#78716c;margin-top:8px;">Connecting to Solis &amp; Growatt</div>
       </div>
     </div>""", unsafe_allow_html=True)
 
@@ -12637,7 +12803,7 @@ def earn(kwh):
 def chart_style(fig, h=300):
     fig.update_layout(
         plot_bgcolor="#fff", paper_bgcolor="#fff",
-        font_color="#64748b", font_family="Plus Jakarta Sans",
+        font_color="#64748b", font_family="Inter",
         margin=dict(l=0,r=0,t=16,b=0), height=h,
         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
         bargap=0.28,
@@ -12649,7 +12815,7 @@ def chart_style(fig, h=300):
                      tickfont_size=11, tickfont_color="#94a3b8")
     return fig
 
-PALETTE = ["#0d9488","#f59e0b","#3b82f6","#f97316","#10b981","#8b5cf6","#06b6d4","#ec4899"]
+PALETTE = ["#ea580c","#f59e0b","#3b82f6","#f97316","#10b981","#8b5cf6","#06b6d4","#ec4899"]
 BRAND_COLORS = {"Solis":"#3b82f6","Growatt":"#10b981","Sungrow":"#f97316"}
 
 def sec(title, icon=""):
@@ -12724,8 +12890,8 @@ with st.sidebar:
         st.markdown(f"""
         <div class="sb-time">
           ⏱ {datetime.now().strftime('%d %b %Y')}<br>
-          <b style="color:#94a3b8;">{datetime.now().strftime('%H:%M:%S')}</b><br>
-          <span style="color:#334155;">Auto-refresh {REFRESH_INTERVAL_SECONDS//60} min</span>
+          <b style="color:#a8a29e;">{datetime.now().strftime('%H:%M:%S')}</b><br>
+          <span style="color:#78716c;">Auto-refresh {REFRESH_INTERVAL_SECONDS//60} min</span>
         </div>""", unsafe_allow_html=True)
 
 # ── Fetch data (only when plant_selected) ────────────────────
@@ -12934,21 +13100,21 @@ if page == "Plants":
             _td = float(_filt["today_kwh"].sum())
             _tt = float(_filt["total_kwh"].sum())
             st.markdown(f"""
-<div style="background:linear-gradient(135deg,#0a1628 0%,#1e3a5f 100%);border-radius:12px;
+<div style="background:linear-gradient(135deg,#1c1917 0%,#292524 100%);border-radius:12px;
   padding:16px 24px;display:flex;gap:28px;flex-wrap:wrap;margin:10px 0 8px;">
-  <div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;">Plants</div>
-    <div style="font-size:22px;font-weight:800;color:#fff;">{len(_filt)}</div></div>
-  <div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;">Live Power</div>
-    <div style="font-size:22px;font-weight:800;color:#0d9488;">{_tp:.1f}
-      <span style="font-size:12px;font-weight:400;color:#64748b;">kW</span></div></div>
-  <div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;">Today's Yield</div>
-    <div style="font-size:22px;font-weight:800;color:#f59e0b;">{_td:.1f}
-      <span style="font-size:12px;font-weight:400;color:#64748b;">kWh</span></div></div>
-  <div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;">Today's Earning</div>
-    <div style="font-size:22px;font-weight:800;color:#7c3aed;">{earn(_td)}</div></div>
-  <div><div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.6px;">Total Yield</div>
-    <div style="font-size:22px;font-weight:800;color:#3b82f6;">{_tt:.1f}
-      <span style="font-size:12px;font-weight:400;color:#64748b;">MWh</span></div></div>
+  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Plants</div>
+    <div style="font-size:22px;font-weight:800;color:#fafaf9;">{len(_filt)}</div></div>
+  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Live Power</div>
+    <div style="font-size:22px;font-weight:800;color:#fb923c;">{_tp:.1f}
+      <span style="font-size:12px;font-weight:400;color:#78716c;">kW</span></div></div>
+  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Today's Yield</div>
+    <div style="font-size:22px;font-weight:800;color:#fcd34d;">{_td:.1f}
+      <span style="font-size:12px;font-weight:400;color:#78716c;">kWh</span></div></div>
+  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Today's Earning</div>
+    <div style="font-size:22px;font-weight:800;color:#f59e0b;">{earn(_td)}</div></div>
+  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Total Yield</div>
+    <div style="font-size:22px;font-weight:800;color:#60a5fa;">{_tt:.1f}
+      <span style="font-size:12px;font-weight:400;color:#78716c;">MWh</span></div></div>
 </div>""", unsafe_allow_html=True)
 
             # ── Submit button ─────────────────────────────────
@@ -13260,14 +13426,14 @@ elif page == "Overview":
                     {"range": [_gmax*0.33,  _gmax*0.66], "color": "#fef9c3"},
                     {"range": [_gmax*0.66,  _gmax],      "color": "#fff7ed"},
                 ],
-                "threshold": {"line":  {"color": "#0d9488", "width": 3},
+                "threshold": {"line":  {"color": "#ea580c", "width": 3},
                               "thickness": 0.78, "value": total_power},
             }
         ))
         _gfig.update_layout(
             height=210, margin=dict(l=16, r=16, t=20, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
-            font_family="Plus Jakarta Sans",
+            font_family="Inter",
         )
         if _cap_kw > 0:
             _gfig.add_annotation(
@@ -13284,9 +13450,9 @@ elif page == "Overview":
              f"{daily_kwh/1000:.3f} MWh" if daily_kwh >= 1000 else f"{daily_kwh:.1f} kWh",
              earn(daily_kwh), "#f59e0b", "#fffbeb"),
             ("Monthly Yield", f"{monthly_mwh:.3f} MWh",
-             earn(monthly_kwh), "#0d9488", "#f0fdf4"),
+             earn(monthly_kwh), "#ea580c", "#fff7ed"),
             ("Annual Yield",  f"{annual_mwh:.3f} MWh",
-             earn(annual_mwh * 1000), "#7c3aed", "#faf5ff"),
+             earn(annual_mwh * 1000), "#f59e0b", "#fffbeb"),
             ("Total Yield",
              f"{total_mwh/1000:.3f} GWh" if total_mwh >= 1000 else f"{total_mwh:.3f} MWh",
              earn(total_mwh * 1000), "#3b82f6", "#eff6ff"),
@@ -13356,7 +13522,7 @@ elif page == "Overview":
                 ))
                 _fd.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font_family="Plus Jakarta Sans", font_color="#64748b",
+                    font_family="Inter", font_color="#64748b",
                     margin=dict(l=0, r=0, t=8, b=50), height=310,
                     hovermode="x unified", showlegend=False,
                     xaxis=dict(
@@ -13444,18 +13610,18 @@ elif page == "Overview":
                 _fm = go.Figure()
                 _fm.add_trace(go.Bar(
                     x=_dm_df[_dx], y=_dm_df["energy_kwh"],
-                    marker_color="rgba(13,148,136,.65)", name="Daily",
+                    marker_color="rgba(234,88,12,.65)", name="Daily",
                     marker_cornerradius=3,
                     hovertemplate="%{x|%d %b}<br><b>%{y:.1f} kWh</b><extra></extra>",
                 ))
                 _fm.add_trace(go.Scatter(
                     x=_dm_df[_dx], y=_dm_df["energy_kwh"],
-                    line=dict(color="#0d9488", width=2), mode="lines+markers",
+                    line=dict(color="#ea580c", width=2), mode="lines+markers",
                     marker=dict(size=4), name="Trend",
                 ))
                 _fm.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font_family="Plus Jakarta Sans", font_color="#64748b",
+                    font_family="Inter", font_color="#64748b",
                     margin=dict(l=0, r=0, t=8, b=0), height=270,
                     bargap=0.28, hovermode="x unified", showlegend=False,
                     xaxis=dict(showgrid=False, tickformat="%d %b", zeroline=False),
@@ -13529,18 +13695,18 @@ elif page == "Overview":
                     _fy = go.Figure()
                     _fy.add_trace(go.Bar(
                         x=_yr_df[_xc], y=_yr_df["energy_kwh"],
-                        marker_color="rgba(124,58,237,.65)", name="Monthly",
+                        marker_color="rgba(245,158,11,.65)", name="Monthly",
                         marker_cornerradius=3,
                         hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
                     ))
                     _fy.add_trace(go.Scatter(
                         x=_yr_df[_xc], y=_yr_df["energy_kwh"],
-                        line=dict(color="#7c3aed", width=2), mode="lines+markers",
+                        line=dict(color="#f59e0b", width=2), mode="lines+markers",
                         marker=dict(size=5), name="Trend",
                     ))
                     _fy.update_layout(
                         plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font_family="Plus Jakarta Sans", font_color="#64748b",
+                        font_family="Inter", font_color="#64748b",
                         margin=dict(l=0, r=0, t=8, b=0), height=270,
                         bargap=0.3, hovermode="x unified", showlegend=False,
                         xaxis=dict(showgrid=False, zeroline=False),
@@ -13660,7 +13826,7 @@ elif page == "Overview":
     <div style="font-size:10px;color:#94a3b8;">{_ipn}</div>
   </div>
   <div style="text-align:right;">
-    <div style="font-size:12px;font-weight:700;color:#0d9488;">{_ipwr:.1f} kW</div>
+    <div style="font-size:12px;font-weight:700;color:#ea580c;">{_ipwr:.1f} kW</div>
     <div style="font-size:10px;font-weight:600;color:{_ic};">
       {'● ' + str(_inv.get('status','—')).capitalize()}</div>
   </div>
@@ -13946,7 +14112,7 @@ elif page == "Report":
                 ))
                 fig.update_layout(
                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font_family="Plus Jakarta Sans", font_color="#64748b",
+                    font_family="Inter", font_color="#64748b",
                     margin=dict(l=0,r=0,t=16,b=0), height=360,
                     hovermode="x unified", bargap=0.25,
                     legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -14028,15 +14194,15 @@ elif page == "Report":
             # Bar: yield
             fig.add_trace(go.Bar(
                 x=daily["Date"], y=daily["Daily Yield (kWh)"],
-                name="Yield (kWh)", marker_color="rgba(13,148,136,.25)",
+                name="Yield (kWh)", marker_color="rgba(234,88,12,.25)",
                 marker_line_width=0,
             ))
             # Line: yield trend
             fig.add_trace(go.Scatter(
                 x=daily["Date"], y=daily["Daily Yield (kWh)"],
                 name="Yield", mode="lines+markers",
-                line=dict(color="#0d9488", width=2.5),
-                marker=dict(size=5, color="#0d9488"),
+                line=dict(color="#ea580c", width=2.5),
+                marker=dict(size=5, color="#ea580c"),
             ))
             # Line: revenue (right axis)
             if "Income (INR)" in daily.columns:
@@ -14049,7 +14215,7 @@ elif page == "Report":
                 ))
             fig.update_layout(
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Plus Jakarta Sans", font_color="#64748b",
+                font_family="Inter", font_color="#64748b",
                 margin=dict(l=0,r=60,t=16,b=0), height=380,
                 hovermode="x unified", bargap=0.25,
                 legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
@@ -14109,7 +14275,7 @@ elif page == "Report":
             ))
             fig.update_layout(
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Plus Jakarta Sans", font_color="#64748b",
+                font_family="Inter", font_color="#64748b",
                 margin=dict(l=0,r=0,t=16,b=0), height=360,
                 hovermode="x unified", bargap=0.3,
                 legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -14143,7 +14309,7 @@ elif page == "Report":
                 ))
             fig.update_layout(
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Plus Jakarta Sans", font_color="#64748b",
+                font_family="Inter", font_color="#64748b",
                 margin=dict(l=0,r=0,t=16,b=0), height=340,
                 showlegend=False, bargap=0.35,
                 yaxis=dict(title="MWh", showgrid=True, gridcolor="#f1f5f9",
