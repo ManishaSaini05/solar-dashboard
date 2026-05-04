@@ -1104,20 +1104,29 @@ def get_plant_intraday_power(plant_id, date_str):
             "time":     date_str,
             "timeZone": 8,
         })
-        records = ((d or {}).get("data") or {}).get("records") or []
-        for r in records:
-            t_raw = r.get("time", "")
-            pwr   = float(r.get("power", 0) or 0)
+        # Handle multiple possible response structures
+        data_obj = (d or {}).get("data") or {}
+        if isinstance(data_obj, list):
+            recs = data_obj
+        else:
+            recs = (data_obj.get("records") or data_obj.get("data") or [])
+        for r in recs:
+            t_raw = r.get("time") or r.get("dataTimestamp") or r.get("ts") or ""
+            pwr   = float(r.get("power") or r.get("pac") or r.get("activePower") or 0)
             key   = str(t_raw)
-            power_by_key[key] = power_by_key.get(key, 0.0) + pwr
+            if key:
+                power_by_key[key] = power_by_key.get(key, 0.0) + pwr
 
     result = []
     for t_raw, pwr in sorted(power_by_key.items()):
         try:
-            if ":" in str(t_raw):
-                dt = _dt.strptime(f"{date_str} {t_raw}", "%Y-%m-%d %H:%M")
+            t_str = str(t_raw).strip()
+            if ":" in t_str and len(t_str) <= 5:
+                dt = _dt.strptime(f"{date_str} {t_str}", "%Y-%m-%d %H:%M")
+            elif t_str.isdigit() and len(t_str) > 8:
+                dt = _dt.fromtimestamp(int(t_str) / 1000)
             else:
-                dt = _dt.fromtimestamp(int(t_raw) / 1000)
+                dt = _dt.strptime(f"{date_str} {t_str}", "%Y-%m-%d %H:%M:%S")
             result.append({"time": dt, "power_kw": pwr})
         except Exception:
             continue
