@@ -1085,41 +1085,47 @@ def get_all_plants_daily(month_str):
 
 def _fetch_inverter_day_chart(sn, date_str):
     """
-    Call inverterPowerOneDayChart with fallback param variants.
-    Handles all known Solis response formats:
-      Format A – array of objects: [{time, power}, ...]
-      Format B – parallel arrays at data root: {time:[...], watt:[...]}
-      Format C – parallel arrays inside inverterPowerVo wrapper
-    Returns list of {"time": "HH:MM", "power_kw": float} dicts.
-    NOTE: Solis "watt" field is in WATTS — divide by 1000 to get kW.
+    Call inverterPowerOneDayChart with multiple param/format variants.
+    Returns (records, last_raw_response) where records is a list of
+    {"time": "HH:MM", "power_kw": float} dicts.
     """
     date_nodash = date_str.replace("-", "")
-    for body in [
-        {"sn": sn, "time": date_str,    "timeZone": 5},
-        {"sn": sn, "time": date_str,    "timeZone": 8},
+    last_raw = None
+    variants = [
+        {"sn": sn, "time": date_nodash, "timeZone": 8},
         {"sn": sn, "time": date_nodash, "timeZone": 5},
+        {"sn": sn, "time": date_str,    "timeZone": 8},
+        {"sn": sn, "time": date_str,    "timeZone": 5},
+        {"sn": sn, "time": date_nodash},
         {"sn": sn, "time": date_str},
-    ]:
+    ]
+    for body in variants:
         d = _post("/v1/api/inverterPowerOneDayChart", body)
-        data_obj = (d or {}).get("data") or {}
+        last_raw = d
+        if not d:
+            continue
+        # Check API-level error
+        if str(d.get("code", "0")) != "0":
+            continue
 
+        data_obj = d.get("data") or {}
         recs = []
 
-        # Format A: array of objects (power field already in kW)
+        # Format A: data is a list
         if isinstance(data_obj, list):
             recs = [{"time": str(r.get("time") or ""),
                      "power_kw": float(r.get("power") or r.get("pac") or 0)}
                     for r in data_obj if r.get("time")]
-        elif not recs:
+
+        # Format A2: data.records or data.data list of objects
+        if not recs:
             _raw = data_obj.get("records") or data_obj.get("data") or []
             if isinstance(_raw, list) and _raw:
                 recs = [{"time": str(r.get("time") or ""),
                          "power_kw": float(r.get("power") or r.get("pac") or 0)}
                         for r in _raw if r.get("time")]
 
-        # Format B: parallel arrays at data root
-        # Solis "watt" field: Solis API v1 returns Watts; v2 returns kW.
-        # Auto-detect: if max value > 100 it's likely Watts → divide by 1000.
+        # Format B: parallel arrays {time:[...], watt:[...]} at data root
         if not recs:
             t_arr = data_obj.get("time") or []
             w_arr = data_obj.get("watt") or []
@@ -1144,9 +1150,19 @@ def _fetch_inverter_day_chart(sn, date_str):
                 recs = [{"time": str(t), "power_kw": float(w or 0) / _wdiv}
                         for t, w in zip(t_arr, w_arr)]
 
+        # Filter zeros (before/after daylight hours) but keep records list
+        recs = [r for r in recs if r.get("time")]
         if recs:
-            return recs
-    return []
+            return recs, last_raw
+
+    return [], last_raw
+
+
+def fetch_day_chart_raw(sn, date_str):
+    """Return the raw API response for debugging."""
+    date_nodash = date_str.replace("-", "")
+    return _post("/v1/api/inverterPowerOneDayChart",
+                 {"sn": sn, "time": date_nodash, "timeZone": 8})
 
 
 def get_plant_intraday_power(plant_id, date_str):

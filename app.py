@@ -13559,6 +13559,7 @@ elif page == "Overview":
 
             # ── Step 1: pull full-day history from Solis API ─────────────
             _day_api_err = ""
+            _day_raw_resp = None
             if not df.empty and (_chart_brand or "Solis") == "Solis":
                 try:
                     from utils.solis_api import _fetch_inverter_day_chart as _fdayc
@@ -13572,7 +13573,7 @@ elif page == "Overview":
                               if s and str(s).strip() not in ("—", "nan", "", "None")]
                     _pw_a = {}
                     for _sn_a in _sns_a:
-                        _recs_a = _fdayc(_sn_a, _day_str_api)
+                        _recs_a, _day_raw_resp = _fdayc(_sn_a, _day_str_api)
                         for _r_a in _recs_a:
                             _t_a = str(_r_a.get("time") or _r_a.get("dataTimestamp")
                                        or _r_a.get("ts") or "")
@@ -13584,7 +13585,7 @@ elif page == "Overview":
                     if not _sns_a:
                         _day_api_err = "No inverter SN found in data"
                     elif not _pw_a:
-                        _day_api_err = f"API returned 0 points for SN(s): {', '.join(_sns_a)}"
+                        _day_api_err = f"0 points for SN(s): {', '.join(_sns_a)}"
                     if _pw_a:
                         _pts_a = []
                         for _t_a, _p_a in sorted(_pw_a.items()):
@@ -13714,10 +13715,16 @@ elif page == "Overview":
                 _nonzero_pts = int((_dp["power_kw"] > 0).sum())
                 _src_label = "✅ Solis API" if _day_src == "api" else "⚠️ Stored DB"
                 st.caption(f"Source: {_src_label} — {len(_dp)} points ({_nonzero_pts} with power > 0)"
-                           + (f"  |  API issue: {_day_api_err}" if _day_api_err and _day_src != "api" else ""))
+                           + (f"  |  API: {_day_api_err}" if _day_api_err and _day_src != "api" else ""))
             else:
                 st.info(f"No data for {_sel_date.strftime('%d %b %Y')} yet. "
                         "Data is stored automatically every 5 min while the app is running.")
+
+            # Always show raw API response expander so we can debug the format
+            if _day_raw_resp is not None:
+                import json as _json
+                with st.expander("🔍 Raw API response (for debugging)", expanded=(_day_src != "api")):
+                    st.json(_day_raw_resp)
 
         with _tab_mon:
             # Month + Year pickers — shows day-by-day breakdown within the month
