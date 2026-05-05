@@ -12131,7 +12131,7 @@ from utils.aggregator import fetch_all_brands, check_alerts
 # ─────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Solar Dashboard · Fractal Energy",
                    page_icon="☀️", layout="wide",
-                   initial_sidebar_state="expanded")
+                   initial_sidebar_state="collapsed")
 
 # ══════════════════════════════════════════════════════════════
 #  GLOBAL CSS  —  Navy · Teal · Amber theme
@@ -12143,64 +12143,64 @@ st.markdown("""
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
 :root{
-  /* ── Orange / Amber / Warm palette ── */
-  --primary:   #ea580c;
-  --primary-l: #fff7ed;
-  --primary-d: #c2410c;
-  --amber:     #f59e0b;
-  --amber-l:   #fffbeb;
-  --amber-d:   #b45309;
-  --yellow:    #eab308;
-  --yellow-l:  #fefce8;
+  /* ── Fractal Energy palette ── */
+  --primary:   #C85A00;
+  --primary-l: #FFF0E6;
+  --primary-d: #A84B00;
+  --amber:     #F5A623;
+  --amber-l:   #FFF8E8;
+  --amber-d:   #D4880A;
+  --yellow:    #F5A623;
+  --yellow-l:  #FFF8E8;
 
   /* ── Semantic ── */
   --green:     #16a34a;
   --green-l:   #dcfce7;
   --red:       #dc2626;
   --red-l:     #fee2e2;
-  --blue:      #2563eb;
-  --blue-l:    #eff6ff;
+  --blue:      #1A6FA8;
+  --blue-l:    #E6F1FB;
 
   /* ── Surfaces ── */
-  --bg:        #faf7f3;
+  --bg:        #f4f4f4;
   --card:      #ffffff;
-  --border:    #e7e5e4;
-  --border2:   #d6d3d1;
+  --border:    #e2e8f0;
+  --border2:   #cbd5e1;
 
   /* ── Text ── */
-  --text:      #1c1917;
-  --text2:     #57534e;
-  --text3:     #a8a29e;
+  --text:      #1a1a1a;
+  --text2:     #555555;
+  --text3:     #999999;
 
-  /* ── Sidebar ── */
-  --sb-bg:     #1c1917;
-  --sb-border: rgba(255,255,255,.07);
+  /* ── Sidebar (navy) ── */
+  --sb-bg:     #0D2B45;
+  --sb-border: rgba(255,255,255,.09);
 
   /* ── Shadows ── */
-  --shadow:    0 1px 3px rgba(28,25,23,.04),0 4px 16px rgba(28,25,23,.04);
-  --shadow-lg: 0 8px 32px rgba(28,25,23,.10);
-  --shadow-p:  0 4px 20px rgba(234,88,12,.22);
+  --shadow:    0 1px 3px rgba(13,43,69,.05),0 4px 16px rgba(13,43,69,.05);
+  --shadow-lg: 0 8px 32px rgba(13,43,69,.12);
+  --shadow-p:  0 4px 20px rgba(200,90,0,.25);
 
   /* ── legacy aliases for old inline HTML ── */
-  --navy:      #1c1917;
-  --navy2:     #292524;
-  --navy3:     #292524;
-  --teal:      #ea580c;
-  --teal-l:    #fff7ed;
-  --teal-d:    #c2410c;
-  --orange:    #f59e0b;
-  --orange-l:  #fffbeb;
-  --sky:       #f59e0b;
-  --sky-l:     #fffbeb;
+  --navy:      #0D2B45;
+  --navy2:     #0D2B45;
+  --navy3:     #0D2B45;
+  --teal:      #C85A00;
+  --teal-l:    #FFF0E6;
+  --teal-d:    #A84B00;
+  --orange:    #F5A623;
+  --orange-l:  #FFF8E8;
+  --sky:       #1A6FA8;
+  --sky-l:     #E6F1FB;
 
   /* ── Shadows ── */
-  --shadow:    0 1px 4px rgba(10,22,40,.06),0 4px 20px rgba(10,22,40,.05);
-  --shadow-lg: 0 8px 40px rgba(10,22,40,.12);
-  --shadow-teal:0 4px 20px rgba(234,88,12,.25);
+  --shadow:    0 1px 4px rgba(13,43,69,.06),0 4px 20px rgba(13,43,69,.05);
+  --shadow-lg: 0 8px 40px rgba(13,43,69,.12);
+  --shadow-teal:0 4px 20px rgba(200,90,0,.25);
 }
 
 /* ── Fonts ── */
-html,body,[data-testid="stAppViewContainer"]{
+html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"]{
   background:var(--bg)!important;
   font-family:'Inter',sans-serif!important;
   color:var(--text);
@@ -12208,50 +12208,16 @@ html,body,[data-testid="stAppViewContainer"]{
 [data-testid="stHeader"]{background:transparent!important;display:none;}
 #MainMenu,footer{visibility:hidden;}
 [data-testid="stDecoration"]{display:none;}
-.block-container{padding:28px 32px!important;max-width:100%!important;}
+.block-container{padding:0 28px 24px!important;max-width:100%!important;}
 
-/* ══ SIDEBAR ══════════════════════════════════════════════ */
-[data-testid="stSidebar"]{
-  background:var(--sb-bg)!important;
-  border-right:1px solid var(--sb-border)!important;
-}
-[data-testid="stSidebar"]>div{padding-top:0!important;}
-section[data-testid="stSidebarContent"]{padding:0!important;}
-
-.sb-logo{
-  padding:22px 18px 16px;
-  border-bottom:1px solid var(--sb-border);
-  margin-bottom:4px;
-  display:flex;align-items:center;gap:11px;
-}
-.sb-logo-icon{
-  width:40px;height:40px;
-  background:linear-gradient(135deg,var(--primary),var(--amber));
-  border-radius:10px;display:flex;align-items:center;justify-content:center;
-  font-size:18px;flex-shrink:0;box-shadow:var(--shadow-p);
-}
-.sb-logo-title{color:#fafaf9;font-weight:700;font-size:14px;letter-spacing:-.2px;}
-.sb-logo-sub{color:#78716c;font-size:11px;margin-top:1px;}
-.sb-section{
-  padding:16px 18px 5px;
-  font-size:9.5px;font-weight:700;color:#57534e;
-  text-transform:uppercase;letter-spacing:.13em;
-}
-.sb-time{
-  padding:12px 18px;font-size:10.5px;color:#57534e;
-  border-top:1px solid var(--sb-border);margin-top:6px;
-  font-family:'JetBrains Mono',monospace;line-height:1.6;
-}
-
-/* ── Sidebar radio nav ── */
-[data-testid="stSidebar"] [data-testid="stRadio"]>div{gap:2px!important;}
-[data-testid="stSidebar"] [data-testid="stRadio"] label{
-  border-radius:8px!important;padding:9px 14px!important;
-  font-size:13px!important;font-weight:500!important;
-  color:#a8a29e!important;transition:all .15s!important;
-}
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover{
-  background:rgba(255,255,255,.06)!important;color:#fafaf9!important;
+/* ══ SIDEBAR — hidden, replaced by top nav ══════════════════ */
+[data-testid="stSidebar"],
+[data-testid="stSidebarNav"],
+section[data-testid="stSidebar"],
+[data-testid="stSidebarCollapsedControl"],
+button[kind="headerNoPadding"]{
+  display:none!important;width:0!important;
+  visibility:hidden!important;overflow:hidden!important;
 }
 
 /* ══ LOGIN PAGE ═══════════════════════════════════════════ */
@@ -12310,16 +12276,32 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
 }
 /* right panel input styles */
 .login-right [data-testid="stTextInput"] input{
-  background:#faf7f3!important;border:1.5px solid var(--border2)!important;
-  border-radius:9px!important;font-size:14px!important;
+  background:#fafafa!important;border:1.5px solid #ddd!important;
+  border-radius:8px!important;font-size:14px!important;
   transition:border-color .15s!important;
 }
 .login-right [data-testid="stTextInput"] input:focus{
-  border-color:var(--primary)!important;
-  box-shadow:0 0 0 3px rgba(234,88,12,.1)!important;
+  border-color:#C85A00!important;
+  box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
 }
 .login-right .stButton>button{
   width:100%!important;padding:13px!important;font-size:15px!important;
+}
+/* login-inputs context (used in the split card) */
+.login-inputs [data-testid="stTextInput"] input{
+  background:#fafafa!important;border:1.5px solid #ddd!important;
+  border-radius:8px!important;font-size:14px!important;
+}
+.login-inputs [data-testid="stTextInput"] input:focus{
+  border-color:#C85A00!important;box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
+}
+.login-inputs [data-testid="stTextInput"]>label{
+  font-size:12px!important;font-weight:600!important;color:#666!important;
+  text-transform:none!important;letter-spacing:0!important;
+}
+.login-inputs .stButton>button{
+  width:100%!important;padding:12px!important;font-size:14px!important;
+  border-radius:8px!important;
 }
 
 /* ══ PAGE HEADER ══════════════════════════════════════════ */
@@ -12328,46 +12310,60 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
 .page-hdr p{font-size:13px;color:var(--text3);margin-top:4px;}
 
 /* ══ TOP NAV BAR ══════════════════════════════════════════ */
-.top-nav{
-  background:var(--sb-bg);border-radius:12px;
-  padding:0 20px;margin-bottom:22px;height:50px;
-  display:flex;align-items:center;justify-content:space-between;
-  box-shadow:0 2px 10px rgba(0,0,0,.12);
+[data-testid="stSidebar"],[data-testid="stSidebarNav"]{display:none!important;}
+.topnav{
+  background:#0D2B45;padding:0 22px;height:54px;
+  display:flex;align-items:center;
+  position:sticky;top:0;z-index:999;
+  margin:0 -28px 20px;
 }
-.top-nav-brand{
-  display:flex;align-items:center;gap:9px;
-  font-size:14px;font-weight:700;color:#fafaf9;
+.topnav-brand{
+  display:flex;align-items:center;gap:8px;margin-right:28px;
+  text-decoration:none;
 }
-.top-nav-brand span{
-  width:28px;height:28px;
-  background:linear-gradient(135deg,var(--primary),var(--amber));
-  border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;
+.topnav-brand-icon{font-size:20px;line-height:1;}
+.topnav-brand-text{display:flex;flex-direction:column;line-height:1.15;}
+.topnav-brand-name{font-size:13px;font-weight:700;color:#F5A623;}
+.topnav-brand-sub{font-size:10px;color:rgba(245,166,35,.5);}
+.ntab{
+  height:54px;padding:0 14px;display:flex;align-items:center;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.6);
+  text-decoration:none;border-bottom:2px solid transparent;
+  transition:color .15s,border-color .15s;white-space:nowrap;
 }
-.top-nav-page{
-  font-size:13px;font-weight:600;color:#a8a29e;
+.ntab:hover{color:#fff;border-bottom-color:rgba(245,166,35,.35);}
+.ntab.active{color:#fff;border-bottom-color:#F5A623;font-weight:600;}
+.nav-right{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.nav-bell{
+  position:relative;cursor:pointer;color:rgba(255,255,255,.75);
+  font-size:16px;line-height:1;text-decoration:none;display:block;
 }
-.top-nav-user{
-  width:32px;height:32px;
-  background:linear-gradient(135deg,var(--primary),var(--amber));
-  border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:700;color:#fff;
+.nav-bell-badge{
+  position:absolute;top:-5px;right:-7px;
+  background:#E24B4A;color:#fff;
+  font-size:9px;font-weight:700;
+  min-width:15px;height:15px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;padding:0 3px;
+}
+.nav-avatar{
+  width:30px;height:30px;border-radius:50%;
+  background:#C85A00;color:#fff;
+  font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
 }
 
 /* ══ KPI CARDS ════════════════════════════════════════════ */
 .kpi-card{
-  background:var(--card);border-radius:14px;padding:22px 20px;
+  background:var(--card);border-radius:10px;padding:18px 18px;
   border:1px solid var(--border);box-shadow:var(--shadow);
   position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;
+  border-left:3px solid var(--primary);
 }
-.kpi-card::after{
-  content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--primary),var(--amber));
-  border-radius:14px 14px 0 0;
-}
-.kpi-card.amber::after{background:linear-gradient(90deg,var(--amber),var(--yellow));}
-.kpi-card.green::after{background:linear-gradient(90deg,#16a34a,#4ade80);}
-.kpi-card.blue::after {background:linear-gradient(90deg,#2563eb,#60a5fa);}
-.kpi-card.navy::after {background:linear-gradient(90deg,var(--primary),var(--amber));}
+.kpi-card::after{content:none;}
+.kpi-card.amber{border-left-color:var(--amber);}
+.kpi-card.green{border-left-color:var(--green);}
+.kpi-card.blue {border-left-color:var(--blue);}
+.kpi-card.navy {border-left-color:var(--primary);}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
 
 .kpi-icon{
@@ -12397,9 +12393,9 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
   margin-bottom:9px;display:flex;gap:12px;align-items:flex-start;
   box-shadow:var(--shadow);
 }
-.alarm-card.critical{border-left-color:var(--red);background:linear-gradient(90deg,#fff5f5,#fff);}
-.alarm-card.warning {border-left-color:var(--amber);background:linear-gradient(90deg,#fffbf0,#fff);}
-.alarm-card.info    {border-left-color:var(--blue);background:linear-gradient(90deg,#f0f7ff,#fff);}
+.alarm-card.critical{border-left-color:#E24B4A;background:linear-gradient(90deg,#FFF5F5,#fff);}
+.alarm-card.warning {border-left-color:#EF9F27;background:linear-gradient(90deg,#FAEEDA,#fff);}
+.alarm-card.info    {border-left-color:#1A6FA8;background:linear-gradient(90deg,#E6F1FB,#fff);}
 .alarm-icon{width:30px;height:30px;border-radius:7px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
 .alarm-icon.critical{background:var(--red-l);color:var(--red);}
@@ -12541,10 +12537,10 @@ section[data-testid="stSidebarContent"]{padding:0!important;}
   font-family:'Inter',sans-serif!important;
   font-weight:700!important;font-size:13px!important;
   padding:10px 24px!important;letter-spacing:.01em!important;
-  box-shadow:0 4px 12px rgba(234,88,12,.3)!important;
+  box-shadow:0 4px 12px rgba(200,90,0,.3)!important;
   transition:all .15s!important;
 }
-.stButton>button:hover{transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(234,88,12,.4)!important;}
+.stButton>button:hover{transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(200,90,0,.4)!important;}
 div[data-testid="stSelectbox"]>label,
 div[data-testid="stTextInput"]>label{
   font-size:12px!important;font-weight:700!important;
@@ -12621,82 +12617,125 @@ for key, default in [
 # ══════════════════════════════════════════════════════════════
 #  STEP 1 — LOGIN
 # ══════════════════════════════════════════════════════════════
-DARK_PAGE_CSS = """<style>
-[data-testid="stSidebar"]{display:none!important;}
-.block-container{padding:0!important;max-width:100%!important;}
+LOGIN_CSS = """<style>
+/* Hide sidebar on login */
+[data-testid="stSidebar"],
+[data-testid="stSidebarNav"],
+[data-testid="stSidebarCollapsedControl"]{display:none!important;}
+/* Remove all padding so columns fill screen */
+.block-container{padding:0!important;max-width:100%!important;margin:0!important;}
+[data-testid="stAppViewContainer"]{padding:0!important;}
+/* Full-height column layout */
+[data-testid="stHorizontalBlock"]{gap:0!important;height:100vh;min-height:100vh;}
+[data-testid="column"]:first-child{
+  background:#0D2B45!important;
+  padding:60px 48px!important;
+  display:flex!important;flex-direction:column!important;justify-content:center!important;
+}
+[data-testid="column"]:first-child *{color:rgba(255,255,255,.55);}
+[data-testid="column"]:last-child{
+  background:#ffffff!important;
+  padding:60px 48px!important;
+  display:flex!important;flex-direction:column!important;justify-content:center!important;
+}
+/* Input styling in the right (white) panel */
+[data-testid="column"]:last-child [data-testid="stTextInput"] input{
+  background:#f8f8f8!important;border:1.5px solid #e0e0e0!important;
+  border-radius:8px!important;font-size:14px!important;padding:11px 14px!important;
+}
+[data-testid="column"]:last-child [data-testid="stTextInput"] input:focus{
+  border-color:#C85A00!important;box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
+}
+[data-testid="column"]:last-child [data-testid="stTextInput"] label{
+  font-size:12px!important;font-weight:600!important;
+  color:#555!important;margin-bottom:4px!important;
+}
+[data-testid="column"]:last-child .stButton>button{
+  background:#C85A00!important;color:#fff!important;border:none!important;
+  border-radius:8px!important;font-size:14px!important;
+  font-weight:600!important;padding:12px!important;width:100%!important;
+  margin-top:8px!important;
+}
+[data-testid="column"]:last-child .stButton>button:hover{background:#A84B00!important;}
+html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{background:#fff!important;}
 </style>"""
 
 if not st.session_state.logged_in:
-    st.markdown(DARK_PAGE_CSS, unsafe_allow_html=True)
-    st.markdown("""
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#1c1917 0%,#292524 55%,#1a1816 100%);padding:20px;
-    position:fixed;top:0;left:0;right:0;bottom:0;">
-      <!-- ambient glows -->
-      <div style="position:absolute;top:10%;left:50%;transform:translateX(-50%);
-        width:500px;height:500px;border-radius:50%;
-        background:radial-gradient(circle,rgba(234,88,12,.08) 0%,transparent 65%);pointer-events:none;"></div>
-      <div style="position:absolute;bottom:5%;right:10%;width:350px;height:350px;border-radius:50%;
-        background:radial-gradient(circle,rgba(245,158,11,.06) 0%,transparent 65%);pointer-events:none;"></div>
-      <div style="width:100%;max-width:440px;position:relative;z-index:1;">
-        <!-- icon + brand -->
-        <div style="text-align:center;margin-bottom:28px;">
-          <div style="width:72px;height:72px;
-            background:linear-gradient(135deg,#ea580c,#f59e0b);
-            border-radius:20px;display:flex;align-items:center;justify-content:center;
-            font-size:34px;margin:0 auto 18px;
-            box-shadow:0 10px 32px rgba(234,88,12,.45);">☀️</div>
-          <div style="font-size:27px;font-weight:800;color:#fafaf9;letter-spacing:-.5px;">Solar Dashboard</div>
-          <div style="font-size:13px;color:#78716c;margin-top:6px;">Fractal Energy · Monitoring Platform</div>
-        </div>
-        <!-- stat pills -->
-        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:28px;">
-          <div style="background:rgba(234,88,12,.13);border:1px solid rgba(234,88,12,.25);
-            border-radius:10px;padding:10px 18px;text-align:center;">
-            <div style="font-size:16px;font-weight:800;color:#fb923c;line-height:1;">Live</div>
-            <div style="font-size:10px;color:#78716c;margin-top:3px;">Monitoring</div>
-          </div>
-          <div style="background:rgba(234,88,12,.13);border:1px solid rgba(234,88,12,.25);
-            border-radius:10px;padding:10px 18px;text-align:center;">
-            <div style="font-size:16px;font-weight:800;color:#fb923c;line-height:1;">24/7</div>
-            <div style="font-size:10px;color:#78716c;margin-top:3px;">Uptime</div>
-          </div>
-          <div style="background:rgba(234,88,12,.13);border:1px solid rgba(234,88,12,.25);
-            border-radius:10px;padding:10px 18px;text-align:center;">
-            <div style="font-size:16px;font-weight:800;color:#fb923c;line-height:1;">Auto</div>
-            <div style="font-size:10px;color:#78716c;margin-top:3px;">Refresh</div>
-          </div>
-        </div>
-        <!-- form card -->
-        <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
-          border-radius:20px;padding:36px 34px;backdrop-filter:blur(20px);
-          box-shadow:0 24px 64px rgba(0,0,0,.5);">
-          <div style="font-size:16px;font-weight:700;color:#e7e5e4;margin-bottom:18px;">Sign in to continue</div>
-    """, unsafe_allow_html=True)
+    st.markdown(LOGIN_CSS, unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="login-inputs">', unsafe_allow_html=True)
-        email    = st.text_input("Email Address", placeholder="your@email.com",
-                                 label_visibility="visible")
-        password = st.text_input("Password", placeholder="••••••••", type="password",
-                                 label_visibility="visible")
-        if st.button("Sign In →", use_container_width=True):
-            if email in USERS and USERS[email] == password:
+    _lcol, _rcol = st.columns([0.44, 0.56])
+
+    with _lcol:
+        st.markdown("""
+<div style="margin-bottom:28px;">
+  <div style="width:54px;height:54px;border-radius:50%;
+    background:rgba(245,166,35,.18);display:flex;align-items:center;
+    justify-content:center;margin-bottom:22px;font-size:26px;">&#9728;</div>
+  <div style="font-size:28px;font-weight:800;color:#F5A623;
+    letter-spacing:-.4px;margin-bottom:10px;">Fractal Energy</div>
+  <div style="font-size:13px;color:rgba(255,255,255,.45);line-height:1.8;">
+    Unified solar monitoring platform<br>for multi-brand inverter fleets
+  </div>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:40px;">
+  <div style="display:flex;align-items:center;gap:11px;">
+    <span style="width:22px;height:22px;border-radius:50%;
+      background:rgba(245,166,35,.2);display:flex;align-items:center;
+      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:12px;color:rgba(255,255,255,.45);">Multi-brand inverter support (Solis, Growatt)</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:11px;">
+    <span style="width:22px;height:22px;border-radius:50%;
+      background:rgba(245,166,35,.2);display:flex;align-items:center;
+      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:12px;color:rgba(255,255,255,.45);">Real-time monitoring &amp; alerts</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:11px;">
+    <span style="width:22px;height:22px;border-radius:50%;
+      background:rgba(245,166,35,.2);display:flex;align-items:center;
+      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:12px;color:rgba(255,255,255,.45);">Yield &amp; performance reports</span>
+  </div>
+</div>
+<div style="font-size:11px;color:rgba(255,255,255,.2);
+  padding-top:20px;border-top:1px solid rgba(255,255,255,.08);">
+  Role-based access · Admin · Engineer · Viewer
+</div>""", unsafe_allow_html=True)
+
+    with _rcol:
+        st.markdown("""
+<div style="margin-bottom:28px;">
+  <div style="font-size:22px;font-weight:700;color:#1a1a1a;
+    letter-spacing:-.3px;margin-bottom:6px;">Sign in to your account</div>
+  <div style="font-size:13px;color:#aaa;">Enter your credentials to continue</div>
+</div>""", unsafe_allow_html=True)
+
+        _email    = st.text_input("EMAIL ADDRESS", placeholder="admin@fractalenergy.in",
+                                  label_visibility="visible", key="login_email")
+        _password = st.text_input("PASSWORD", placeholder="••••••••", type="password",
+                                  label_visibility="visible", key="login_password")
+        if st.button("Sign In  →", use_container_width=True, key="login_btn"):
+            if _email in USERS and USERS[_email] == _password:
                 st.session_state.logged_in = True
-                st.session_state.user      = email
+                st.session_state.user      = _email
                 st.rerun()
             else:
                 st.error("Invalid email or password.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("""
-          <div style="text-align:center;margin-top:18px;font-size:11.5px;color:#57534e;
-            padding-top:14px;border-top:1px solid rgba(255,255,255,.07);">
-            Secured by Fractal Energy &nbsp;·&nbsp; v2.0</div>
-        </div>
-      </div>
-    </div>""", unsafe_allow_html=True)
+        st.markdown("""
+<div style="margin-top:20px;font-size:11px;color:#ccc;text-align:center;
+  padding-top:16px;border-top:1px solid #f0f0f0;">
+  Secured by Fractal Energy &nbsp;·&nbsp; Solar Monitor v2.0
+</div>""", unsafe_allow_html=True)
+
     st.stop()
+
+DARK_PAGE_CSS = """<style>
+[data-testid="stSidebar"],
+[data-testid="stSidebarNav"],
+[data-testid="stSidebarCollapsedControl"]{display:none!important;}
+.block-container{padding:0!important;max-width:100%!important;}
+</style>"""
 
 # ══════════════════════════════════════════════════════════════
 #  STEP 2 — AUTO-LOAD ALL PLANTS  (runs once after login)
@@ -12822,89 +12861,72 @@ def sec(title, icon=""):
     st.markdown(f'<div class="sec-hdr"><div class="sec-hdr-dot"></div>{icon} {title}</div>',
                 unsafe_allow_html=True)
 
-# ── Sidebar — only shown in main dashboard ───────────────────
-with st.sidebar:
+def topnav(active_page, fault_count=0):
+    user_initials = (st.session_state.get("user") or "AK")[:2].upper()
+    badge_html = (
+        f'<div class="nav-bell-badge">{fault_count}</div>' if fault_count > 0 else ""
+    )
+    tabs = [
+        ("dashboard", "Dashboard"),
+        ("reports",   "Reports"),
+        ("alarms",    "Alarms"),
+        ("settings",  "Settings"),
+    ]
+    tabs_html = "".join(
+        f'<a class="ntab{" active" if active_page == k else ""}" href="?page={k}">{label}</a>'
+        for k, label in tabs
+    )
     st.markdown(f"""
-    <div class="sb-logo">
-      <div class="sb-logo-icon">☀</div>
-      <div>
-        <div class="sb-logo-title">Solar Dashboard</div>
-        <div class="sb-logo-sub">Fractal Energy</div>
+    <div class="topnav">
+      <a class="topnav-brand" href="?page=dashboard">
+        <div class="topnav-brand-icon">☀️</div>
+        <div class="topnav-brand-text">
+          <div class="topnav-brand-name">Fractal Energy</div>
+          <div class="topnav-brand-sub">Solar Monitor</div>
+        </div>
+      </a>
+      {tabs_html}
+      <div class="nav-right">
+        <a class="nav-bell ntab" href="?page=alarms" style="padding:0 8px">
+          🔔{badge_html}
+        </a>
+        <div class="nav-avatar">{user_initials}</div>
       </div>
     </div>""", unsafe_allow_html=True)
 
-    if not st.session_state.get("plant_selected", False):
-        # Minimal sidebar while auto-loading plants
-        st.markdown("<div style='color:#64748b;padding:20px;font-size:13px;'>Loading plants…</div>",
-                    unsafe_allow_html=True)
-        page = "Plants"
-        sel_brands = st.session_state.get("sel_brands", ["Solis"])
-        sel_plants = []
-        show_debug = False
-    else:
-        # Consume pending navigation set by plant-card buttons BEFORE widgets are created
-        _nav_opts = {
-            "Plants":   "🏭  Plants",
-            "Overview": "📊  Overview",
-            "O&M":      "🔧  O&M",
-            "Report":   "📈  Report",
-            "Service":  "🗺  Service",
-            "Settings": "⚙️  Settings",
-        }
-        if "_pending_page" in st.session_state:
-            _ppage = st.session_state.pop("_pending_page")
-            if _ppage in _nav_opts:
-                st.session_state["nav_page"] = _nav_opts[_ppage]
-        if "_pending_plant" in st.session_state:
-            _pp = st.session_state.pop("_pending_plant")
-            _pc = ["All Plants"] + st.session_state.get("sel_plants", [])
-            if _pp in _pc:
-                # Store in a separate key — never set a widget key directly
-                st.session_state["_active_plant_idx"] = _pc.index(_pp)
+# ── Navigation — URL-param routing (no sidebar) ──────────────────────────────
+sel_brands = st.session_state.get("sel_brands", ["Solis"])
+show_debug = False
 
-        page = st.radio("", ["🏭  Plants","📊  Overview","🔧  O&M","📈  Report","🗺  Service","⚙️  Settings"],
-                        label_visibility="collapsed", key="nav_page")
-        page = page.split("  ",1)[1].strip()
+# Consume pending navigation set by plant-card buttons
+if "_pending_page" in st.session_state:
+    _pp = st.session_state.pop("_pending_page")
+    _pplant = st.session_state.pop("_pending_plant", None)
+    if _pplant:
+        st.session_state["active_plant"] = _pplant
+    _to_qpage = {
+        "Plants": "dashboard", "Overview": "overview",
+        "Report": "reports", "Alarms": "alarms", "Settings": "settings",
+    }.get(_pp, "dashboard")
+    st.query_params["page"] = _to_qpage
+    st.rerun()
 
-        st.markdown('<div class="sb-section">Active Plant</div>', unsafe_allow_html=True)
-        sel_brands     = st.session_state.get("sel_brands", ["Solis"])
-        all_sel_plants = st.session_state.get("sel_plants", [])
-        plant_choices  = ["All Plants"] + all_sel_plants
-        _ap_idx = st.session_state.pop("_active_plant_idx", 0)
-        _ap_idx = min(_ap_idx, len(plant_choices) - 1)
-        active_plant   = st.selectbox("View plant", plant_choices,
-                                      index=_ap_idx,
-                                      key="active_plant",
-                                      label_visibility="collapsed")
-        for b in sel_brands:
-            st.markdown(
-                f'<div style="color:#64748b;font-size:11px;padding:2px 4px;">'
-                f'{"☀️" if b=="Solis" else "⚡" if b=="Growatt" else "🔆"} {b}</div>',
-                unsafe_allow_html=True)
-        if st.button("🔄  Refresh Now"):
-            st.cache_data.clear(); st.rerun()
-
-        show_debug = st.checkbox("🔍  Debug", value=False)
-
-        st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-        if st.button("🚪  Sign Out"):
-            st.session_state.logged_in = False
-            st.rerun()
-
-        st.markdown(f"""
-        <div class="sb-time">
-          ⏱ {datetime.now().strftime('%d %b %Y')}<br>
-          <b style="color:#a8a29e;">{datetime.now().strftime('%H:%M:%S')}</b><br>
-          <span style="color:#78716c;">Auto-refresh {REFRESH_INTERVAL_SECONDS//60} min</span>
-        </div>""", unsafe_allow_html=True)
-
-# ── Fetch data (only when plant_selected) ────────────────────
-if not st.session_state.get("plant_selected", False):
-    st.stop()
-
-all_sel_plants = st.session_state.get("sel_plants", [])
+_qpage = st.query_params.get("page", "dashboard")
+page = {
+    "dashboard": "Plants",
+    "overview":  "Overview",
+    "reports":   "Report",
+    "alarms":    "Alarms",
+    "settings":  "Settings",
+}.get(_qpage, "Plants")
 active_plant   = st.session_state.get("active_plant", "All Plants")
+all_sel_plants = st.session_state.get("sel_plants", [])
 
+# Render topnav (uses cached fault count from previous run)
+_topnav_active = "dashboard" if _qpage in ("dashboard", "overview") else _qpage
+topnav(_topnav_active, st.session_state.get("_fault_count", 0))
+
+# ── Fetch data ────────────────────────────────────────────────
 @st.cache_data(ttl=REFRESH_INTERVAL_SECONDS)
 def load(brands, plants):
     result = fetch_all_brands(list(brands))
@@ -12988,6 +13010,7 @@ else:
     records_view = records
 
 alerts = check_alerts(records, st.session_state)
+st.session_state["_fault_count"] = len(alerts)
 
 df = pd.DataFrame()
 if records_view:
@@ -13027,16 +13050,16 @@ if page == "Plants":
     # ── Page header ──────────────────────────────────────────
     st.markdown(f"""
 <div style="display:flex;justify-content:space-between;align-items:center;
-  border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:20px;">
+  margin-bottom:18px;">
   <div>
-    <div style="font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-.3px;">
+    <div style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-.2px;">
       Plant Portfolio
     </div>
-    <div style="font-size:13px;color:#64748b;margin-top:2px;">
-      Select a plant and click <b>Open Dashboard</b> for detailed monitoring
+    <div style="font-size:12px;color:#999;margin-top:3px;">
+      Live monitoring across all connected inverters
     </div>
   </div>
-  <div style="font-size:12px;color:#94a3b8;">{datetime.now().strftime('%d %b %Y  %H:%M')}</div>
+  <div style="font-size:11px;color:#aaa;">{datetime.now().strftime('%d %b %Y &nbsp; %H:%M')}</div>
 </div>""", unsafe_allow_html=True)
 
     if not records:
@@ -13080,149 +13103,185 @@ if page == "Plants":
                  else "Partial" if r["n_online"] > 0
                  else "Offline", axis=1)
 
-        # ── Sort / Filter controls ────────────────────────────
-        _fc1, _fc2, _fc3, _fc4 = st.columns([2, 2, 2, 2])
-        with _fc1:
-            _sort_by = st.selectbox("Sort", ["Default","Best Performing","Worst Performing"],
-                                    label_visibility="collapsed")
-        with _fc2:
-            _brand_f = st.multiselect("Brand", sorted(_pg["brand"].unique().tolist()),
-                                      placeholder="All Brands", label_visibility="collapsed")
-        with _fc3:
-            _status_f = st.multiselect("Status", ["Online","Partial","Offline"],
-                                       placeholder="All Status", label_visibility="collapsed")
-        with _fc4:
-            _search = st.text_input("Search", placeholder="Search plant name…",
-                                    label_visibility="collapsed")
+        # Apply default sort (best performing first) and reset index
+        _filt = _pg.sort_values("power_kw", ascending=False).reset_index(drop=True)
 
-        # Apply filters & sort
-        _filt = _pg.copy()
-        if _brand_f:  _filt = _filt[_filt["brand"].isin(_brand_f)]
-        if _status_f: _filt = _filt[_filt["Status"].isin(_status_f)]
-        if _search:   _filt = _filt[_filt["plant_name"].str.contains(_search, case=False, na=False)]
-        if _sort_by == "Best Performing":  _filt = _filt.sort_values("power_kw", ascending=False)
-        elif _sort_by == "Worst Performing": _filt = _filt.sort_values("power_kw", ascending=True)
-        _filt = _filt.reset_index(drop=True)
+        # ── Portfolio totals ──────────────────────────────────────
+        _tp           = float(_filt["power_kw"].sum())
+        _td           = float(_filt["today_kwh"].sum())
+        _tt           = float(_filt["total_kwh"].sum())
+        _n_online_inv = int(_filt["n_online"].sum())
+        _n_total_inv  = int(_filt["n_total"].sum())
+        _n_online_pl  = len(_filt[_filt["Status"] == "Online"])
+        _co2_kg       = _td * 0.82
+        _trees        = max(1, int(_co2_kg / 22)) if _co2_kg > 0 else 0
 
-        # ── Two-column layout: table | alerts ────────────────
-        _tcol, _acol = st.columns([3.5, 1])
-
-        with _tcol:
-            _tbl_df = pd.DataFrame({
-                "Select":       [False] * len(_filt),
-                "Plant Name":   _filt["plant_name"].tolist(),
-                "Brand":        _filt["brand"].tolist(),
-                "Location":     _filt["Location"].tolist(),
-                "Inverters":    _filt["n_inverters"].astype(int).tolist(),
-                "Capacity":     _filt["Capacity"].tolist(),
-                "Power (kW)":   _filt["power_kw"].round(2).tolist(),
-                "Daily (kWh)":  _filt["today_kwh"].round(1).tolist(),
-                "Total (MWh)":  _filt["total_kwh"].round(2).tolist(),
-                "Status":       _filt["Status"].tolist(),
-            })
-
-            _edited = st.data_editor(
-                _tbl_df,
-                column_config={
-                    "Select":      st.column_config.CheckboxColumn("", width="small"),
-                    "Plant Name":  st.column_config.TextColumn("Plant Name", width="large"),
-                    "Brand":       st.column_config.TextColumn("Brand",      width="small"),
-                    "Location":    st.column_config.TextColumn("Location",   width="medium"),
-                    "Inverters":   st.column_config.NumberColumn("Inv.", width="small"),
-                    "Capacity":    st.column_config.TextColumn("Capacity",   width="small"),
-                    "Power (kW)":  st.column_config.NumberColumn("Power (kW)",  format="%.2f", width="small"),
-                    "Daily (kWh)": st.column_config.NumberColumn("Daily (kWh)", format="%.1f", width="small"),
-                    "Total (MWh)": st.column_config.NumberColumn("Total (MWh)", format="%.2f", width="small"),
-                    "Status":      st.column_config.TextColumn("Status", width="small"),
-                },
-                disabled=["Plant Name","Brand","Location","Inverters","Capacity",
-                          "Power (kW)","Daily (kWh)","Total (MWh)","Status"],
-                hide_index=True,
-                use_container_width=True,
-                height=min(420, 48 + len(_tbl_df) * 36),
-                key="plants_table",
-            )
-
-            # ── Portfolio totals strip ────────────────────────
-            _tp = float(_filt["power_kw"].sum())
-            _td = float(_filt["today_kwh"].sum())
-            _tt = float(_filt["total_kwh"].sum())
-            st.markdown(f"""
-<div style="background:linear-gradient(135deg,#1c1917 0%,#292524 100%);border-radius:12px;
-  padding:16px 24px;display:flex;gap:28px;flex-wrap:wrap;margin:10px 0 8px;">
-  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Plants</div>
-    <div style="font-size:22px;font-weight:800;color:#fafaf9;">{len(_filt)}</div></div>
-  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Live Power</div>
-    <div style="font-size:22px;font-weight:800;color:#fb923c;">{_tp:.1f}
-      <span style="font-size:12px;font-weight:400;color:#78716c;">kW</span></div></div>
-  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Today's Yield</div>
-    <div style="font-size:22px;font-weight:800;color:#fcd34d;">{_td:.1f}
-      <span style="font-size:12px;font-weight:400;color:#78716c;">kWh</span></div></div>
-  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Today's Earning</div>
-    <div style="font-size:22px;font-weight:800;color:#f59e0b;">{earn(_td)}</div></div>
-  <div><div style="font-size:9px;color:#78716c;text-transform:uppercase;letter-spacing:.6px;">Total Yield</div>
-    <div style="font-size:22px;font-weight:800;color:#60a5fa;">{_tt:.1f}
-      <span style="font-size:12px;font-weight:400;color:#78716c;">MWh</span></div></div>
+        # ── KPI Cards ────────────────────────────────────────────
+        st.markdown(f"""
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+  <div style="background:#fff;border-radius:10px;padding:13px 16px;
+    border-left:3px solid #F5A623;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
+      letter-spacing:.05em;margin-bottom:6px;">Yield Today</div>
+    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
+      {_td:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kWh</span></div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px;">{_n_online_inv} of {_n_total_inv} inverters online</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:13px 16px;
+    border-left:3px solid #C85A00;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
+      letter-spacing:.05em;margin-bottom:6px;">Earnings Today</div>
+    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">{earn(_td)}</div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8377;{RATE_PER_KWH:.2f}/kWh tariff</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:13px 16px;
+    border-left:3px solid #1A6FA8;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
+      letter-spacing:.05em;margin-bottom:6px;">CO&#8322; Offset</div>
+    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
+      {_co2_kg:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kg</span></div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8776; {_trees} trees saved today</div>
+  </div>
+  <div style="background:#fff;border-radius:10px;padding:13px 16px;
+    border-left:3px solid #22c55e;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
+      letter-spacing:.05em;margin-bottom:6px;">Plants Online</div>
+    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
+      {_n_online_pl}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">/ {len(_filt)}</span></div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px;">Total: {_tt:,.1f} MWh lifetime</div>
+  </div>
 </div>""", unsafe_allow_html=True)
 
-            # ── Submit button ─────────────────────────────────
-            _selected_plants = _edited[_edited["Select"]]["Plant Name"].tolist() if not _edited.empty else []
-            _, _btn_c = st.columns([3, 1])
-            with _btn_c:
-                _btn_disabled = len(_selected_plants) == 0
-                if st.button("Open Dashboard →", use_container_width=True,
-                             type="primary", disabled=_btn_disabled,
-                             key="open_dashboard_btn"):
-                    st.session_state["_pending_plant"] = _selected_plants[0]
+        # ── Charts row ───────────────────────────────────────────
+        import plotly.graph_objects as _pgo
+        _cc1, _cc2 = st.columns([2, 1])
+
+        with _cc1:
+            _bar_vals   = _filt["today_kwh"].round(1).tolist()
+            _bar_names  = _filt["plant_name"].tolist()
+            _peak_val   = max(_bar_vals) if _bar_vals else 0
+            _bar_colors = ["#C85A00" if v == _peak_val else "#F5A623" for v in _bar_vals]
+            _bar_fig = _pgo.Figure(_pgo.Bar(
+                x=_bar_names, y=_bar_vals,
+                marker=dict(color=_bar_colors, line=dict(width=0)),
+            ))
+            _bar_fig.update_layout(
+                title=dict(text="Generation today (kWh per plant)",
+                           font=dict(size=12, color="#666"), x=0),
+                margin=dict(l=0, r=0, t=40, b=0), height=210,
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                xaxis=dict(tickfont=dict(size=10, color="#bbb"),
+                           showgrid=False, zeroline=False, tickangle=-20),
+                yaxis=dict(tickfont=dict(size=10, color="#bbb"),
+                           gridcolor="#eee", zeroline=False),
+                bargap=0.35,
+            )
+            st.plotly_chart(_bar_fig, use_container_width=True,
+                            config={"displayModeBar": False})
+
+        with _cc2:
+            _bc = _filt.groupby("brand")["today_kwh"].sum().reset_index()
+            _pie_palette = ["#C85A00", "#F5A623", "#1A6FA8", "#22c55e",
+                            "#a855f7", "#ec4899", "#06b6d4"]
+            _pie_fig = _pgo.Figure(_pgo.Pie(
+                labels=_bc["brand"].tolist(),
+                values=_bc["today_kwh"].round(1).tolist(),
+                hole=0.58,
+                marker=dict(colors=_pie_palette[:len(_bc)]),
+                textinfo="none",
+            ))
+            _pie_fig.update_layout(
+                title=dict(text="By inverter brand",
+                           font=dict(size=12, color="#666"), x=0),
+                margin=dict(l=0, r=0, t=40, b=0), height=210,
+                legend=dict(font=dict(size=10, color="#666"),
+                            orientation="v", x=1, y=0.5),
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+            )
+            st.plotly_chart(_pie_fig, use_container_width=True,
+                            config={"displayModeBar": False})
+
+        # ── Brand filter pills ────────────────────────────────────
+        _all_brands = ["All"] + sorted(_filt["brand"].unique().tolist())
+        _brand_pill = st.radio("Brand", _all_brands, horizontal=True,
+                               label_visibility="collapsed",
+                               key="dash_brand_pill")
+        _tbl_rows = _filt if _brand_pill == "All" else \
+                    _filt[_filt["brand"] == _brand_pill]
+
+        # ── Projects table ────────────────────────────────────────
+        _rows_html = ""
+        for _, _r in _tbl_rows.iterrows():
+            _sc = ("#22c55e" if _r["Status"] == "Online"
+                   else "#F5A623" if _r["Status"] == "Partial"
+                   else "#ef4444")
+            _rows_html += f"""
+      <tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:11px 13px;">
+          <div style="font-weight:600;color:#1a1a1a;font-size:13px;">{_r['plant_name']}</div>
+          <div style="font-size:10px;color:#aaa;">{int(_r['n_inverters'])} inverters &middot; {_r['Capacity']}</div>
+        </td>
+        <td style="padding:11px 13px;">
+          <span style="background:#f0f0f0;border-radius:4px;padding:2px 7px;
+            font-size:10px;color:#555;">{_r['brand']}</span>
+        </td>
+        <td style="padding:11px 13px;font-size:12px;color:#666;">{_r['Location']}</td>
+        <td style="padding:11px 13px;text-align:right;font-size:12px;">
+          <b>{_r['power_kw']:.1f}</b> <span style="font-size:10px;color:#aaa;">kW</span></td>
+        <td style="padding:11px 13px;text-align:right;font-size:12px;">
+          <b>{_r['today_kwh']:.1f}</b> <span style="font-size:10px;color:#aaa;">kWh</span></td>
+        <td style="padding:11px 13px;text-align:right;font-size:12px;">
+          <b>{_r['total_kwh']:.1f}</b> <span style="font-size:10px;color:#aaa;">MWh</span></td>
+        <td style="padding:11px 13px;text-align:center;">
+          <span style="background:{_sc}20;color:{_sc};border-radius:12px;
+            padding:3px 9px;font-size:10px;font-weight:600;">{_r['Status']}</span>
+        </td>
+      </tr>"""
+
+        st.markdown(f"""
+<div style="background:#fff;border-radius:10px;overflow:hidden;
+  border:1px solid #eee;margin-bottom:12px;">
+  <table style="width:100%;border-collapse:collapse;">
+    <thead>
+      <tr style="background:#f9f9f9;border-bottom:1px solid #eee;">
+        <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Plant</th>
+        <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Brand</th>
+        <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Location</th>
+        <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Live Power</th>
+        <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Yield Today</th>
+        <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</th>
+        <th style="padding:10px 13px;text-align:center;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Status</th>
+      </tr>
+    </thead>
+    <tbody>{_rows_html}
+    </tbody>
+  </table>
+</div>""", unsafe_allow_html=True)
+
+        # ── Open Dashboard selector ───────────────────────────────
+        if not _tbl_rows.empty:
+            _nc1, _nc2, _ = st.columns([3, 2, 4])
+            with _nc1:
+                _sel_pl = st.selectbox(
+                    "Select plant to open:",
+                    _tbl_rows["plant_name"].tolist(),
+                    label_visibility="visible",
+                    key="dash_sel_plant",
+                )
+            with _nc2:
+                st.write("")
+                if st.button("Open Dashboard →", type="primary",
+                             key="dash_open_btn"):
+                    st.session_state["_pending_plant"] = _sel_pl
                     st.session_state["_pending_page"]  = "Overview"
                     st.rerun()
-            if _selected_plants:
-                st.caption(f"Selected: **{_selected_plants[0]}**")
-            else:
-                st.caption("Check a row above, then click Open Dashboard")
-
-        # ── Right: Recent Alerts panel ────────────────────────
-        with _acol:
-            _alog = get_alert_log(10)
-            st.markdown("""
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;
-  padding:16px;min-height:320px;">
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-    <span style="width:9px;height:9px;background:#ef4444;border-radius:50%;
-      display:inline-block;flex-shrink:0;"></span>
-    <span style="font-size:13px;font-weight:700;color:#0f172a;">Recent Alerts</span>
-  </div>""", unsafe_allow_html=True)
-
-            if not alerts and (_alog.empty):
-                st.markdown("""
-<div style="text-align:center;padding:28px 8px;color:#94a3b8;">
-  <div style="font-size:30px;margin-bottom:8px;">✅</div>
-  <div style="font-size:12px;">No active alerts</div>
-</div>""", unsafe_allow_html=True)
-            else:
-                for _al in alerts[:6]:
-                    _ac = "#ef4444" if any(k in str(_al.get("issue","")).lower()
-                                          for k in ("fault","offline","error")) else "#f59e0b"
-                    st.markdown(f"""
-<div style="border-left:3px solid {_ac};background:{_ac}10;border-radius:0 8px 8px 0;
-  padding:8px 10px;margin-bottom:8px;">
-  <div style="font-size:11px;font-weight:700;color:{_ac};">{_al.get('plant_name','—')}</div>
-  <div style="font-size:10px;color:#64748b;">{_al.get('inverter_sn','—')}</div>
-  <div style="font-size:11px;color:#0f172a;margin-top:2px;">{_al.get('issue','—')}</div>
-</div>""", unsafe_allow_html=True)
-
-                if not _alog.empty:
-                    st.markdown("""<div style="font-size:10px;font-weight:600;color:#94a3b8;
-                      margin:10px 0 6px;text-transform:uppercase;letter-spacing:.5px;">
-                      History</div>""", unsafe_allow_html=True)
-                    for _, _ar in _alog.head(5).iterrows():
-                        st.markdown(f"""
-<div style="border-left:2px solid #cbd5e1;padding:5px 10px;margin-bottom:6px;">
-  <div style="font-size:10px;font-weight:600;color:#475569;">{_ar.get('plant_name','—')}</div>
-  <div style="font-size:10px;color:#94a3b8;">{str(_ar.get('issue','—'))[:50]}</div>
-</div>""", unsafe_allow_html=True)
-
-            st.markdown("</div>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
 #  OVERVIEW
@@ -14654,6 +14713,113 @@ elif page == "Service":
               f'<div>{badge(pst)}</div>'
             f'</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════
+#  ALARMS
+# ══════════════════════════════════════════════════════════════
+elif page == "Alarms":
+    # Build unified alarm list: live critical alerts + resolved history
+    _alarm_log = get_alert_log(200)
+    _all_alarms = []
+    for _a in alerts:
+        _all_alarms.append({
+            "severity": "critical",
+            "title":    _a.get("issue", "Inverter fault"),
+            "meta":     f'{_a.get("plant_name","—")} · S/N: {_a.get("inverter_sn","—")} · {_a.get("brand","—")} · {datetime.now().strftime("%H:%M")}',
+            "status":   "Active",
+            "plant":    _a.get("plant_name",""),
+        })
+    if not _alarm_log.empty:
+        for _, _lr in _alarm_log.iterrows():
+            _all_alarms.append({
+                "severity": "warning",
+                "title":    _lr.get("issue", "Past alert"),
+                "meta":     f'{_lr.get("plant_name","—")} · S/N: {_lr.get("inverter_sn","—")} · {_lr.get("brand","—")} · {_lr.get("alerted_at","—")}',
+                "status":   "Resolved",
+                "plant":    _lr.get("plant_name",""),
+            })
+
+    st.markdown("""<style>
+    .alm-card{border:1px solid #e8e8e8;border-radius:8px;padding:11px 13px;margin-bottom:8px;
+      display:flex;align-items:flex-start;gap:11px;background:#fff;}
+    .alm-card.critical{border-left:3px solid #E24B4A;}
+    .alm-card.warning {border-left:3px solid #EF9F27;}
+    .alm-icon{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;
+      justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;}
+    .alm-icon.critical{background:#FCEBEB;color:#A32D2D;}
+    .alm-icon.warning {background:#FAEEDA;color:#854F0B;}
+    .alm-content{flex:1;min-width:0;}
+    .alm-title{font-size:12px;font-weight:600;color:#1a1a1a;}
+    .alm-meta{font-size:11px;color:#999;margin-top:3px;}
+    .alm-empty{font-size:12px;color:#aaa;text-align:center;padding:32px 0;}
+    .alm-note{font-size:11px;color:#888;background:#f9f9f9;border-radius:6px;
+      padding:8px 12px;margin-top:12px;border-left:3px solid #F5A623;}
+    .alm-badge{display:inline-block;padding:2px 8px;border-radius:10px;
+      font-size:10px;font-weight:600;white-space:nowrap;}
+    .alm-badge.critical{background:#FCEBEB;color:#A32D2D;}
+    .alm-badge.warning {background:#FAEEDA;color:#854F0B;}
+    .alm-badge.resolved{background:#e6f9ef;color:#166634;}
+    </style>""", unsafe_allow_html=True)
+
+    _crit_n = sum(1 for a in _all_alarms if a["severity"] == "critical")
+    _warn_n = sum(1 for a in _all_alarms if a["severity"] == "warning")
+    _icon_map  = {"critical": "!", "warning": "~", "info": "i"}
+    _label_map = {"critical": "Critical", "warning": "Warning", "info": "Info"}
+
+    # ── Filters row ───────────────────────────────────────────
+    _fc1, _fc2, _fc3 = st.columns([3, 1, 2])
+    with _fc1:
+        _sev_filter = st.radio(
+            "",
+            [f"All ({len(_all_alarms)})", f"Critical ({_crit_n})", f"Warning ({_warn_n})"],
+            horizontal=True, label_visibility="collapsed", key="alm_sev")
+        _sev_key = "all" if _sev_filter.startswith("All") else \
+                   "critical" if _sev_filter.startswith("Critical") else "warning"
+    with _fc2:
+        _show_resolved = st.checkbox("Show Resolved", value=True, key="alm_resolved")
+    with _fc3:
+        _plant_opts = ["All plants"] + sorted({a["plant"] for a in _all_alarms if a["plant"]})
+        _sel_plant_alm = st.selectbox("Plant", _plant_opts,
+                                      label_visibility="collapsed", key="alm_plant")
+
+    # ── Apply filters ─────────────────────────────────────────
+    _filtered = _all_alarms[:]
+    if _sev_key != "all":
+        _filtered = [a for a in _filtered if a["severity"] == _sev_key]
+    if not _show_resolved:
+        _filtered = [a for a in _filtered if a["status"] == "Active"]
+    if _sel_plant_alm != "All plants":
+        _filtered = [a for a in _filtered if a["plant"] == _sel_plant_alm]
+
+    # ── Alarm cards ───────────────────────────────────────────
+    if not _filtered:
+        st.markdown('<div class="alm-empty">✅ No alarms match the selected filters.</div>',
+                    unsafe_allow_html=True)
+    else:
+        _cards_html = ""
+        for _alarm in _filtered:
+            _sev  = _alarm["severity"]
+            _icon = _icon_map.get(_sev, "i")
+            _lbl  = _label_map.get(_sev, _sev.title())
+            _stat_cls = "resolved" if _alarm["status"] == "Resolved" else _sev
+            _badge_lbl = "Resolved" if _alarm["status"] == "Resolved" else _lbl
+            _cards_html += (
+                f'<div class="alm-card {_sev}">'
+                  f'<div class="alm-icon {_sev}">{_icon}</div>'
+                  f'<div class="alm-content">'
+                    f'<div class="alm-title">{_alarm["title"]}</div>'
+                    f'<div class="alm-meta">{_alarm["meta"]}</div>'
+                  f'</div>'
+                  f'<span class="alm-badge {_stat_cls}">{_badge_lbl}</span>'
+                f'</div>'
+            )
+        st.markdown(_cards_html, unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="alm-note">Alarms are auto-pulled from each inverter brand\'s API. '
+        'Email and SMS notifications are configurable per project in Settings.</div>',
+        unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════

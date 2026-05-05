@@ -76,6 +76,8 @@ import streamlit as st
 from utils import solis_api, growatt_api, sungrow_api
 from utils.database import save_readings, log_alert
 from utils.alerts import send_email_alert
+from utils.database import save_intraday, save_daily_yield
+from datetime import datetime
 
 FETCHERS = {"Solis": solis_api.fetch_all,
             "Growatt": growatt_api.fetch_all,
@@ -91,7 +93,37 @@ def fetch_all_brands(brands=None):
             st.warning(f"⚠️ {b} fetch failed: {e}")
     if all_records:
         save_readings(all_records)
+        # ✅ NEW: store intraday + daily
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_hm  = now.strftime("%H:%M")
+
+        plant_map = {}
+
+        for r in all_records:
+            plant = r.get("plant_name")
+            power = float(r.get("power_kw") or 0)
+            energy = float(r.get("today_kwh") or 0)
+
+            # ---- intraday ----
+            save_intraday(
+                plant,
+                date_str,
+                [{"time_hm": time_hm, "power_kw": power}]
+            )
+
+            # ---- daily yield aggregation ----
+            if plant not in plant_map:
+                plant_map[plant] = 0
+            plant_map[plant] += energy
+
+        # ---- save daily yield ----
+        for plant, total_kwh in plant_map.items():
+            save_daily_yield(plant, date_str, total_kwh)
+            
     return all_records
+
+
 
 def check_alerts(records, ss):
     if "alert_sent" not in ss: ss.alert_sent = {}
