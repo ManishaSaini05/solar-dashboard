@@ -1086,13 +1086,14 @@ def get_all_plants_daily(month_str):
 def _fetch_inverter_day_chart(sn, date_str):
     """
     Call inverterPowerOneDayChart with fallback param variants.
-    Handles both response formats Solis uses:
+    Handles all known Solis response formats:
       Format A – array of objects: [{time, power}, ...]
-      Format B – parallel arrays:  {time:[...], watt:[...]}
-    Returns list of {"time": "HH:MM", "power": float} dicts.
+      Format B – parallel arrays at data root: {time:[...], watt:[...]}
+      Format C – parallel arrays inside inverterPowerVo wrapper
+    Returns list of {"time": "HH:MM", "power_kw": float} dicts.
+    NOTE: Solis "watt" field is in WATTS — divide by 1000 to get kW.
     """
     date_nodash = date_str.replace("-", "")
-    # Try India timezone (5) first, then China (8), then no-tz, then YYYYMMDD
     for body in [
         {"sn": sn, "time": date_str,    "timeZone": 5},
         {"sn": sn, "time": date_str,    "timeZone": 8},
@@ -1102,19 +1103,45 @@ def _fetch_inverter_day_chart(sn, date_str):
         d = _post("/v1/api/inverterPowerOneDayChart", body)
         data_obj = (d or {}).get("data") or {}
 
-        # Format A: array of objects at the top level or in a "records"/"data" key
-        if isinstance(data_obj, list):
-            recs = data_obj
-        else:
-            recs = data_obj.get("records") or data_obj.get("data") or []
+        recs = []
 
-        # Format B: parallel arrays {time:[...], watt:[...]}  ← most common Solis format
+        # Format A: array of objects (power field already in kW)
+        if isinstance(data_obj, list):
+            recs = [{"time": str(r.get("time") or ""),
+                     "power_kw": float(r.get("power") or r.get("pac") or 0)}
+                    for r in data_obj if r.get("time")]
+        elif not recs:
+            _raw = data_obj.get("records") or data_obj.get("data") or []
+            if isinstance(_raw, list) and _raw:
+                recs = [{"time": str(r.get("time") or ""),
+                         "power_kw": float(r.get("power") or r.get("pac") or 0)}
+                        for r in _raw if r.get("time")]
+
+        # Format B: parallel arrays at data root
+        # Solis "watt" field: Solis API v1 returns Watts; v2 returns kW.
+        # Auto-detect: if max value > 100 it's likely Watts → divide by 1000.
         if not recs:
             t_arr = data_obj.get("time") or []
-            w_arr = (data_obj.get("watt") or data_obj.get("power")
-                     or data_obj.get("pac") or [])
+            w_arr = data_obj.get("watt") or []
+            p_arr = data_obj.get("power") or data_obj.get("pac") or []
             if t_arr and w_arr:
-                recs = [{"time": str(t), "power": float(w or 0)}
+                _wmax = max((float(x or 0) for x in w_arr), default=0)
+                _wdiv = 1000.0 if _wmax > 100 else 1.0
+                recs = [{"time": str(t), "power_kw": float(w or 0) / _wdiv}
+                        for t, w in zip(t_arr, w_arr)]
+            elif t_arr and p_arr:
+                recs = [{"time": str(t), "power_kw": float(p or 0)}
+                        for t, p in zip(t_arr, p_arr)]
+
+        # Format C: inverterPowerVo wrapper
+        if not recs:
+            _pvo = data_obj.get("inverterPowerVo") or {}
+            t_arr = _pvo.get("time") or []
+            w_arr = _pvo.get("watt") or []
+            if t_arr and w_arr:
+                _wmax = max((float(x or 0) for x in w_arr), default=0)
+                _wdiv = 1000.0 if _wmax > 100 else 1.0
+                recs = [{"time": str(t), "power_kw": float(w or 0) / _wdiv}
                         for t, w in zip(t_arr, w_arr)]
 
         if recs:

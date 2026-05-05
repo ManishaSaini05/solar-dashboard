@@ -13422,6 +13422,10 @@ elif page == "Overview":
                      type="primary", key="dash_export_btn"):
             st.session_state["_export_requested"] = True
 
+    # Placeholder so the download button can appear right here (below header)
+    # even though the Excel is built much later when all KPI vars are ready.
+    _export_dl_placeholder = st.empty()
+
     if df.empty:
         st.warning("⚠️ No data. Check credentials in config.py and click Refresh.")
         st.stop()
@@ -13566,11 +13570,12 @@ elif page == "Overview":
                     _pw_a = {}
                     for _sn_a in _sns_a:
                         for _r_a in _fdayc(_sn_a, _day_str_api):
-                            # handle all known field name variants from Solis API
                             _t_a = str(_r_a.get("time") or _r_a.get("dataTimestamp")
                                        or _r_a.get("ts") or "")
-                            _p_a = float(_r_a.get("power") or _r_a.get("pac")
-                                         or _r_a.get("activePower") or 0)
+                            # _fetch_inverter_day_chart normalises to "power_kw"; also
+                            # fall back to raw field names in case of format variation
+                            _p_a = float(_r_a.get("power_kw") or _r_a.get("power")
+                                         or _r_a.get("pac") or _r_a.get("activePower") or 0)
                             if _t_a and ":" in _t_a:
                                 _k_a = _t_a[:5]
                                 _pw_a[_k_a] = _pw_a.get(_k_a, 0.0) + _p_a
@@ -13694,7 +13699,11 @@ elif page == "Overview":
                 )
                 st.plotly_chart(_fd, use_container_width=True,
                                 config={"displayModeBar": True, "scrollZoom": True})
-                st.caption(f"Source: {'API' if _day_src == 'api' else 'Stored DB'} — {len(_dp)} data points")
+                _nonzero_pts = int((_dp["power_kw"] > 0).sum())
+                st.caption(
+                    f"Source: {'✅ Solis API' if _day_src == 'api' else '⚠️ Stored DB (API returned no data)'}"
+                    f" — {len(_dp)} points ({_nonzero_pts} with power > 0)"
+                )
             else:
                 st.info(f"No data for {_sel_date.strftime('%d %b %Y')} yet. "
                         "Data is stored automatically every 5 min while the app is running.")
@@ -14080,8 +14089,11 @@ elif page == "Overview":
             st.markdown("</div>", unsafe_allow_html=True)
 
     # ── Excel Export ──────────────────────────────────────────
+    # Build the Excel and fill the placeholder that sits just below the header,
+    # so the user never needs to scroll down to find the download button.
     if st.session_state.get("_export_requested", False):
-        _xbuf = _io.BytesIO()
+        import io as _io_exp
+        _xbuf = _io_exp.BytesIO()
         try:
             with pd.ExcelWriter(_xbuf, engine="openpyxl") as _xw:
                 pd.DataFrame({
@@ -14103,18 +14115,24 @@ elif page == "Overview":
                         _hexp = _hexp[_hexp["plant_name"] == active_plant]
                     _hexp.to_excel(_xw, sheet_name="History (30d)", index=False)
             _xbuf.seek(0)
-            st.success("Report ready — click below to download.")
-            st.download_button(
-                "📥 Download Excel Report",
-                data=_xbuf,
-                file_name=f"{_plant_lbl.replace(' ','_')}_report_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="export_download_btn",
-                on_click=lambda: st.session_state.update({"_export_requested": False}),
-            )
+            _xl_bytes = _xbuf.read()
+            _xl_fname = (f"{_plant_lbl.replace(' ','_')}_report_"
+                         f"{datetime.now().strftime('%Y%m%d')}.xlsx")
+            st.session_state["_export_requested"] = False
+            # Render the download button in the placeholder right below the header
+            with _export_dl_placeholder.container():
+                st.success("✅ Report ready — click to download:")
+                st.download_button(
+                    "📥 Download Excel Report",
+                    data=_xl_bytes,
+                    file_name=_xl_fname,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="export_download_btn",
+                    use_container_width=True,
+                )
         except Exception as _xe:
             st.session_state["_export_requested"] = False
-            st.error(f"Export failed: {_xe}. Install openpyxl: pip install openpyxl")
+            st.error(f"Export failed: {_xe}")
 
 
 # ══════════════════════════════════════════════════════════════
