@@ -13720,11 +13720,17 @@ elif page == "Overview":
                 st.info(f"No data for {_sel_date.strftime('%d %b %Y')} yet. "
                         "Data is stored automatically every 5 min while the app is running.")
 
-            # Always show raw API response expander so we can debug the format
-            if _day_raw_resp is not None:
-                import json as _json
-                with st.expander("🔍 Raw API response (for debugging)", expanded=(_day_src != "api")):
-                    st.json(_day_raw_resp)
+            # Always show raw API response expander for debugging
+            if _sns_a if "_sns_a" in dir() else False:
+                try:
+                    from utils.solis_api import fetch_day_chart_debug as _fdd
+                    _dbg = _fdd(_sns_a[0], _day_str_api)
+                except Exception as _de:
+                    _dbg = {"debug_error": str(_de)}
+            else:
+                _dbg = _day_raw_resp
+            with st.expander("🔍 Raw API response (share this to fix chart)", expanded=(_day_src != "api")):
+                st.json(_dbg if _dbg is not None else {"status": "no response captured"})
 
         with _tab_mon:
             # Month + Year pickers — shows day-by-day breakdown within the month

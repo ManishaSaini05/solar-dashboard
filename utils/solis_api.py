@@ -866,6 +866,26 @@ def _post(path, body):
         return None
 
 
+def _post_debug(path, body):
+    """Like _post but returns full diagnostic dict even on HTTP/auth errors."""
+    bj = json.dumps(body, separators=(",", ":"))
+    try:
+        r = requests.post(SOLIS_BASE_URL + path, data=bj,
+                          headers=_headers(path, bj), timeout=15)
+        try:
+            resp_json = r.json()
+        except Exception:
+            resp_json = None
+        return {
+            "http_status": r.status_code,
+            "request_body": body,
+            "response_json": resp_json,
+            "response_text": r.text[:1000] if resp_json is None else None,
+        }
+    except Exception as e:
+        return {"error": str(e), "request_body": body}
+
+
 def _f(v):
     try:    return float(v)
     except: return None
@@ -1158,11 +1178,11 @@ def _fetch_inverter_day_chart(sn, date_str):
     return [], last_raw
 
 
-def fetch_day_chart_raw(sn, date_str):
-    """Return the raw API response for debugging."""
+def fetch_day_chart_debug(sn, date_str):
+    """Return full diagnostic info for the day chart API call."""
     date_nodash = date_str.replace("-", "")
-    return _post("/v1/api/inverterPowerOneDayChart",
-                 {"sn": sn, "time": date_nodash, "timeZone": 8})
+    return _post_debug("/v1/api/inverterPowerOneDayChart",
+                       {"sn": sn, "time": date_nodash, "timeZone": 8})
 
 
 def get_plant_intraday_power(plant_id, date_str):
