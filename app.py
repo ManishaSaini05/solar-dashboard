@@ -13554,8 +13554,7 @@ elif page == "Overview":
             _pname_q = active_plant if active_plant != "All Plants" else ""
 
             # ── Step 1: pull full-day history from Solis API ─────────────
-            # Uses _fetch_inverter_day_chart which tries multiple timeZone/format
-            # variants to maximise the number of 5-min points returned.
+            _day_api_err = ""
             if not df.empty and (_chart_brand or "Solis") == "Solis":
                 try:
                     from utils.solis_api import _fetch_inverter_day_chart as _fdayc
@@ -13565,20 +13564,23 @@ elif page == "Overview":
                     _inv_s = (df.loc[df["plant_name"] == active_plant, _col_sn]
                               if active_plant != "All Plants" and _col_sn in df.columns
                               else df.get(_col_sn, pd.Series()))
-                    _sns_a = [str(s) for s in _inv_s.dropna().unique()
-                              if s and str(s) not in ("—", "nan", "")]
+                    _sns_a = [str(s).strip() for s in _inv_s.dropna().unique()
+                              if s and str(s).strip() not in ("—", "nan", "", "None")]
                     _pw_a = {}
                     for _sn_a in _sns_a:
-                        for _r_a in _fdayc(_sn_a, _day_str_api):
+                        _recs_a = _fdayc(_sn_a, _day_str_api)
+                        for _r_a in _recs_a:
                             _t_a = str(_r_a.get("time") or _r_a.get("dataTimestamp")
                                        or _r_a.get("ts") or "")
-                            # _fetch_inverter_day_chart normalises to "power_kw"; also
-                            # fall back to raw field names in case of format variation
                             _p_a = float(_r_a.get("power_kw") or _r_a.get("power")
                                          or _r_a.get("pac") or _r_a.get("activePower") or 0)
                             if _t_a and ":" in _t_a:
                                 _k_a = _t_a[:5]
                                 _pw_a[_k_a] = _pw_a.get(_k_a, 0.0) + _p_a
+                    if not _sns_a:
+                        _day_api_err = "No inverter SN found in data"
+                    elif not _pw_a:
+                        _day_api_err = f"API returned 0 points for SN(s): {', '.join(_sns_a)}"
                     if _pw_a:
                         _pts_a = []
                         for _t_a, _p_a in sorted(_pw_a.items()):
@@ -13591,7 +13593,6 @@ elif page == "Overview":
                             _dp = pd.DataFrame(_pts_a)
                             _dp["fetched_at"] = pd.to_datetime(_dp["fetched_at"])
                             _day_src = "api"
-                            # Persist all API points to DB for future history
                             if _pname_q:
                                 try:
                                     _sv_api(_pname_q, _day_str_api,
@@ -13600,8 +13601,8 @@ elif page == "Overview":
                                              for _, r in _dp.iterrows()])
                                 except Exception:
                                     pass
-                except Exception:
-                    pass
+                except Exception as _e1:
+                    _day_api_err = str(_e1)
 
             # ── Step 2: merge with / fallback to intraday_power DB ───────
             from utils.database import get_intraday as _get_id
@@ -13652,10 +13653,17 @@ elif page == "Overview":
             _ds3.metric("Full Load Hours", f"{_flh:.2f} h" if _cap_kw > 0 else "—")
 
             if not _dp.empty:
-                # Fixed full-day range: always show 06:00–18:30 so chart context
-                # matches the real solar day regardless of how much data is loaded
-                _day_range_start = f"{_day_str_api} 06:00:00"
-                _day_range_end   = f"{_day_str_api} 18:30:00"
+                # Fixed full-day range using pd.Timestamp so types match x data
+                import pandas as _pd2
+                _day_range_start = _pd2.Timestamp(f"{_day_str_api} 06:00:00")
+                _day_range_end   = _pd2.Timestamp(f"{_day_str_api} 18:30:00")
+                # Clamp any out-of-range timestamps to keep the axis correct
+                _dp = _dp[(_dp["fetched_at"] >= _day_range_start) &
+                          (_dp["fetched_at"] <= _day_range_end)].copy()
+                if _dp.empty:
+                    # All points were outside 06:00–18:30; still show the chart
+                    _day_range_start = _pd2.Timestamp(f"{_day_str_api} 06:00:00")
+                    _day_range_end   = _pd2.Timestamp(f"{_day_str_api} 18:30:00")
 
                 _fd = go.Figure()
                 _fd.add_trace(go.Scatter(
@@ -13700,10 +13708,9 @@ elif page == "Overview":
                 st.plotly_chart(_fd, use_container_width=True,
                                 config={"displayModeBar": True, "scrollZoom": True})
                 _nonzero_pts = int((_dp["power_kw"] > 0).sum())
-                st.caption(
-                    f"Source: {'✅ Solis API' if _day_src == 'api' else '⚠️ Stored DB (API returned no data)'}"
-                    f" — {len(_dp)} points ({_nonzero_pts} with power > 0)"
-                )
+                _src_label = "✅ Solis API" if _day_src == "api" else "⚠️ Stored DB"
+                st.caption(f"Source: {_src_label} — {len(_dp)} points ({_nonzero_pts} with power > 0)"
+                           + (f"  |  API issue: {_day_api_err}" if _day_api_err and _day_src != "api" else ""))
             else:
                 st.info(f"No data for {_sel_date.strftime('%d %b %Y')} yet. "
                         "Data is stored automatically every 5 min while the app is running.")
