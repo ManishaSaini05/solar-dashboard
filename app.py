@@ -12224,33 +12224,33 @@ button[kind="headerNoPadding"]{
 .login-split{min-height:100vh;display:flex;}
 .login-left{
   flex:0 0 42%;
-  background:linear-gradient(160deg,#1c1917 0%,#292524 60%,#1a1816 100%);
+  background:#0D2B45;
   padding:60px 48px;display:flex;flex-direction:column;justify-content:center;
   position:relative;overflow:hidden;
 }
 .login-left::before{
   content:'';position:absolute;top:-120px;right:-80px;width:380px;height:380px;
   border-radius:50%;
-  background:radial-gradient(circle,rgba(234,88,12,.18) 0%,transparent 70%);
+  background:radial-gradient(circle,rgba(245,166,35,.12) 0%,transparent 70%);
 }
 .login-left::after{
   content:'';position:absolute;bottom:-100px;left:-60px;width:300px;height:300px;
   border-radius:50%;
-  background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);
+  background:radial-gradient(circle,rgba(26,111,168,.18) 0%,transparent 70%);
 }
 .login-brand-icon{
-  width:54px;height:54px;
-  background:linear-gradient(135deg,var(--primary),var(--amber));
-  border-radius:14px;display:flex;align-items:center;justify-content:center;
-  font-size:26px;margin-bottom:18px;
-  box-shadow:0 8px 24px rgba(234,88,12,.3);position:relative;z-index:1;
+  width:60px;height:60px;
+  background:rgba(245,166,35,.15);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:30px;margin-bottom:20px;
+  border:2px solid rgba(245,166,35,.3);position:relative;z-index:1;
 }
 .login-brand-name{
-  font-size:28px;font-weight:800;color:#fafaf9;letter-spacing:-.5px;
+  font-size:28px;font-weight:800;color:#F5A623;letter-spacing:-.5px;
   margin-bottom:6px;position:relative;z-index:1;
 }
 .login-brand-sub{
-  font-size:14px;color:#78716c;line-height:1.6;margin-bottom:44px;
+  font-size:14px;color:rgba(255,255,255,.45);line-height:1.6;margin-bottom:44px;
   max-width:280px;position:relative;z-index:1;
 }
 .login-stat-row{display:flex;gap:14px;flex-wrap:wrap;position:relative;z-index:1;}
@@ -12258,8 +12258,8 @@ button[kind="headerNoPadding"]{
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
   border-radius:12px;padding:16px 18px;min-width:86px;
 }
-.login-stat-val{font-size:22px;font-weight:800;color:#fb923c;line-height:1;}
-.login-stat-lbl{font-size:11px;color:#78716c;margin-top:4px;line-height:1.3;}
+.login-stat-val{font-size:22px;font-weight:800;color:#F5A623;line-height:1;}
+.login-stat-lbl{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;line-height:1.3;}
 .login-right{
   flex:1;background:#fff;padding:60px 52px;
   display:flex;flex-direction:column;justify-content:center;
@@ -12667,39 +12667,40 @@ if not st.session_state.logged_in:
 
     with _lcol:
         st.markdown("""
-<div style="margin-bottom:28px;">
-  <div style="width:54px;height:54px;border-radius:50%;
-    background:rgba(245,166,35,.18);display:flex;align-items:center;
-    justify-content:center;margin-bottom:22px;font-size:26px;">&#9728;</div>
+<div style="text-align:center;padding:20px 0 40px;">
+  <div style="width:72px;height:72px;border-radius:50%;
+    background:rgba(245,166,35,.15);border:2px solid rgba(245,166,35,.35);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 22px;font-size:34px;">&#9728;</div>
   <div style="font-size:28px;font-weight:800;color:#F5A623;
-    letter-spacing:-.4px;margin-bottom:10px;">Fractal Energy</div>
-  <div style="font-size:13px;color:rgba(255,255,255,.45);line-height:1.8;">
-    Unified solar monitoring platform<br>for multi-brand inverter fleets
+    letter-spacing:-.4px;margin-bottom:8px;">Fractal Energy</div>
+  <div style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.7;">
+    Unified Inverter Monitoring
   </div>
 </div>
-<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:40px;">
-  <div style="display:flex;align-items:center;gap:11px;">
-    <span style="width:22px;height:22px;border-radius:50%;
+<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:40px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="width:24px;height:24px;border-radius:50%;
       background:rgba(245,166,35,.2);display:flex;align-items:center;
-      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
-    <span style="font-size:12px;color:rgba(255,255,255,.45);">Multi-brand inverter support (Solis, Growatt)</span>
+      justify-content:center;font-size:12px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:13px;color:rgba(255,255,255,.55);">Multi-brand inverter support (Solis, Growatt)</span>
   </div>
-  <div style="display:flex;align-items:center;gap:11px;">
-    <span style="width:22px;height:22px;border-radius:50%;
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="width:24px;height:24px;border-radius:50%;
       background:rgba(245,166,35,.2);display:flex;align-items:center;
-      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
-    <span style="font-size:12px;color:rgba(255,255,255,.45);">Real-time monitoring &amp; alerts</span>
+      justify-content:center;font-size:12px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:13px;color:rgba(255,255,255,.55);">Real-time monitoring &amp; alerts</span>
   </div>
-  <div style="display:flex;align-items:center;gap:11px;">
-    <span style="width:22px;height:22px;border-radius:50%;
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="width:24px;height:24px;border-radius:50%;
       background:rgba(245,166,35,.2);display:flex;align-items:center;
-      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
-    <span style="font-size:12px;color:rgba(255,255,255,.45);">Yield &amp; performance reports</span>
+      justify-content:center;font-size:12px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:13px;color:rgba(255,255,255,.55);">Yield &amp; performance reports</span>
   </div>
 </div>
 <div style="font-size:11px;color:rgba(255,255,255,.2);
-  padding-top:20px;border-top:1px solid rgba(255,255,255,.08);">
-  Role-based access · Admin · Engineer · Viewer
+  padding-top:20px;border-top:1px solid rgba(255,255,255,.08);text-align:center;">
+  Role-based access &nbsp;·&nbsp; Admin &nbsp;·&nbsp; Engineer &nbsp;·&nbsp; Viewer
 </div>""", unsafe_allow_html=True)
 
     with _rcol:
@@ -13048,18 +13049,24 @@ if page == "Plants":
     plant_meta = st.session_state.get("plant_meta", {})
 
     # ── Page header ──────────────────────────────────────────
+    _user_init = (st.session_state.get("user") or "AD")[:2].upper()
     st.markdown(f"""
-<div style="display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:18px;">
-  <div>
-    <div style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-.2px;">
-      Plant Portfolio
-    </div>
-    <div style="font-size:12px;color:#999;margin-top:3px;">
-      Live monitoring across all connected inverters
-    </div>
+<div style="background:#0D2B45;padding:14px 28px;display:flex;align-items:center;
+  gap:10px;margin:0 -28px 0;">
+  <span style="font-size:20px;line-height:1;">☀️</span>
+  <span style="font-size:15px;font-weight:700;color:#F5A623;letter-spacing:-.2px;">Fractal Energy</span>
+  <span style="font-size:11px;color:rgba(245,166,35,.45);margin-left:2px;">Solar Monitor</span>
+  <div style="flex:1"></div>
+  <span style="font-size:11px;color:rgba(255,255,255,.35);">{datetime.now().strftime('%d %b %Y %H:%M')}</span>
+  <div style="width:30px;height:30px;border-radius:50%;background:#C85A00;color:#fff;
+    font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    margin-left:12px;">{_user_init}</div>
+</div>
+<div style="margin:20px 0 16px;">
+  <div style="font-size:22px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;">All Plants</div>
+  <div style="font-size:12px;color:#94a3b8;margin-top:3px;">
+    {len(all_sel_plants) or len(st.session_state.get("plant_meta", {}))} plants · Live monitoring across all connected inverters
   </div>
-  <div style="font-size:11px;color:#aaa;">{datetime.now().strftime('%d %b %Y &nbsp; %H:%M')}</div>
 </div>""", unsafe_allow_html=True)
 
     if not records:
@@ -13116,90 +13123,14 @@ if page == "Plants":
         _co2_kg       = _td * 0.82
         _trees        = max(1, int(_co2_kg / 22)) if _co2_kg > 0 else 0
 
-        # ── KPI Cards ────────────────────────────────────────────
-        st.markdown(f"""
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
-  <div style="background:#fff;border-radius:10px;padding:13px 16px;
-    border-left:3px solid #F5A623;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-      letter-spacing:.05em;margin-bottom:6px;">Yield Today</div>
-    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-      {_td:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kWh</span></div>
-    <div style="font-size:10px;color:#aaa;margin-top:4px;">{_n_online_inv} of {_n_total_inv} inverters online</div>
-  </div>
-  <div style="background:#fff;border-radius:10px;padding:13px 16px;
-    border-left:3px solid #C85A00;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-      letter-spacing:.05em;margin-bottom:6px;">Earnings Today</div>
-    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">{earn(_td)}</div>
-    <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8377;{RATE_PER_KWH:.2f}/kWh tariff</div>
-  </div>
-  <div style="background:#fff;border-radius:10px;padding:13px 16px;
-    border-left:3px solid #1A6FA8;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-      letter-spacing:.05em;margin-bottom:6px;">CO&#8322; Offset</div>
-    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-      {_co2_kg:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kg</span></div>
-    <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8776; {_trees} trees saved today</div>
-  </div>
-  <div style="background:#fff;border-radius:10px;padding:13px 16px;
-    border-left:3px solid #22c55e;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-    <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-      letter-spacing:.05em;margin-bottom:6px;">Plants Online</div>
-    <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-      {_n_online_pl}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">/ {len(_filt)}</span></div>
-    <div style="font-size:10px;color:#aaa;margin-top:4px;">Total: {_tt:,.1f} MWh lifetime</div>
-  </div>
-</div>""", unsafe_allow_html=True)
-
-        # ── Charts row ───────────────────────────────────────────
-        import plotly.graph_objects as _pgo
-        _cc1, _cc2 = st.columns([2, 1])
-
-        with _cc1:
-            _bar_vals   = _filt["today_kwh"].round(1).tolist()
-            _bar_names  = _filt["plant_name"].tolist()
-            _peak_val   = max(_bar_vals) if _bar_vals else 0
-            _bar_colors = ["#C85A00" if v == _peak_val else "#F5A623" for v in _bar_vals]
-            _bar_fig = _pgo.Figure(_pgo.Bar(
-                x=_bar_names, y=_bar_vals,
-                marker=dict(color=_bar_colors, line=dict(width=0)),
-            ))
-            _bar_fig.update_layout(
-                title=dict(text="Generation today (kWh per plant)",
-                           font=dict(size=12, color="#666"), x=0),
-                margin=dict(l=0, r=0, t=40, b=0), height=210,
-                plot_bgcolor="#fff", paper_bgcolor="#fff",
-                xaxis=dict(tickfont=dict(size=10, color="#bbb"),
-                           showgrid=False, zeroline=False, tickangle=-20),
-                yaxis=dict(tickfont=dict(size=10, color="#bbb"),
-                           gridcolor="#eee", zeroline=False),
-                bargap=0.35,
-            )
-            st.plotly_chart(_bar_fig, use_container_width=True,
-                            config={"displayModeBar": False})
-
-        with _cc2:
-            _bc = _filt.groupby("brand")["today_kwh"].sum().reset_index()
-            _pie_palette = ["#C85A00", "#F5A623", "#1A6FA8", "#22c55e",
-                            "#a855f7", "#ec4899", "#06b6d4"]
-            _pie_fig = _pgo.Figure(_pgo.Pie(
-                labels=_bc["brand"].tolist(),
-                values=_bc["today_kwh"].round(1).tolist(),
-                hole=0.58,
-                marker=dict(colors=_pie_palette[:len(_bc)]),
-                textinfo="none",
-            ))
-            _pie_fig.update_layout(
-                title=dict(text="By inverter brand",
-                           font=dict(size=12, color="#666"), x=0),
-                margin=dict(l=0, r=0, t=40, b=0), height=210,
-                legend=dict(font=dict(size=10, color="#666"),
-                            orientation="v", x=1, y=0.5),
-                plot_bgcolor="#fff", paper_bgcolor="#fff",
-            )
-            st.plotly_chart(_pie_fig, use_container_width=True,
-                            config={"displayModeBar": False})
+        # ── Search + action row ───────────────────────────────────
+        _sc1, _sc2, _sc3 = st.columns([4, 2, 1])
+        with _sc1:
+            _plant_search = st.text_input("", placeholder="🔍  Search plants by name or location…",
+                                          label_visibility="collapsed", key="plants_search")
+        with _sc3:
+            st.button("+ Add Plant", type="primary", use_container_width=True,
+                      key="add_plant_btn", disabled=True)
 
         # ── Brand filter pills ────────────────────────────────────
         _all_brands = ["All"] + sorted(_filt["brand"].unique().tolist())
@@ -13208,6 +13139,13 @@ if page == "Plants":
                                key="dash_brand_pill")
         _tbl_rows = _filt if _brand_pill == "All" else \
                     _filt[_filt["brand"] == _brand_pill]
+        # Apply text search filter
+        if _plant_search:
+            _q = _plant_search.lower()
+            _tbl_rows = _tbl_rows[
+                _tbl_rows["plant_name"].str.lower().str.contains(_q, na=False) |
+                _tbl_rows["Location"].str.lower().str.contains(_q, na=False)
+            ]
 
         # ── Projects table ────────────────────────────────────────
         _rows_html = ""
@@ -13263,6 +13201,28 @@ if page == "Plants":
     <tbody>{_rows_html}
     </tbody>
   </table>
+</div>""", unsafe_allow_html=True)
+
+        # ── Fleet stat cards ──────────────────────────────────────
+        _fleet_pct  = round(_n_online_pl / max(len(_filt), 1) * 100)
+        _n_alerts   = st.session_state.get("_fault_count", 0)
+        st.markdown(f"""
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px;margin-bottom:20px;">
+  <div style="background:#E6F5EE;border:1px solid #B4E0C8;border-radius:12px;padding:18px 20px;">
+    <div style="font-size:10px;color:#4A6278;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Fleet Health</div>
+    <div style="font-size:26px;font-weight:800;color:#1E7B4A;margin:6px 0 2px;">{_fleet_pct}%</div>
+    <div style="font-size:11px;color:#4A8C63;">{_n_online_pl} of {len(_filt)} plants online</div>
+  </div>
+  <div style="background:#FEF3E2;border:1px solid #F5D09A;border-radius:12px;padding:18px 20px;">
+    <div style="font-size:10px;color:#4A6278;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Current Output</div>
+    <div style="font-size:26px;font-weight:800;color:#A05A00;margin:6px 0 2px;">{_tp/1000:.2f} MW</div>
+    <div style="font-size:11px;color:#7A5010;">Across all active plants</div>
+  </div>
+  <div style="background:#FDEAEA;border:1px solid #F4AEAE;border-radius:12px;padding:18px 20px;">
+    <div style="font-size:10px;color:#4A6278;text-transform:uppercase;letter-spacing:.5px;font-weight:600;">Active Alarms</div>
+    <div style="font-size:26px;font-weight:800;color:#B91C1C;margin:6px 0 2px;">{_n_alerts}</div>
+    <div style="font-size:11px;color:#8B1A1A;">Requires attention</div>
+  </div>
 </div>""", unsafe_allow_html=True)
 
         # ── Open Dashboard selector ───────────────────────────────
@@ -13519,6 +13479,40 @@ elif page == "Overview":
   margin-bottom:14px;font-size:13px;font-weight:600;color:#fff;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
   {_ab_txt}
+</div>""", unsafe_allow_html=True)
+
+    # ── 4 KPI cards row ──────────────────────────────────────────
+    _co2_today  = round(daily_kwh * 0.82 / 1000, 3)
+    _trees_today = max(0, round(_co2_today * 45, 0))
+    _earn_today  = daily_kwh * RATE_PER_KWH
+    st.markdown(f"""
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+  <div style="background:#fff;border-radius:12px;padding:18px 20px;
+    border:1px solid #E5EBF0;box-shadow:0 1px 4px rgba(0,0,0,.04);">
+    <div style="font-size:10px;color:#6B7E8F;text-transform:uppercase;letter-spacing:.6px;font-weight:600;">Yield Today</div>
+    <div style="font-size:26px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;margin:6px 0 4px;">
+      {daily_kwh/1000:.3f}<span style="font-size:14px;font-weight:500;color:#94a3b8;margin-left:4px;">MWh</span></div>
+    <div style="font-size:11px;color:#2E9B5F;">&#8593; Live · {n_on}/{n_tot} inverters online</div>
+  </div>
+  <div style="background:#fff;border-radius:12px;padding:18px 20px;
+    border:1px solid #E5EBF0;box-shadow:0 1px 4px rgba(0,0,0,.04);">
+    <div style="font-size:10px;color:#6B7E8F;text-transform:uppercase;letter-spacing:.6px;font-weight:600;">Savings Today</div>
+    <div style="font-size:26px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;margin:6px 0 4px;">{earn(daily_kwh)}</div>
+    <div style="font-size:11px;color:#2E9B5F;">&#8593; &#8377;{RATE_PER_KWH:.2f}/kWh tariff</div>
+  </div>
+  <div style="background:#fff;border-radius:12px;padding:18px 20px;
+    border:1px solid #E5EBF0;box-shadow:0 1px 4px rgba(0,0,0,.04);">
+    <div style="font-size:10px;color:#6B7E8F;text-transform:uppercase;letter-spacing:.6px;font-weight:600;">CO&#8322; Avoided</div>
+    <div style="font-size:26px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;margin:6px 0 4px;">
+      {_co2_today:.3f}<span style="font-size:14px;font-weight:500;color:#94a3b8;margin-left:4px;">tons</span></div>
+    <div style="font-size:11px;color:#2E9B5F;">&#8593; Based on 0.82 kg/kWh</div>
+  </div>
+  <div style="background:#fff;border-radius:12px;padding:18px 20px;
+    border:1px solid #E5EBF0;box-shadow:0 1px 4px rgba(0,0,0,.04);">
+    <div style="font-size:10px;color:#6B7E8F;text-transform:uppercase;letter-spacing:.6px;font-weight:600;">Trees Equivalent</div>
+    <div style="font-size:26px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;margin:6px 0 4px;">{_trees_today:,.0f}</div>
+    <div style="font-size:11px;color:#2E9B5F;">&#8593; Lifetime: {_trees:,.1f} trees</div>
+  </div>
 </div>""", unsafe_allow_html=True)
 
     # ── 3-column layout: [gauge+KPIs | charts | right panel] ─
@@ -14334,25 +14328,32 @@ elif page == "O&M":
 #  REPORT  — pulls historical data from Solis API directly
 # ══════════════════════════════════════════════════════════════
 elif page == "Report":
-    st.markdown('<div class="page-hdr"><h1>Plant Report</h1>'
-                '<p>Historical generation data from Solis Cloud</p></div>',
-                unsafe_allow_html=True)
+    st.markdown(f"""
+<div style="margin-bottom:16px;">
+  <div style="font-size:22px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;">Reports</div>
+  <div style="font-size:12px;color:#94a3b8;margin-top:3px;">Historical generation &amp; performance data</div>
+</div>""", unsafe_allow_html=True)
 
     rtype = st.radio("", ["Daily","Monthly","Annual","Total"],
                      horizontal=True, label_visibility="collapsed")
-    st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
 
     # Plant comes from the sidebar active_plant selector
     sel_plant = active_plant   # 'All Plants' or a specific plant name
 
-    fc1, fc2 = st.columns([2, 1])
+    fc1, fc2, fc3, fc4 = st.columns([2, 1.5, 1, 1])
     with fc1:
         st.markdown(
-            f'<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;'
-            f'padding:10px 14px;font-size:13px;font-weight:600;color:#166534;">'
-            f'📍 {sel_plant}</div>',
+            f'<div style="background:#E8F1FA;border:1px solid #B8D4EE;border-radius:8px;'
+            f'padding:9px 14px;font-size:13px;font-weight:600;color:#1A6FA8;">'
+            f'&#128205; {sel_plant}</div>',
             unsafe_allow_html=True)
-    with fc2: sel_date = st.date_input("Date", value=date.today())
+    with fc2:
+        sel_date = st.date_input("Date", value=date.today(), label_visibility="collapsed")
+    with fc3:
+        st.button("&#11015; CSV", use_container_width=True, key="rpt_csv_btn")
+    with fc4:
+        st.button("&#11015; Excel", use_container_width=True, key="rpt_xl_btn")
 
     # Shared line chart helper
     def line_chart(fig, h=360):
@@ -14740,11 +14741,18 @@ elif page == "Alarms":
                 "plant":    _lr.get("plant_name",""),
             })
 
+    st.markdown(f"""
+<div style="margin-bottom:16px;">
+  <div style="font-size:22px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;">Alarms &amp; Notifications</div>
+  <div style="font-size:12px;color:#94a3b8;margin-top:3px;">Active and resolved alerts across all plants</div>
+</div>""", unsafe_allow_html=True)
+
     st.markdown("""<style>
-    .alm-card{border:1px solid #e8e8e8;border-radius:8px;padding:11px 13px;margin-bottom:8px;
-      display:flex;align-items:flex-start;gap:11px;background:#fff;}
-    .alm-card.critical{border-left:3px solid #E24B4A;}
-    .alm-card.warning {border-left:3px solid #EF9F27;}
+    .alm-card{border:1px solid #e8e8e8;border-radius:10px;padding:13px 16px;margin-bottom:9px;
+      display:flex;align-items:flex-start;gap:11px;background:#fff;
+      box-shadow:0 1px 4px rgba(0,0,0,.04);}
+    .alm-card.critical{border-left:4px solid #B91C1C;background:linear-gradient(90deg,#FFF5F5,#fff);}
+    .alm-card.warning {border-left:4px solid #F5A623;background:linear-gradient(90deg,#FEFBF0,#fff);}
     .alm-icon{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;
       justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;}
     .alm-icon.critical{background:#FCEBEB;color:#A32D2D;}
@@ -14826,9 +14834,11 @@ elif page == "Alarms":
 #  SETTINGS
 # ══════════════════════════════════════════════════════════════
 elif page == "Settings":
-    st.markdown('<div class="page-hdr"><h1>Settings</h1>'
-                '<p>Credentials, alerts and app configuration</p></div>',
-                unsafe_allow_html=True)
+    st.markdown("""
+<div style="margin-bottom:16px;">
+  <div style="font-size:22px;font-weight:800;color:#0D2B45;letter-spacing:-.4px;">Settings</div>
+  <div style="font-size:12px;color:#94a3b8;margin-top:3px;">Credentials, alerts and app configuration</div>
+</div>""", unsafe_allow_html=True)
 
     from config import (SOLIS_API_KEY, GROWATT_USERNAME, SUNGROW_APP_KEY,
                         EMAIL_USER, TO_EMAILS, RATE_PER_KWH)
