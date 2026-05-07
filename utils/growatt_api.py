@@ -2128,7 +2128,7 @@ def fetch_all():
                         "inverter_sn": inv.get("sn") or inv.get("deviceSn", pid),
                         "power_kw":    power_kw,
                         "today_kwh":   _sf(inv.get("eToday") or inv.get("todayEnergy")),
-                        "total_kwh":   _sf(inv.get("eTotal") or inv.get("totalEnergy")),
+                        "total_kwh":   (_sf(inv.get("eTotal") or inv.get("totalEnergy")) or 0) / 1000,
                         "status":      {1:"Online", 0:"Offline", -1:"Fault",
                                         3:"Abnormal", 2:"Warning"}.get(sc, "Unknown"),
                         "temperature": _sf(inv.get("ipmTemperature") or inv.get("temperature")),
@@ -2139,8 +2139,9 @@ def fetch_all():
             else:
                 # Fallback: use plant-level data as a single record
                 status_map = {"1":"Online","3":"Abnormal","0":"Offline","-1":"Fault","2":"Warning"}
-                nom_power  = _sf(p.get("nominalPower", 0))
-                power_kw   = round(nom_power / 1000.0, 3) if nom_power else None
+                # Use actual currentPower (kW) not nominalPower (rated capacity)
+                _cur_kw = _sf(p.get("currentPower") or p.get("pac"))
+                power_kw = round(float(_cur_kw), 3) if _cur_kw is not None else None
 
                 results.append({
                     "brand":       "Growatt",
@@ -2149,7 +2150,7 @@ def fetch_all():
                     "inverter_sn": pid,
                     "power_kw":    power_kw,
                     "today_kwh":   _sf(p.get("eToday", 0)),
-                    "total_kwh":   _sf(p.get("eTotal", 0)),
+                    "total_kwh":   (_sf(p.get("eTotal", 0)) or 0) / 1000,
                     "status":      status_map.get(str(p.get("status")), "Unknown"),
                     "temperature": None,
                     "voltage":     None,

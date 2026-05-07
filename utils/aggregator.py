@@ -76,7 +76,10 @@ import streamlit as st
 from utils import solis_api, growatt_api, sungrow_api
 from utils.database import save_readings, log_alert
 from utils.alerts import send_email_alert
-from utils.database import save_intraday, save_daily_yield
+from utils.database import (save_intraday, save_daily_yield,
+                             get_daily_yield_month,
+                             save_monthly_yield, get_monthly_yield,
+                             save_yearly_yield)
 from datetime import datetime
 
 FETCHERS = {"Solis": solis_api.fetch_all,
@@ -93,34 +96,45 @@ def fetch_all_brands(brands=None):
             st.warning(f"⚠️ {b} fetch failed: {e}")
     if all_records:
         save_readings(all_records)
-        # ✅ NEW: store intraday + daily
-        now = datetime.now()
+        now      = datetime.now()
         date_str = now.strftime("%Y-%m-%d")
         time_hm  = now.strftime("%H:%M")
 
-        plant_map = {}
-
+        # Aggregate per PLANT (sum all inverters) before saving
+        plant_pwr = {}
+        plant_kwh = {}
         for r in all_records:
-            plant = r.get("plant_name")
-            power = float(r.get("power_kw") or 0)
-            energy = float(r.get("today_kwh") or 0)
+            plant = r.get("plant_name") or ""
+            if not plant:
+                continue
+            plant_pwr[plant] = plant_pwr.get(plant, 0.0) + float(r.get("power_kw") or 0)
+            plant_kwh[plant] = plant_kwh.get(plant, 0.0) + float(r.get("today_kwh") or 0)
 
-            # ---- intraday ----
-            save_intraday(
-                plant,
-                date_str,
-                [{"time_hm": time_hm, "power_kw": power}]
-            )
+        for plant, pwr in plant_pwr.items():
+            save_intraday(plant, date_str, [{"time_hm": time_hm, "power_kw": pwr}])
 
-            # ---- daily yield aggregation ----
-            if plant not in plant_map:
-                plant_map[plant] = 0
-            plant_map[plant] += energy
+        cur_month = date_str[:7]   # e.g. "2026-05"
+        cur_year  = date_str[:4]   # e.g. "2026"
 
-        # ---- save daily yield ----
-        for plant, total_kwh in plant_map.items():
-            save_daily_yield(plant, date_str, total_kwh)
-            
+        for plant, kwh in plant_kwh.items():
+            save_daily_yield(plant, date_str, kwh)
+
+            # Recompute monthly total from stored daily_yield rows and save
+            try:
+                _daily_df = get_daily_yield_month(plant, cur_month)
+                _mon_total = float(_daily_df["energy_kwh"].sum()) if not _daily_df.empty else kwh
+                save_monthly_yield(plant, cur_month, _mon_total)
+            except Exception as _e:
+                print(f"⚠️ monthly_yield save error ({plant}): {_e}")
+
+            # Recompute yearly total from stored monthly_yield rows and save
+            try:
+                _mon_df = get_monthly_yield(plant, cur_year)
+                _yr_total = float(_mon_df["energy_kwh"].sum()) if not _mon_df.empty else kwh
+                save_yearly_yield(plant, cur_year, _yr_total)
+            except Exception as _e:
+                print(f"⚠️ yearly_yield save error ({plant}): {_e}")
+
     return all_records
 
 
