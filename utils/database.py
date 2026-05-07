@@ -4,18 +4,30 @@ import pandas as pd
 import psycopg2
 from datetime import datetime, timedelta
 
-try:
-    from config import NEON_DATABASE_URL
-except Exception:
-    NEON_DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+def _get_url():
+    """Read the Neon connection URL — tries st.secrets first, then env vars."""
+    # 1. Try Streamlit secrets (works on Streamlit Cloud and local with secrets.toml)
+    try:
+        import streamlit as st
+        url = (st.secrets.get("NEON_DATABASE_URL", "")
+               or st.secrets.get("DATABASE_URL", ""))
+        if url:
+            return url
+    except Exception:
+        pass
+    # 2. Fall back to environment variables
+    return (os.environ.get("NEON_DATABASE_URL", "")
+            or os.environ.get("DATABASE_URL", ""))
 
 
 def _conn():
     """Open and return a new psycopg2 connection to Neon PostgreSQL."""
-    url = NEON_DATABASE_URL or os.environ.get("DATABASE_URL", "")
+    url = _get_url()
     if not url:
         raise RuntimeError(
-            "NEON_DATABASE_URL not set. Add it to .streamlit/secrets.toml:\n"
+            "NEON_DATABASE_URL not configured.\n"
+            "Streamlit Cloud: App → Manage app → Settings → Secrets → add:\n"
             '  NEON_DATABASE_URL = "postgresql://user:pass@host.neon.tech/db?sslmode=require"'
         )
     return psycopg2.connect(url)

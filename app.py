@@ -12595,7 +12595,17 @@ div[data-testid="stSelectbox"]>div>div{
 # ══════════════════════════════════════════════════════════════
 #  INIT
 # ══════════════════════════════════════════════════════════════
-init_db()
+try:
+    init_db()
+except Exception as _db_init_err:
+    st.error(
+        "**Database not connected.**\n\n"
+        "Add your Neon connection string to Streamlit Cloud secrets:\n\n"
+        "**Manage app → Settings → Secrets** → add:\n"
+        "```\nNEON_DATABASE_URL = \"postgresql://user:pass@host.neon.tech/db?sslmode=require\"\n```\n\n"
+        f"Error: `{_db_init_err}`"
+    )
+    st.stop()
 
 # ══════════════════════════════════════════════════════════════
 #  SESSION STATE
