@@ -13657,7 +13657,7 @@ elif page == "Overview":
                     _c2    = _dbc2()
                     _id_df = pd.read_sql(
                         "SELECT time_hm, power_kw FROM intraday_power "
-                        "WHERE date=? ORDER BY time_hm",
+                        "WHERE date=%s ORDER BY time_hm",
                         _c2, params=(_day_str_api,))
                     _c2.close()
                     if not _id_df.empty:
