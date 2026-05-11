@@ -12922,7 +12922,9 @@ if not st.session_state.plant_selected:
                     "location": p.get("city","") or p.get("address","") or "—",
                 })
         except Exception as e:
-            print(f"Plant loader Solis error: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"[Solis plant load FAILED] {e}")
         try:
             from utils.growatt_api import _get_plants, login as glogin
             glogin()
@@ -12978,6 +12980,10 @@ if not st.session_state.plant_selected:
     }
     st.session_state.sel_brands     = active_brands or ["Solis"]
     st.session_state.sel_plants     = sel_plant_names
+    if not sel_plant_names:
+        st.session_state["_plant_load_failed"] = True
+    else:
+        st.session_state["_plant_load_failed"] = False
     st.session_state.plant_selected = True
     st.cache_data.clear()
     st.rerun()
@@ -13129,6 +13135,7 @@ with st.spinner("Fetching live data…"):
                 else:
                     _recs = []
                 records.extend(_recs)
+                print(f"[{_brand} fetch] got {len(_recs)} records")
             except Exception as _e:
                 _fetch_errors.append(f"{_brand}: {_e}")
         if all_sel_plants:
@@ -13160,9 +13167,24 @@ if _plant_pwr:
     for _pn, _pwr in _plant_pwr.items():
         _day_slot.setdefault(_pn, {})[_snap_hm] = _pwr
 
-# Step B: persist to SQLite (at most once per minute) for cross-session history
-_last_id_save = st.session_state.get("_last_intraday_save", 0)
-if records and (_now_ts - _last_id_save >= 60):
+# Step B: persist to DB (throttle via DB query so it works across sessions)
+_should_save = False
+try:
+    from utils.database import _conn as _sc
+    _sc2 = _sc()
+    _scur = _sc2.cursor()
+    _scur.execute(
+        "SELECT MAX(fetched_at) FROM inverter_data "
+        "WHERE fetched_at >= NOW() - INTERVAL '2 minutes'"
+    )
+    _last_db_row = _scur.fetchone()
+    _scur.close()
+    _sc2.close()
+    _should_save = (_last_db_row is None or _last_db_row[0] is None)
+except Exception:
+    _should_save = (_now_ts - st.session_state.get("_last_intraday_save", 0) >= 60)
+
+if records and _should_save:
     try:
         from utils.database import (save_readings as _sv_r,
                                     save_intraday as _sv_id,
@@ -13177,6 +13199,7 @@ if records and (_now_ts - _last_id_save >= 60):
         st.session_state["_last_db_save_hm"]    = _snap_hm
     except Exception as _save_err:
         st.session_state["_db_save_err"] = str(_save_err)
+        print(f"[DB save error] {_save_err}")
 
 # ── Hourly: save monthly yield to report_monthly_yield ────────────────────────
 _last_ms = st.session_state.get("_last_monthly_save", 0)
@@ -13198,6 +13221,40 @@ else:
 
 alerts = check_alerts(records, st.session_state)
 st.session_state["_fault_count"] = len(alerts)
+
+if alerts:
+    try:
+        from utils.database import _conn as _aconn
+        _ac = _aconn()
+        _acur = _ac.cursor()
+        _acur.execute("""
+            CREATE TABLE IF NOT EXISTS alert_log (
+                id         SERIAL PRIMARY KEY,
+                plant_name TEXT,
+                inverter_sn TEXT,
+                brand      TEXT,
+                issue      TEXT,
+                alerted_at TEXT,
+                UNIQUE(plant_name, inverter_sn, issue, alerted_at)
+            )
+        """)
+        for _al in alerts:
+            _acur.execute("""
+                INSERT INTO alert_log (plant_name, inverter_sn, brand, issue, alerted_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT DO NOTHING
+            """, (
+                _al.get("plant_name", ""),
+                _al.get("inverter_sn", ""),
+                _al.get("brand", ""),
+                _al.get("issue", ""),
+                _snap_ts
+            ))
+        _ac.commit()
+        _acur.close()
+        _ac.close()
+    except Exception as _al_err:
+        print(f"[alert persist] {_al_err}")
 
 df = pd.DataFrame()
 if records_view:
@@ -13250,6 +13307,10 @@ if page == "Plants":
 </div>""", unsafe_allow_html=True)
 
     if not records:
+        st.cache_data.clear()
+        if st.session_state.get("_plant_load_failed"):
+            st.error("Plant list could not be loaded from the API. Live inverter data may still appear if credentials are correct.")
+        st.button("🔄 Retry", on_click=st.cache_data.clear)
         st.warning("No plant data — API returned no inverters. Check credentials and click **Refresh Now**.")
         if _fetch_errors:
             for _fe in _fetch_errors:
@@ -13821,7 +13882,29 @@ elif page == "Overview":
                         pass
                 return pd.DataFrame(rows) if rows else pd.DataFrame()
 
-            # ── Source 1: session-state (populated on every refresh, instant) ─
+            # ── Source 1: DB is the primary source ───────────────────────────
+            _db_pts = {}
+            try:
+                from utils.database import get_intraday as _get_id
+                if _pname_q:
+                    _id_df_primary = _get_id(_pname_q, _day_str_api)
+                else:
+                    from utils.database import _conn as _dbc_primary
+                    _c_primary = _dbc_primary()
+                    _id_df_primary = pd.read_sql(
+                        "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
+                        "WHERE date=%s GROUP BY time_hm ORDER BY time_hm",
+                        _c_primary, params=(_day_str_api,))
+                    _c_primary.close()
+                if not _id_df_primary.empty:
+                    _db_pts = dict(zip(
+                        _id_df_primary["time_hm"],
+                        pd.to_numeric(_id_df_primary["power_kw"], errors="coerce").fillna(0)
+                    ))
+            except Exception as _db_primary_err:
+                print(f"[intraday primary read] {_db_primary_err}")
+
+            # ── Source 2: overlay session state (more recent points in current session) ─
             _ss_day = st.session_state.get("_ss_intraday", {}).get(_day_str_api, {})
             if _pname_q:
                 _ss_pts = dict(_ss_day.get(_pname_q, {}))
@@ -13830,37 +13913,12 @@ elif page == "Overview":
                 for _pn_s, _ppts_s in _ss_day.items():
                     for _t_s, _p_s in _ppts_s.items():
                         _ss_pts[_t_s] = _ss_pts.get(_t_s, 0.0) + _p_s
-            if _ss_pts:
-                _dp      = _to_chart_df(_ss_pts, _day_str_api)
-                _day_src = "session"
 
-            # ── Source 2: intraday_power DB (populated by 1-min DB saves) ─────
-            try:
-                from utils.database import get_intraday as _get_id
-                if _pname_q:
-                    _id_df = _get_id(_pname_q, _day_str_api)
-                else:
-                    from utils.database import _conn as _dbc2
-                    _c2    = _dbc2()
-                    _id_df = pd.read_sql(
-                        "SELECT time_hm, power_kw FROM intraday_power "
-                        "WHERE date=%s ORDER BY time_hm",
-                        _c2, params=(_day_str_api,))
-                    _c2.close()
-                    if not _id_df.empty:
-                        _id_df = _id_df.groupby("time_hm")["power_kw"].sum().reset_index()
-
-                if not _id_df.empty:
-                    # Merge DB into session data — DB may have more points (older entries)
-                    _db_pts = dict(zip(_id_df["time_hm"],
-                                       pd.to_numeric(_id_df["power_kw"],
-                                                     errors="coerce").fillna(0)))
-                    _merged = {**_db_pts, **_ss_pts}  # session overrides DB for same time
-                    if _merged:
-                        _dp      = _to_chart_df(_merged, _day_str_api)
-                        _day_src = "db" if not _ss_pts else "session+db"
-            except Exception:
-                pass
+            # Merge: session state overrides DB for same time slot
+            _merged_pts = {**_db_pts, **_ss_pts}
+            if _merged_pts:
+                _dp      = _to_chart_df(_merged_pts, _day_str_api)
+                _day_src = "db+session" if _db_pts else "session"
 
             # ── Source 3: inverter_data fallback (same DB, broader table) ─────
             if _dp.empty:
@@ -15066,7 +15124,23 @@ elif page == "Service":
 # ══════════════════════════════════════════════════════════════
 elif page == "Alarms":
     # Build unified alarm list: live critical alerts + resolved history
-    _alarm_log = get_alert_log(200)
+    try:
+        _alarm_log = get_alert_log(200)
+    except Exception:
+        _alarm_log = pd.DataFrame()
+
+    if _alarm_log.empty:
+        try:
+            from utils.database import _conn as _alconn
+            _alc = _alconn()
+            _alarm_log = pd.read_sql(
+                "SELECT plant_name, inverter_sn, brand, issue, alerted_at "
+                "FROM alert_log ORDER BY alerted_at DESC LIMIT 200",
+                _alc)
+            _alc.close()
+        except Exception as _alq_err:
+            print(f"[alert_log fallback] {_alq_err}")
+            _alarm_log = pd.DataFrame()
     _all_alarms = []
     for _a in alerts:
         _all_alarms.append({
