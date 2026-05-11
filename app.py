@@ -14746,45 +14746,100 @@ elif page == "Report":
     if rtype == "Daily":
         _ds = sel_date.strftime("%Y-%m-%d")
         _plant_filter = sel_plant if sel_plant != "All Plants" else None
-        try:
-            from utils.database import _conn as _rc
-            _rconn = _rc()
-            if _plant_filter:
-                _intra_df = pd.read_sql(
-                    "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
-                    "WHERE plant_name=%s AND date=%s GROUP BY time_hm ORDER BY time_hm",
-                    _rconn, params=(_plant_filter, _ds))
-            else:
-                _intra_df = pd.read_sql(
-                    "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
-                    "WHERE date=%s GROUP BY time_hm ORDER BY time_hm",
-                    _rconn, params=(_ds,))
-            _rconn.close()
-        except Exception as _re:
-            print(f"[reports daily] {_re}")
-            _intra_df = pd.DataFrame()
+        _intra_df = pd.DataFrame()
 
+        # Step 1: Try Solis/Growatt API for full-day historical power curve.
+        # Both solis_api.get_plant_intraday_power and growatt_api.get_plant_intraday_power
+        # return: [{"time": datetime, "power_kw": float}, ...]
+        if _plant_filter:
+            _pid_info = plant_id_map.get(_plant_filter)
+            if _pid_info:
+                _pid, _pbrand = _pid_info
+                try:
+                    if _pbrand == "Solis":
+                        from utils.solis_api import get_plant_intraday_power as _sdp
+                        _api_rows = _sdp(_pid, _ds)
+                        if _api_rows:
+                            _intra_df = pd.DataFrame(_api_rows)
+                            # "time" column is a datetime object; rename to "datetime"
+                            _intra_df = _intra_df.rename(columns={"time": "datetime"})
+                            _intra_df["power_kw"] = pd.to_numeric(
+                                _intra_df["power_kw"], errors="coerce").fillna(0)
+                    elif _pbrand == "Growatt":
+                        from utils.growatt_api import get_plant_intraday_power as _gdp
+                        _api_rows = _gdp(_pid, _ds)
+                        if _api_rows:
+                            _intra_df = pd.DataFrame(_api_rows)
+                            _intra_df = _intra_df.rename(columns={"time": "datetime"})
+                            _intra_df["power_kw"] = pd.to_numeric(
+                                _intra_df["power_kw"], errors="coerce").fillna(0)
+                except Exception as _api_day_err:
+                    print(f"[day power API] {_api_day_err}")
+                    _intra_df = pd.DataFrame()
+
+        # Step 2: Fall back to intraday_power DB table if API returned nothing.
+        if _intra_df.empty:
+            try:
+                from utils.database import _conn as _rc
+                _rconn = _rc()
+                if _plant_filter:
+                    _intra_df = pd.read_sql(
+                        "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
+                        "WHERE plant_name=%s AND date=%s GROUP BY time_hm ORDER BY time_hm",
+                        _rconn, params=(_plant_filter, _ds))
+                else:
+                    _intra_df = pd.read_sql(
+                        "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
+                        "WHERE date=%s GROUP BY time_hm ORDER BY time_hm",
+                        _rconn, params=(_ds,))
+                _rconn.close()
+                # DB rows have "time_hm" (string); build datetime column
+                if not _intra_df.empty and "time_hm" in _intra_df.columns:
+                    _intra_df["datetime"] = pd.to_datetime(
+                        _ds + " " + _intra_df["time_hm"].astype(str), errors="coerce")
+            except Exception as _re:
+                print(f"[reports daily DB fallback] {_re}")
+                _intra_df = pd.DataFrame()
+
+        # Step 3: Sort and drop bad rows
+        if not _intra_df.empty and "datetime" in _intra_df.columns:
+            _intra_df = _intra_df.dropna(subset=["datetime"]).sort_values("datetime")
+
+        # Step 4: Plot
         sec(f"Power output — {sel_date.strftime('%d %b %Y')}")
-        if not _intra_df.empty:
-            _intra_df["datetime"] = pd.to_datetime(_ds + " " + _intra_df["time_hm"])
+        if not _intra_df.empty and "datetime" in _intra_df.columns:
             _fig_d = go.Figure()
             _fig_d.add_trace(go.Scatter(
                 x=_intra_df["datetime"], y=_intra_df["power_kw"],
-                fill="tozeroy", fillcolor="rgba(200,90,0,.12)",
-                line=dict(color="#C85A00", width=2.5), mode="lines+markers",
-                marker=dict(size=4, color="#C85A00"),
+                fill="tozeroy", fillcolor="rgba(245,166,35,.15)",
+                line=dict(color="#F5A623", width=2.5), mode="lines+markers",
+                marker=dict(size=4, color="#F5A623"),
                 hovertemplate="<b>%{x|%H:%M}</b><br>Power: <b>%{y:.2f} kW</b><extra></extra>"))
             _fig_d.update_layout(
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=8,b=50), height=360, showlegend=False,
-                xaxis=dict(showgrid=False, tickformat="%H:%M", title="Time",
-                           rangeslider=dict(visible=True, thickness=0.06)),
+                margin=dict(l=0,r=0,t=8,b=50), height=380, showlegend=False,
+                xaxis=dict(
+                    showgrid=False, tickformat="%H:%M", title="Time",
+                    range=[pd.Timestamp(_ds + " 06:00"), pd.Timestamp(_ds + " 18:30")],
+                    rangeslider=dict(visible=True, thickness=0.06),
+                    rangeselector=dict(
+                        buttons=[
+                            dict(count=4, label="4h", step="hour", stepmode="backward"),
+                            dict(count=8, label="8h", step="hour", stepmode="backward"),
+                            dict(step="all", label="Full Day")],
+                        bgcolor="#f8fafc", activecolor="#F5A623", font=dict(size=10))),
                 yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="Power (kW)", zeroline=False))
-            st.plotly_chart(_fig_d, use_container_width=True, config={"displayModeBar": True})
-            st.caption(f"{len(_intra_df)} readings · peak {_intra_df['power_kw'].max():.2f} kW")
+            st.plotly_chart(_fig_d, use_container_width=True,
+                            config={"displayModeBar": True, "scrollZoom": True})
+            _peak = _intra_df["power_kw"].max()
+            _peak_time = _intra_df.loc[_intra_df["power_kw"].idxmax(), "datetime"]
+            st.caption(
+                f"{len(_intra_df)} readings  ·  "
+                f"Peak {_peak:.2f} kW at {_peak_time.strftime('%H:%M')}")
         else:
-            st.info(f"No intraday data for {sel_date.strftime('%d %b %Y')}. The app must be running during the day to collect readings.")
+            st.info(f"No power data for {sel_date.strftime('%d %b %Y')}. "
+                    "Select a plant and try a date the system was active.")
 
         sec(f"Daily totals — {sel_date.strftime('%B %Y')}")
         _mon_str_d = sel_date.strftime("%Y-%m")
