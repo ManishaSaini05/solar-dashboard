@@ -12115,2782 +12115,15 @@
 #     """, language="")
 
 
-# # ============================================================
-# #  app.py  —  Solar Dashboard  |  streamlit run app.py
-# # ============================================================
-# import streamlit as st
-# from streamlit_autorefresh import st_autorefresh
-# import pandas as pd
-# import plotly.express as px
-# import plotly.graph_objects as go
-# from datetime import datetime, date, timedelta
-
-# from config import REFRESH_INTERVAL_SECONDS, RATE_PER_KWH
-# from utils.database import init_db, get_history, get_alert_log
-# from utils.aggregator import fetch_all_brands, check_alerts
-
-# # ─────────────────────────────────────────────────────────────
-# st.set_page_config(page_title="Solar Dashboard · Fractal Energy",
-#                    page_icon="☀️", layout="wide",
-#                    initial_sidebar_state="collapsed")
-
-# # ══════════════════════════════════════════════════════════════
-# #  GLOBAL CSS  —  Navy · Teal · Amber theme
-# # ══════════════════════════════════════════════════════════════
-# st.markdown("""
-# <style>
-# @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
-
-# *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-
-# :root{
-#   /* ── Fractal Energy palette ── */
-#   --primary:   #C85A00;
-#   --primary-l: #FFF0E6;
-#   --primary-d: #A84B00;
-#   --amber:     #F5A623;
-#   --amber-l:   #FFF8E8;
-#   --amber-d:   #D4880A;
-#   --yellow:    #F5A623;
-#   --yellow-l:  #FFF8E8;
-
-#   /* ── Semantic ── */
-#   --green:     #16a34a;
-#   --green-l:   #dcfce7;
-#   --red:       #dc2626;
-#   --red-l:     #fee2e2;
-#   --blue:      #1A6FA8;
-#   --blue-l:    #E6F1FB;
-
-#   /* ── Surfaces ── */
-#   --bg:        #f4f4f4;
-#   --card:      #ffffff;
-#   --border:    #e2e8f0;
-#   --border2:   #cbd5e1;
-
-#   /* ── Text ── */
-#   --text:      #1a1a1a;
-#   --text2:     #555555;
-#   --text3:     #999999;
-
-#   /* ── Sidebar (navy) ── */
-#   --sb-bg:     #0D2B45;
-#   --sb-border: rgba(255,255,255,.09);
-
-#   /* ── Shadows ── */
-#   --shadow:    0 1px 3px rgba(13,43,69,.05),0 4px 16px rgba(13,43,69,.05);
-#   --shadow-lg: 0 8px 32px rgba(13,43,69,.12);
-#   --shadow-p:  0 4px 20px rgba(200,90,0,.25);
-
-#   /* ── legacy aliases for old inline HTML ── */
-#   --navy:      #0D2B45;
-#   --navy2:     #0D2B45;
-#   --navy3:     #0D2B45;
-#   --teal:      #C85A00;
-#   --teal-l:    #FFF0E6;
-#   --teal-d:    #A84B00;
-#   --orange:    #F5A623;
-#   --orange-l:  #FFF8E8;
-#   --sky:       #1A6FA8;
-#   --sky-l:     #E6F1FB;
-
-#   /* ── Shadows ── */
-#   --shadow:    0 1px 4px rgba(13,43,69,.06),0 4px 20px rgba(13,43,69,.05);
-#   --shadow-lg: 0 8px 40px rgba(13,43,69,.12);
-#   --shadow-teal:0 4px 20px rgba(200,90,0,.25);
-# }
-
-# /* ── Fonts ── */
-# html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"]{
-#   background:var(--bg)!important;
-#   font-family:'Inter',sans-serif!important;
-#   color:var(--text);
-# }
-# [data-testid="stHeader"]{background:transparent!important;display:none;}
-# #MainMenu,footer{visibility:hidden;}
-# [data-testid="stDecoration"]{display:none;}
-# .block-container{padding:0 28px 24px!important;max-width:100%!important;}
-
-# /* ══ SIDEBAR — hidden, replaced by top nav ══════════════════ */
-# [data-testid="stSidebar"],
-# [data-testid="stSidebarNav"],
-# section[data-testid="stSidebar"],
-# [data-testid="stSidebarCollapsedControl"],
-# button[kind="headerNoPadding"]{
-#   display:none!important;width:0!important;
-#   visibility:hidden!important;overflow:hidden!important;
-# }
-
-# /* ══ LOGIN PAGE ═══════════════════════════════════════════ */
-# .login-split{min-height:100vh;display:flex;}
-# .login-left{
-#   flex:0 0 42%;
-#   background:linear-gradient(160deg,#1c1917 0%,#292524 60%,#1a1816 100%);
-#   padding:60px 48px;display:flex;flex-direction:column;justify-content:center;
-#   position:relative;overflow:hidden;
-# }
-# .login-left::before{
-#   content:'';position:absolute;top:-120px;right:-80px;width:380px;height:380px;
-#   border-radius:50%;
-#   background:radial-gradient(circle,rgba(234,88,12,.18) 0%,transparent 70%);
-# }
-# .login-left::after{
-#   content:'';position:absolute;bottom:-100px;left:-60px;width:300px;height:300px;
-#   border-radius:50%;
-#   background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);
-# }
-# .login-brand-icon{
-#   width:54px;height:54px;
-#   background:linear-gradient(135deg,var(--primary),var(--amber));
-#   border-radius:14px;display:flex;align-items:center;justify-content:center;
-#   font-size:26px;margin-bottom:18px;
-#   box-shadow:0 8px 24px rgba(234,88,12,.3);position:relative;z-index:1;
-# }
-# .login-brand-name{
-#   font-size:28px;font-weight:800;color:#fafaf9;letter-spacing:-.5px;
-#   margin-bottom:6px;position:relative;z-index:1;
-# }
-# .login-brand-sub{
-#   font-size:14px;color:#78716c;line-height:1.6;margin-bottom:44px;
-#   max-width:280px;position:relative;z-index:1;
-# }
-# .login-stat-row{display:flex;gap:14px;flex-wrap:wrap;position:relative;z-index:1;}
-# .login-stat-card{
-#   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
-#   border-radius:12px;padding:16px 18px;min-width:86px;
-# }
-# .login-stat-val{font-size:22px;font-weight:800;color:#fb923c;line-height:1;}
-# .login-stat-lbl{font-size:11px;color:#78716c;margin-top:4px;line-height:1.3;}
-# .login-right{
-#   flex:1;background:#fff;padding:60px 52px;
-#   display:flex;flex-direction:column;justify-content:center;
-# }
-# .login-right-inner{max-width:360px;}
-# .login-right-title{
-#   font-size:24px;font-weight:800;color:var(--text);
-#   letter-spacing:-.4px;margin-bottom:6px;
-# }
-# .login-right-sub{font-size:14px;color:var(--text3);margin-bottom:28px;}
-# .login-roles{
-#   margin-top:18px;font-size:12px;color:var(--text3);
-#   padding-top:14px;border-top:1px solid var(--border);
-# }
-# /* right panel input styles */
-# .login-right [data-testid="stTextInput"] input{
-#   background:#fafafa!important;border:1.5px solid #ddd!important;
-#   border-radius:8px!important;font-size:14px!important;
-#   transition:border-color .15s!important;
-# }
-# .login-right [data-testid="stTextInput"] input:focus{
-#   border-color:#C85A00!important;
-#   box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
-# }
-# .login-right .stButton>button{
-#   width:100%!important;padding:13px!important;font-size:15px!important;
-# }
-# /* login-inputs context (used in the split card) */
-# .login-inputs [data-testid="stTextInput"] input{
-#   background:#fafafa!important;border:1.5px solid #ddd!important;
-#   border-radius:8px!important;font-size:14px!important;
-# }
-# .login-inputs [data-testid="stTextInput"] input:focus{
-#   border-color:#C85A00!important;box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
-# }
-# .login-inputs [data-testid="stTextInput"]>label{
-#   font-size:12px!important;font-weight:600!important;color:#666!important;
-#   text-transform:none!important;letter-spacing:0!important;
-# }
-# .login-inputs .stButton>button{
-#   width:100%!important;padding:12px!important;font-size:14px!important;
-#   border-radius:8px!important;
-# }
-
-# /* ══ PAGE HEADER ══════════════════════════════════════════ */
-# .page-hdr{margin-bottom:24px;}
-# .page-hdr h1{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.5px;}
-# .page-hdr p{font-size:13px;color:var(--text3);margin-top:4px;}
-
-# /* ══ TOP NAV BAR ══════════════════════════════════════════ */
-# [data-testid="stSidebar"],[data-testid="stSidebarNav"]{display:none!important;}
-# .topnav{
-#   background:#0D2B45;padding:0 22px;height:54px;
-#   display:flex;align-items:center;
-#   position:sticky;top:0;z-index:999;
-#   margin:0 -28px 20px;
-# }
-# .topnav-brand{
-#   display:flex;align-items:center;gap:8px;margin-right:28px;
-#   text-decoration:none;
-# }
-# .topnav-brand-icon{font-size:20px;line-height:1;}
-# .topnav-brand-text{display:flex;flex-direction:column;line-height:1.15;}
-# .topnav-brand-name{font-size:13px;font-weight:700;color:#F5A623;}
-# .topnav-brand-sub{font-size:10px;color:rgba(245,166,35,.5);}
-# .ntab{
-#   height:54px;padding:0 14px;display:flex;align-items:center;
-#   font-size:12px;font-weight:500;color:rgba(255,255,255,.6);
-#   text-decoration:none;border-bottom:2px solid transparent;
-#   transition:color .15s,border-color .15s;white-space:nowrap;
-# }
-# .ntab:hover{color:#fff;border-bottom-color:rgba(245,166,35,.35);}
-# .ntab.active{color:#fff;border-bottom-color:#F5A623;font-weight:600;}
-# .nav-right{display:flex;align-items:center;gap:12px;margin-left:auto;}
-# .nav-bell{
-#   position:relative;cursor:pointer;color:rgba(255,255,255,.75);
-#   font-size:16px;line-height:1;text-decoration:none;display:block;
-# }
-# .nav-bell-badge{
-#   position:absolute;top:-5px;right:-7px;
-#   background:#E24B4A;color:#fff;
-#   font-size:9px;font-weight:700;
-#   min-width:15px;height:15px;border-radius:8px;
-#   display:flex;align-items:center;justify-content:center;padding:0 3px;
-# }
-# .nav-avatar{
-#   width:30px;height:30px;border-radius:50%;
-#   background:#C85A00;color:#fff;
-#   font-size:11px;font-weight:700;
-#   display:flex;align-items:center;justify-content:center;
-# }
-
-# /* ══ KPI CARDS ════════════════════════════════════════════ */
-# .kpi-card{
-#   background:var(--card);border-radius:10px;padding:18px 18px;
-#   border:1px solid var(--border);box-shadow:var(--shadow);
-#   position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;
-#   border-left:3px solid var(--primary);
-# }
-# .kpi-card::after{content:none;}
-# .kpi-card.amber{border-left-color:var(--amber);}
-# .kpi-card.green{border-left-color:var(--green);}
-# .kpi-card.blue {border-left-color:var(--blue);}
-# .kpi-card.navy {border-left-color:var(--primary);}
-# .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
-
-# .kpi-icon{
-#   width:46px;height:46px;border-radius:11px;
-#   display:flex;align-items:center;justify-content:center;font-size:20px;
-#   margin-bottom:12px;
-# }
-# .kpi-icon.teal  {background:var(--primary-l);color:var(--primary);}
-# .kpi-icon.orange{background:var(--primary-l);color:var(--primary);}
-# .kpi-icon.amber {background:var(--amber-l);color:var(--amber-d);}
-# .kpi-icon.green {background:var(--green-l);color:var(--green);}
-# .kpi-icon.navy  {background:var(--amber-l);color:var(--amber-d);}
-
-# .kpi-label{
-#   font-size:10.5px;color:var(--text3);font-weight:600;
-#   text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;
-# }
-# .kpi-value{font-size:28px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-.5px;}
-# .kpi-unit{font-size:14px;font-weight:600;color:var(--text2);margin-left:3px;}
-# .kpi-meta{font-size:12px;color:var(--text3);margin-top:8px;line-height:1.4;}
-# .kpi-meta b{color:var(--primary);font-weight:600;}
-
-# /* ══ ALARM CARDS ══════════════════════════════════════════ */
-# .alarm-card{
-#   background:var(--card);border-radius:12px;padding:14px 16px;
-#   border:1px solid var(--border);border-left:4px solid var(--border2);
-#   margin-bottom:9px;display:flex;gap:12px;align-items:flex-start;
-#   box-shadow:var(--shadow);
-# }
-# .alarm-card.critical{border-left-color:#E24B4A;background:linear-gradient(90deg,#FFF5F5,#fff);}
-# .alarm-card.warning {border-left-color:#EF9F27;background:linear-gradient(90deg,#FAEEDA,#fff);}
-# .alarm-card.info    {border-left-color:#1A6FA8;background:linear-gradient(90deg,#E6F1FB,#fff);}
-# .alarm-icon{width:30px;height:30px;border-radius:7px;flex-shrink:0;
-#   display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
-# .alarm-icon.critical{background:var(--red-l);color:var(--red);}
-# .alarm-icon.warning {background:var(--amber-l);color:var(--amber-d);}
-# .alarm-icon.info    {background:var(--blue-l);color:var(--blue);}
-# .alarm-title{font-size:13px;font-weight:700;color:var(--text);}
-# .alarm-meta{font-size:11px;color:var(--text3);margin-top:3px;}
-# .alarm-badge{margin-left:auto;padding:3px 9px;border-radius:6px;
-#   font-size:11px;font-weight:700;flex-shrink:0;}
-# .alarm-badge.critical{background:var(--red-l);color:var(--red);}
-# .alarm-badge.warning {background:var(--amber-l);color:var(--amber-d);}
-# .alarm-badge.info    {background:var(--blue-l);color:var(--blue);}
-
-# /* ══ SECTION HEADER ═══════════════════════════════════════ */
-# .sec-hdr{
-#   font-size:13px;font-weight:700;color:var(--text);
-#   display:flex;align-items:center;gap:8px;
-#   margin-bottom:14px;padding-bottom:10px;
-#   border-bottom:2px solid var(--border);
-# }
-# .sec-hdr-dot{
-#   width:8px;height:8px;border-radius:50%;
-#   background:linear-gradient(135deg,var(--primary),var(--amber));
-#   flex-shrink:0;
-# }
-
-# /* ══ CARD WRAPPER ═════════════════════════════════════════ */
-# .card{
-#   background:var(--card);border-radius:16px;padding:22px;
-#   border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;
-# }
-
-# /* ══ INVERTER CARD ════════════════════════════════════════ */
-# .inv-card{
-#   background:var(--card);border-radius:16px;padding:22px;
-#   border:1px solid var(--border);box-shadow:var(--shadow);
-#   margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
-# }
-# .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
-# .inv-card.alert-card{border-left:3px solid var(--red);}
-# .inv-header{
-#   display:flex;justify-content:space-between;align-items:flex-start;
-#   margin-bottom:18px;padding-bottom:14px;
-#   border-bottom:1px solid var(--border);
-# }
-# .inv-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.3px;}
-# .inv-meta{font-size:11px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace;}
-# .inv-params{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;}
-# .param-label{
-#   font-size:10px;color:var(--text3);text-transform:uppercase;
-#   letter-spacing:.08em;font-weight:600;margin-bottom:4px;
-# }
-# .param-val{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.3px;}
-# .param-unit{font-size:11px;color:var(--text3);margin-left:2px;}
-# .inv-footer{margin-top:14px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
-
-# /* ══ TABLES ═══════════════════════════════════════════════ */
-# .tbl{
-#   background:var(--card);border-radius:16px;
-#   border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);
-# }
-# .tbl-hdr,.tbl-row{
-#   display:grid;padding:0 20px;align-items:center;gap:10px;
-# }
-# .tbl-hdr{
-#   background:linear-gradient(90deg,#f8fafc,#f1f5f9);
-#   border-bottom:2px solid var(--border);
-#   font-size:10px;font-weight:700;color:var(--text3);
-#   text-transform:uppercase;letter-spacing:.1em;height:44px;
-# }
-# .tbl-row{
-#   min-height:54px;border-bottom:1px solid var(--border);
-#   font-size:13px;transition:background .1s;
-# }
-# .tbl-row:last-child{border-bottom:none;}
-# .tbl-row:hover{background:#f8fafc;}
-# .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
-# .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
-# .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
-
-# /* ══ BADGES ═══════════════════════════════════════════════ */
-# .badge{
-#   display:inline-flex;align-items:center;gap:5px;
-#   font-size:11px;font-weight:700;padding:4px 10px;
-#   border-radius:20px;letter-spacing:.02em;
-# }
-# .badge::before{content:'';width:6px;height:6px;border-radius:50%;}
-# .b-online {background:var(--green-l);color:#065f46;}
-# .b-online::before{background:var(--green);}
-# .b-offline{background:var(--red-l);color:#991b1b;}
-# .b-offline::before{background:var(--red);}
-# .b-warning{background:var(--amber-l);color:#92400e;}
-# .b-warning::before{background:var(--amber);}
-# .b-unknown{background:#f1f5f9;color:#64748b;}
-# .b-unknown::before{background:#94a3b8;}
-# .b-active {background:var(--red-l);color:#991b1b;}
-# .b-active::before{background:var(--red);}
-# .b-resolved{background:var(--green-l);color:#065f46;}
-# .b-resolved::before{background:var(--green);}
-# .b-critical{background:var(--red-l);color:#991b1b;font-weight:800;}
-# .b-critical::before{background:var(--red);}
-
-# /* ══ CHIPS ════════════════════════════════════════════════ */
-# .chip{
-#   display:inline-block;font-size:10px;font-weight:800;
-#   padding:3px 9px;border-radius:6px;
-#   letter-spacing:.1em;text-transform:uppercase;
-# }
-# .chip-solis  {background:#dbeafe;color:#1e40af;}
-# .chip-growatt{background:#d1fae5;color:#065f46;}
-# .chip-sungrow{background:#ffedd5;color:#c2410c;}
-
-# /* ══ ALERT STRIP ══════════════════════════════════════════ */
-# .alert-strip{
-#   background:linear-gradient(135deg,#fff1f2,#ffe4e6);
-#   border:1px solid #fecdd3;border-left:4px solid var(--red);
-#   border-radius:12px;padding:16px 18px;margin-bottom:12px;
-#   display:flex;gap:14px;align-items:flex-start;
-# }
-# .alert-strip-ico{font-size:20px;flex-shrink:0;}
-# .alert-strip-ttl{font-size:14px;font-weight:700;color:var(--red);}
-# .alert-strip-msg{font-size:12px;color:#7f1d1d;margin-top:3px;}
-
-# /* ══ STAT ROW ═════════════════════════════════════════════ */
-# .stat-row{
-#   background:var(--card);border-radius:14px;padding:16px 24px;
-#   border:1px solid var(--border);display:flex;gap:32px;
-#   margin-bottom:20px;align-items:center;flex-wrap:wrap;
-#   box-shadow:var(--shadow);
-# }
-# .stat-item{text-align:center;}
-# .stat-val{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
-# .stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;}
-
-# /* ══ STREAMLIT OVERRIDES ══════════════════════════════════ */
-# .stButton>button{
-#   background:linear-gradient(135deg,var(--primary),var(--primary-d))!important;
-#   color:#fff!important;border:none!important;border-radius:10px!important;
-#   font-family:'Inter',sans-serif!important;
-#   font-weight:700!important;font-size:13px!important;
-#   padding:10px 24px!important;letter-spacing:.01em!important;
-#   box-shadow:0 4px 12px rgba(200,90,0,.3)!important;
-#   transition:all .15s!important;
-# }
-# .stButton>button:hover{transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(200,90,0,.4)!important;}
-# div[data-testid="stSelectbox"]>label,
-# div[data-testid="stTextInput"]>label{
-#   font-size:12px!important;font-weight:700!important;
-#   color:var(--text2)!important;text-transform:uppercase!important;letter-spacing:.06em!important;
-# }
-# [data-testid="stRadio"]>label{font-size:13px!important;font-weight:600!important;}
-# .stRadio>div{gap:4px!important;}
-# .stAlert{border-radius:12px!important;}
-# div[data-testid="stTextInput"] input{
-#   border-radius:10px!important;border-color:var(--border2)!important;
-#   font-size:14px!important;font-family:'Inter',sans-serif!important;
-# }
-# div[data-testid="stSelectbox"]>div>div{
-#   border-radius:10px!important;border-color:var(--border2)!important;
-#   font-size:13px!important;
-# }
-
-# /* ══ LOGIN STREAMLIT INPUT OVERRIDES ═══════════════════════ */
-# /* Applied when sidebar is hidden = login / loading screens */
-# [data-testid="stSidebar"]:not([style*="visible"]) ~ * div[data-testid="stTextInput"] input,
-# .login-inputs div[data-testid="stTextInput"] input{
-#   background:rgba(255,255,255,.07)!important;
-#   border:1px solid rgba(255,255,255,.14)!important;
-#   border-radius:10px!important;color:#fafaf9!important;
-#   font-size:14px!important;padding:12px 14px!important;
-# }
-# .login-inputs div[data-testid="stTextInput"] input:focus{
-#   border-color:rgba(234,88,12,.6)!important;
-#   box-shadow:0 0 0 3px rgba(234,88,12,.15)!important;
-# }
-# .login-inputs div[data-testid="stTextInput"]>label{
-#   color:rgba(255,255,255,.5)!important;
-# }
-# .login-inputs .stButton>button{
-#   width:100%!important;padding:14px!important;font-size:15px!important;
-#   box-shadow:0 6px 20px rgba(234,88,12,.4)!important;
-# }
-
-# /* ══ DIVIDER ══════════════════════════════════════════════ */
-# .divider{height:1px;background:var(--border);margin:20px 0;}
-
-# /* ══ METRIC OVERRIDES ═════════════════════════════════════ */
-# [data-testid="stMetric"]{
-#   background:var(--card);border-radius:12px;padding:16px 18px;
-#   border:1px solid var(--border);box-shadow:var(--shadow);
-# }
-# [data-testid="stMetricLabel"]{font-size:11px!important;font-weight:700!important;color:var(--text3)!important;text-transform:uppercase!important;letter-spacing:.08em!important;}
-# [data-testid="stMetricValue"]{font-size:24px!important;font-weight:800!important;color:var(--text)!important;letter-spacing:-.4px!important;}
-# </style>
-# """, unsafe_allow_html=True)
-
-# # ══════════════════════════════════════════════════════════════
-# #  INIT
-# # ══════════════════════════════════════════════════════════════
-# try:
-#     init_db()
-# except Exception as _db_init_err:
-#     st.error(
-#         "**Database not connected.**\n\n"
-#         "Add your Neon connection string to Streamlit Cloud secrets:\n\n"
-#         "**Manage app → Settings → Secrets** → add:\n"
-#         "```\nNEON_DATABASE_URL = \"postgresql://user:pass@host.neon.tech/db?sslmode=require\"\n```\n\n"
-#         f"Error: `{_db_init_err}`"
-#     )
-#     st.stop()
-
-# # ══════════════════════════════════════════════════════════════
-# #  SESSION STATE
-# # ══════════════════════════════════════════════════════════════
-# USERS = {
-#     "admin":    "1234"
-# }
-
-# for key, default in [
-#     ("logged_in",      False),
-#     ("user",           ""),
-#     ("plant_selected", False),
-#     ("sel_brands",     ["Solis"]),
-#     ("sel_plants",     []),        # list of selected plant names
-# ]:
-#     if key not in st.session_state:
-#         st.session_state[key] = default
-
-# # ══════════════════════════════════════════════════════════════
-# #  STEP 1 — LOGIN
-# # ══════════════════════════════════════════════════════════════
-# LOGIN_CSS = """<style>
-# /* Hide sidebar on login */
-# [data-testid="stSidebar"],
-# [data-testid="stSidebarNav"],
-# [data-testid="stSidebarCollapsedControl"]{display:none!important;}
-# /* Remove all padding so columns fill screen */
-# .block-container{padding:0!important;max-width:100%!important;margin:0!important;}
-# [data-testid="stAppViewContainer"]{padding:0!important;}
-# /* Full-height column layout */
-# [data-testid="stHorizontalBlock"]{gap:0!important;height:100vh;min-height:100vh;}
-# [data-testid="column"]:first-child{
-#   background:#0D2B45!important;
-#   padding:60px 48px!important;
-#   display:flex!important;flex-direction:column!important;justify-content:center!important;
-# }
-# [data-testid="column"]:first-child *{color:rgba(255,255,255,.55);}
-# [data-testid="column"]:last-child{
-#   background:#ffffff!important;
-#   padding:60px 48px!important;
-#   display:flex!important;flex-direction:column!important;justify-content:center!important;
-# }
-# /* Input styling in the right (white) panel */
-# [data-testid="column"]:last-child [data-testid="stTextInput"] input{
-#   background:#f8f8f8!important;border:1.5px solid #e0e0e0!important;
-#   border-radius:8px!important;font-size:14px!important;padding:11px 14px!important;
-# }
-# [data-testid="column"]:last-child [data-testid="stTextInput"] input:focus{
-#   border-color:#C85A00!important;box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
-# }
-# [data-testid="column"]:last-child [data-testid="stTextInput"] label{
-#   font-size:12px!important;font-weight:600!important;
-#   color:#555!important;margin-bottom:4px!important;
-# }
-# [data-testid="column"]:last-child .stButton>button{
-#   background:#C85A00!important;color:#fff!important;border:none!important;
-#   border-radius:8px!important;font-size:14px!important;
-#   font-weight:600!important;padding:12px!important;width:100%!important;
-#   margin-top:8px!important;
-# }
-# [data-testid="column"]:last-child .stButton>button:hover{background:#A84B00!important;}
-# html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{background:#fff!important;}
-# </style>"""
-
-# if not st.session_state.logged_in:
-#     st.markdown(LOGIN_CSS, unsafe_allow_html=True)
-
-#     _lcol, _rcol = st.columns([0.44, 0.56])
-
-#     with _lcol:
-#         st.markdown("""
-# <div style="margin-bottom:28px;">
-#   <div style="width:54px;height:54px;border-radius:50%;
-#     background:rgba(245,166,35,.18);display:flex;align-items:center;
-#     justify-content:center;margin-bottom:22px;font-size:26px;">&#9728;</div>
-#   <div style="font-size:28px;font-weight:800;color:#F5A623;
-#     letter-spacing:-.4px;margin-bottom:10px;">Fractal Energy</div>
-#   <div style="font-size:13px;color:rgba(255,255,255,.45);line-height:1.8;">
-#     Unified solar monitoring platform<br>for multi-brand inverter fleets
-#   </div>
-# </div>
-# <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:40px;">
-#   <div style="display:flex;align-items:center;gap:11px;">
-#     <span style="width:22px;height:22px;border-radius:50%;
-#       background:rgba(245,166,35,.2);display:flex;align-items:center;
-#       justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
-#     <span style="font-size:12px;color:rgba(255,255,255,.45);">Multi-brand inverter support (Solis, Growatt)</span>
-#   </div>
-#   <div style="display:flex;align-items:center;gap:11px;">
-#     <span style="width:22px;height:22px;border-radius:50%;
-#       background:rgba(245,166,35,.2);display:flex;align-items:center;
-#       justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
-#     <span style="font-size:12px;color:rgba(255,255,255,.45);">Real-time monitoring &amp; alerts</span>
-#   </div>
-#   <div style="display:flex;align-items:center;gap:11px;">
-#     <span style="width:22px;height:22px;border-radius:50%;
-#       background:rgba(245,166,35,.2);display:flex;align-items:center;
-#       justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
-#     <span style="font-size:12px;color:rgba(255,255,255,.45);">Yield &amp; performance reports</span>
-#   </div>
-# </div>
-# <div style="font-size:11px;color:rgba(255,255,255,.2);
-#   padding-top:20px;border-top:1px solid rgba(255,255,255,.08);">
-#   Role-based access · Admin · Engineer · Viewer
-# </div>""", unsafe_allow_html=True)
-
-#     with _rcol:
-#         st.markdown("""
-# <div style="margin-bottom:28px;">
-#   <div style="font-size:22px;font-weight:700;color:#1a1a1a;
-#     letter-spacing:-.3px;margin-bottom:6px;">Sign in to your account</div>
-#   <div style="font-size:13px;color:#aaa;">Enter your credentials to continue</div>
-# </div>""", unsafe_allow_html=True)
-
-#         _email    = st.text_input("EMAIL ADDRESS", placeholder="admin@fractalenergy.in",
-#                                   label_visibility="visible", key="login_email")
-#         _password = st.text_input("PASSWORD", placeholder="••••••••", type="password",
-#                                   label_visibility="visible", key="login_password")
-#         if st.button("Sign In  →", use_container_width=True, key="login_btn"):
-#             if _email in USERS and USERS[_email] == _password:
-#                 st.session_state.logged_in = True
-#                 st.session_state.user      = _email
-#                 st.rerun()
-#             else:
-#                 st.error("Invalid email or password.")
-
-#         st.markdown("""
-# <div style="margin-top:20px;font-size:11px;color:#ccc;text-align:center;
-#   padding-top:16px;border-top:1px solid #f0f0f0;">
-#   Secured by Fractal Energy &nbsp;·&nbsp; Solar Monitor v2.0
-# </div>""", unsafe_allow_html=True)
-
-#     st.stop()
-
-# DARK_PAGE_CSS = """<style>
-# [data-testid="stSidebar"],
-# [data-testid="stSidebarNav"],
-# [data-testid="stSidebarCollapsedControl"]{display:none!important;}
-# .block-container{padding:0!important;max-width:100%!important;}
-# </style>"""
-
-# # ══════════════════════════════════════════════════════════════
-# #  STEP 2 — AUTO-LOAD ALL PLANTS  (runs once after login)
-# # ══════════════════════════════════════════════════════════════
-# if not st.session_state.plant_selected:
-#     st.markdown(DARK_PAGE_CSS, unsafe_allow_html=True)
-
-#     @st.cache_data(ttl=600)
-#     def _fetch_available_plants():
-#         available = []
-#         try:
-#             from utils.solis_api import get_plants as _sp
-#             for p in _sp():
-#                 cap_raw = p.get("capacity","")
-#                 available.append({
-#                     "brand":    "Solis",
-#                     "name":     p.get("stationName",""),
-#                     "id":       p.get("id",""),
-#                     "capacity": f"{cap_raw} kWp" if cap_raw else "—",
-#                     "location": p.get("city","") or p.get("address","") or "—",
-#                 })
-#         except Exception as e:
-#             print(f"Plant loader Solis error: {e}")
-#         try:
-#             from utils.growatt_api import _get_plants, login as glogin
-#             glogin()
-#             for p in _get_plants():
-#                 cap_raw = p.get("nominalPower","")
-#                 available.append({
-#                     "brand":    "Growatt",
-#                     "name":     p.get("plantNameEncryption") or p.get("plantName",""),
-#                     "id":       str(p.get("pId") or p.get("plantId","")),
-#                     "capacity": f"{float(cap_raw)/1000:.1f} kWp" if cap_raw else "—",
-#                     "location": p.get("country","") or "—",
-#                 })
-#         except Exception as e:
-#             print(f"Plant loader Growatt error: {e}")
-#         return available
-
-#     st.markdown("""
-#     <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-#     background:linear-gradient(135deg,#1c1917 0%,#292524 55%,#1a1816 100%);
-#     position:fixed;top:0;left:0;right:0;bottom:0;">
-#       <div style="text-align:center;color:#fff;">
-#         <div style="width:72px;height:72px;background:linear-gradient(135deg,#ea580c,#f59e0b);
-#           border-radius:20px;display:flex;align-items:center;justify-content:center;
-#           font-size:34px;margin:0 auto 20px;box-shadow:0 10px 32px rgba(234,88,12,.4);">☀️</div>
-#         <div style="font-size:20px;font-weight:700;color:#fafaf9;">Loading your plants…</div>
-#         <div style="font-size:13px;color:#78716c;margin-top:8px;">Connecting to Solis &amp; Growatt</div>
-#       </div>
-#     </div>""", unsafe_allow_html=True)
-
-#     with st.spinner(""):
-#         available_plants = _fetch_available_plants()
-
-#     sel_plant_names = [p["name"] for p in available_plants if p["name"]]
-#     active_brands   = []
-#     if any(p["brand"] == "Solis"   for p in available_plants): active_brands.append("Solis")
-#     if any(p["brand"] == "Growatt" for p in available_plants): active_brands.append("Growatt")
-
-#     # Store capacity & location for the Plants portfolio page
-#     st.session_state.plant_meta = {
-#         p["name"]: {"capacity": p["capacity"], "location": p["location"], "brand": p["brand"]}
-#         for p in available_plants if p["name"]
-#     }
-#     st.session_state.sel_brands     = active_brands or ["Solis"]
-#     st.session_state.sel_plants     = sel_plant_names
-#     st.session_state.plant_selected = True
-#     st.cache_data.clear()
-#     st.rerun()
-
-# # ══════════════════════════════════════════════════════════════
-# #  AUTHENTICATED APP
-# # ══════════════════════════════════════════════════════════════
-# st_autorefresh(interval=REFRESH_INTERVAL_SECONDS * 1000, key="solar_ar")
-
-# # ── Helpers ──────────────────────────────────────────────────
-# def f(v, d=1, na="—"):
-#     try:    return f"{float(v):.{d}f}"
-#     except: return na
-
-# def badge(s, kind=None):
-#     s  = (s or "").strip()
-#     sl = s.lower()
-#     if kind == "level":
-#         cls = "b-critical" if sl == "critical" else "b-warning"
-#     elif kind == "status_alarm":
-#         cls = "b-active" if sl == "active" else "b-resolved"
-#     else:
-#         if sl == "online":              cls = "b-online"
-#         elif sl in ("offline","fault"): cls = "b-offline"
-#         else:                           cls = "b-unknown"
-#     return f'<span class="badge {cls}">{s}</span>'
-
-# def chip(b):
-#     return f'<span class="chip chip-{(b or "").lower()}">{b}</span>'
-
-# def earn(kwh):
-#     v = float(kwh or 0) * RATE_PER_KWH
-#     if v >= 1_000_000: return f"₹{v/1_000_000:.3f}M"
-#     if v >= 1_000:     return f"₹{v/1_000:.3f}K"
-#     return f"₹{v:.2f}"
-
-# def chart_style(fig, h=300):
-#     fig.update_layout(
-#         plot_bgcolor="#fff", paper_bgcolor="#fff",
-#         font_color="#64748b", font_family="Inter",
-#         margin=dict(l=0,r=0,t=16,b=0), height=h,
-#         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
-#         bargap=0.28,
-#     )
-#     fig.update_traces(marker_line_width=0)
-#     fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11,
-#                      tickfont_color="#94a3b8", linecolor="#e2e8f0")
-#     fig.update_yaxes(showgrid=True, gridcolor="#f1f5f9", zeroline=False,
-#                      tickfont_size=11, tickfont_color="#94a3b8")
-#     return fig
-
-# PALETTE = ["#ea580c","#f59e0b","#3b82f6","#f97316","#10b981","#8b5cf6","#06b6d4","#ec4899"]
-# BRAND_COLORS = {"Solis":"#3b82f6","Growatt":"#10b981","Sungrow":"#f97316"}
-
-# def sec(title, icon=""):
-#     st.markdown(f'<div class="sec-hdr"><div class="sec-hdr-dot"></div>{icon} {title}</div>',
-#                 unsafe_allow_html=True)
-
-# def topnav(active_page, fault_count=0):
-#     user_initials = (st.session_state.get("user") or "AK")[:2].upper()
-#     badge_html = (
-#         f'<div class="nav-bell-badge">{fault_count}</div>' if fault_count > 0 else ""
-#     )
-#     tabs = [
-#         ("dashboard", "Dashboard"),
-#         ("reports",   "Reports"),
-#         ("alarms",    "Alarms"),
-#         ("settings",  "Settings"),
-#     ]
-#     tabs_html = "".join(
-#         f'<a class="ntab{" active" if active_page == k else ""}" href="?page={k}">{label}</a>'
-#         for k, label in tabs
-#     )
-#     st.markdown(f"""
-#     <div class="topnav">
-#       <a class="topnav-brand" href="?page=dashboard">
-#         <div class="topnav-brand-icon">☀️</div>
-#         <div class="topnav-brand-text">
-#           <div class="topnav-brand-name">Fractal Energy</div>
-#           <div class="topnav-brand-sub">Solar Monitor</div>
-#         </div>
-#       </a>
-#       {tabs_html}
-#       <div class="nav-right">
-#         <a class="nav-bell ntab" href="?page=alarms" style="padding:0 8px">
-#           🔔{badge_html}
-#         </a>
-#         <div class="nav-avatar">{user_initials}</div>
-#       </div>
-#     </div>""", unsafe_allow_html=True)
-
-# # ── Navigation — URL-param routing (no sidebar) ──────────────────────────────
-# sel_brands = st.session_state.get("sel_brands", ["Solis"])
-# show_debug = False
-
-# # Consume pending navigation set by plant-card buttons
-# if "_pending_page" in st.session_state:
-#     _pp = st.session_state.pop("_pending_page")
-#     _pplant = st.session_state.pop("_pending_plant", None)
-#     if _pplant:
-#         st.session_state["active_plant"] = _pplant
-#     _to_qpage = {
-#         "Plants": "dashboard", "Overview": "overview",
-#         "Report": "reports", "Alarms": "alarms", "Settings": "settings",
-#     }.get(_pp, "dashboard")
-#     st.query_params["page"] = _to_qpage
-#     st.rerun()
-
-# _qpage = st.query_params.get("page", "dashboard")
-# page = {
-#     "dashboard": "Plants",
-#     "overview":  "Overview",
-#     "reports":   "Report",
-#     "alarms":    "Alarms",
-#     "settings":  "Settings",
-# }.get(_qpage, "Plants")
-# active_plant   = st.session_state.get("active_plant", "All Plants")
-# all_sel_plants = st.session_state.get("sel_plants", [])
-
-# # Render topnav (uses cached fault count from previous run)
-# _topnav_active = "dashboard" if _qpage in ("dashboard", "overview") else _qpage
-# topnav(_topnav_active, st.session_state.get("_fault_count", 0))
-
-# # ── Fetch data ────────────────────────────────────────────────
-# @st.cache_data(ttl=REFRESH_INTERVAL_SECONDS)
-# def load(brands, plants):
-#     result = fetch_all_brands(list(brands))
-#     if not result:
-#         raise RuntimeError("empty")
-#     if plants:
-#         result = [r for r in result if r.get("plant_name") in plants]
-#     return result
-
-# _fetch_errors = []
-
-# with st.spinner("Fetching live data…"):
-#     try:
-#         records = load(tuple(sel_brands), tuple(all_sel_plants))
-#     except Exception:
-#         st.cache_data.clear()
-#         records = []
-#         for _brand in sel_brands:
-#             try:
-#                 from utils import solis_api as _sapi, growatt_api as _gapi
-#                 if _brand == "Solis":
-#                     _recs = _sapi.fetch_all()
-#                 elif _brand == "Growatt":
-#                     _recs = _gapi.fetch_all()
-#                 else:
-#                     _recs = []
-#                 records.extend(_recs)
-#             except Exception as _e:
-#                 _fetch_errors.append(f"{_brand}: {_e}")
-#         if all_sel_plants:
-#             records = [r for r in records if r.get("plant_name") in all_sel_plants]
-
-# # ── Persist every refresh's live data (runs on each auto-refresh) ────────────
-# import time as _time
-# from datetime import datetime as _dtnow
-
-# _now_ts    = _time.time()
-# _snap_time = _dtnow.now()
-# _snap_hm   = _snap_time.strftime("%H:%M")
-# _snap_date = _snap_time.strftime("%Y-%m-%d")
-# _snap_ts   = _snap_time.isoformat(sep=" ", timespec="seconds")
-
-# # Aggregate power and yield per plant from live records
-# _plant_pwr = {}
-# _plant_kwh = {}
-# for _r in records:
-#     _pn = _r.get("plant_name", "")
-#     if _pn:
-#         _plant_pwr[_pn] = _plant_pwr.get(_pn, 0.0) + float(_r.get("power_kw") or 0)
-#         _plant_kwh[_pn] = _plant_kwh.get(_pn, 0.0) + float(_r.get("today_kwh") or 0)
-
-# # Step A: always update session_state — survives auto-refreshes, no DB needed
-# if _plant_pwr:
-#     _ss_id    = st.session_state.setdefault("_ss_intraday", {})
-#     _day_slot = _ss_id.setdefault(_snap_date, {})
-#     for _pn, _pwr in _plant_pwr.items():
-#         _day_slot.setdefault(_pn, {})[_snap_hm] = _pwr
-
-# # Step B: persist to SQLite (at most once per minute) for cross-session history
-# _last_id_save = st.session_state.get("_last_intraday_save", 0)
-# if records and (_now_ts - _last_id_save >= 60):
-#     try:
-#         from utils.database import (save_readings as _sv_r,
-#                                     save_intraday as _sv_id,
-#                                     save_daily_yield as _sv_dy)
-#         _sv_r([{**r, "fetched_at": _snap_ts} for r in records])
-#         for _pn, _pwr in _plant_pwr.items():
-#             _sv_id(_pn, _snap_date, [{"time_hm": _snap_hm, "power_kw": _pwr}])
-#         for _pn, _kwh in _plant_kwh.items():
-#             if _kwh > 0:
-#                 _sv_dy(_pn, _snap_date, _kwh)
-#         st.session_state["_last_intraday_save"] = _now_ts
-#         st.session_state["_last_db_save_hm"]    = _snap_hm
-#     except Exception as _save_err:
-#         st.session_state["_db_save_err"] = str(_save_err)
-
-# # Filter to active plant chosen in sidebar
-# if active_plant and active_plant != "All Plants":
-#     records_view = [r for r in records if r.get("plant_name") == active_plant]
-# else:
-#     records_view = records
-
-# alerts = check_alerts(records, st.session_state)
-# st.session_state["_fault_count"] = len(alerts)
-
-# df = pd.DataFrame()
-# if records_view:
-#     df = pd.DataFrame(records_view)
-#     for c in ["power_kw","today_kwh","total_kwh","temperature","voltage","current_a"]:
-#         if c in df.columns:
-#             df[c] = pd.to_numeric(df[c], errors="coerce")
-#     if "status" in df.columns:
-#         df["status"] = df["status"].astype(str).str.strip()
-
-# # ── Debug ─────────────────────────────────────────────────────
-# if show_debug and not df.empty:
-#     st.markdown("### 🔍 Debug: Raw API Data")
-#     st.dataframe(df, use_container_width=True)
-#     try:
-#         from utils.solis_api import fetch_summary as _fsum, _raw_plants_cache
-#         summ = _fsum()
-#         st.write("**fetch_summary():**", summ)
-#     except Exception as ex:
-#         st.error(f"Debug error: {ex}")
-#     st.divider()
-
-
-# # ── Unified plant filter vars for all pages ─────────────────
-# # sel_plants = plants chosen at login (all_sel_plants)
-# # active_plant = currently viewed plant (from sidebar dropdown)
-# sel_plants = all_sel_plants  # alias for backward compat
-
-# # ══════════════════════════════════════════════════════════════
-# #  PLANTS — Portfolio overview (default landing page)
-# # ══════════════════════════════════════════════════════════════
-# if page == "Plants":
-#     import io as _io
-
-#     plant_meta = st.session_state.get("plant_meta", {})
-
-#     # ── Page header ──────────────────────────────────────────
-#     st.markdown(f"""
-# <div style="display:flex;justify-content:space-between;align-items:center;
-#   margin-bottom:18px;">
-#   <div>
-#     <div style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-.2px;">
-#       Plant Portfolio
-#     </div>
-#     <div style="font-size:12px;color:#999;margin-top:3px;">
-#       Live monitoring across all connected inverters
-#     </div>
-#   </div>
-#   <div style="font-size:11px;color:#aaa;">{datetime.now().strftime('%d %b %Y &nbsp; %H:%M')}</div>
-# </div>""", unsafe_allow_html=True)
-
-#     if not records:
-#         st.warning("No plant data — API returned no inverters. Check credentials and click **Refresh Now**.")
-#         if _fetch_errors:
-#             for _fe in _fetch_errors:
-#                 st.error(f"🔴 {_fe}")
-#         # Show what credentials are actually loaded (helps diagnose secrets issues)
-#         from config import SOLIS_API_KEY, GROWATT_USERNAME
-#         st.info(
-#             f"Loaded credentials — "
-#             f"Solis key: `{'✅ set' if SOLIS_API_KEY else '❌ empty'}` · "
-#             f"Growatt user: `{'✅ set' if GROWATT_USERNAME else '❌ empty'}`"
-#         )
-#     else:
-#         # ── Build per-plant summary ───────────────────────────
-#         _pdf = pd.DataFrame(records)
-#         for _c in ["power_kw","today_kwh","total_kwh"]:
-#             if _c in _pdf.columns:
-#                 _pdf[_c] = pd.to_numeric(_pdf[_c], errors="coerce").fillna(0)
-#         if "status" not in _pdf.columns:
-#             _pdf["status"] = "Unknown"
-#         if "inverter_sn" not in _pdf.columns:
-#             _pdf["inverter_sn"] = "—"
-
-#         _pg = (_pdf.groupby(["plant_name","brand"]).agg(
-#             power_kw    = ("power_kw",    "sum"),
-#             today_kwh   = ("today_kwh",   "sum"),
-#             total_kwh   = ("total_kwh",   "sum"),
-#             n_inverters = ("inverter_sn", "nunique"),
-#             n_online    = ("status",      lambda x: (x.str.lower() == "online").sum()),
-#             n_total     = ("status",      "count"),
-#         ).reset_index())
-
-#         _pg["Location"] = _pg["plant_name"].map(
-#             lambda n: plant_meta.get(n, {}).get("location", "—"))
-#         _pg["Capacity"] = _pg["plant_name"].map(
-#             lambda n: plant_meta.get(n, {}).get("capacity", "—"))
-#         _pg["Status"] = _pg.apply(
-#             lambda r: "Online"  if r["n_online"] == r["n_total"] and r["n_total"] > 0
-#                  else "Partial" if r["n_online"] > 0
-#                  else "Offline", axis=1)
-
-#         # Apply default sort (best performing first) and reset index
-#         _filt = _pg.sort_values("power_kw", ascending=False).reset_index(drop=True)
-
-#         # ── Portfolio totals ──────────────────────────────────────
-#         _tp           = float(_filt["power_kw"].sum())
-#         _td           = float(_filt["today_kwh"].sum())
-#         _tt           = float(_filt["total_kwh"].sum())
-#         _n_online_inv = int(_filt["n_online"].sum())
-#         _n_total_inv  = int(_filt["n_total"].sum())
-#         _n_online_pl  = len(_filt[_filt["Status"] == "Online"])
-#         _co2_kg       = _td * 0.82
-#         _trees        = max(1, int(_co2_kg / 22)) if _co2_kg > 0 else 0
-
-#         # ── KPI Cards ────────────────────────────────────────────
-#         st.markdown(f"""
-# <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
-#   <div style="background:#fff;border-radius:10px;padding:13px 16px;
-#     border-left:3px solid #F5A623;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-#     <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-#       letter-spacing:.05em;margin-bottom:6px;">Yield Today</div>
-#     <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-#       {_td:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kWh</span></div>
-#     <div style="font-size:10px;color:#aaa;margin-top:4px;">{_n_online_inv} of {_n_total_inv} inverters online</div>
-#   </div>
-#   <div style="background:#fff;border-radius:10px;padding:13px 16px;
-#     border-left:3px solid #C85A00;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-#     <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-#       letter-spacing:.05em;margin-bottom:6px;">Earnings Today</div>
-#     <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">{earn(_td)}</div>
-#     <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8377;{RATE_PER_KWH:.2f}/kWh tariff</div>
-#   </div>
-#   <div style="background:#fff;border-radius:10px;padding:13px 16px;
-#     border-left:3px solid #1A6FA8;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-#     <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-#       letter-spacing:.05em;margin-bottom:6px;">CO&#8322; Offset</div>
-#     <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-#       {_co2_kg:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kg</span></div>
-#     <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8776; {_trees} trees saved today</div>
-#   </div>
-#   <div style="background:#fff;border-radius:10px;padding:13px 16px;
-#     border-left:3px solid #22c55e;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-#     <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-#       letter-spacing:.05em;margin-bottom:6px;">Plants Online</div>
-#     <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-#       {_n_online_pl}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">/ {len(_filt)}</span></div>
-#     <div style="font-size:10px;color:#aaa;margin-top:4px;">Total: {_tt:,.1f} MWh lifetime</div>
-#   </div>
-# </div>""", unsafe_allow_html=True)
-
-#         # ── Charts row ───────────────────────────────────────────
-#         import plotly.graph_objects as _pgo
-#         _cc1, _cc2 = st.columns([2, 1])
-
-#         with _cc1:
-#             _bar_vals   = _filt["today_kwh"].round(1).tolist()
-#             _bar_names  = _filt["plant_name"].tolist()
-#             _peak_val   = max(_bar_vals) if _bar_vals else 0
-#             _bar_colors = ["#C85A00" if v == _peak_val else "#F5A623" for v in _bar_vals]
-#             _bar_fig = _pgo.Figure(_pgo.Bar(
-#                 x=_bar_names, y=_bar_vals,
-#                 marker=dict(color=_bar_colors, line=dict(width=0)),
-#             ))
-#             _bar_fig.update_layout(
-#                 title=dict(text="Generation today (kWh per plant)",
-#                            font=dict(size=12, color="#666"), x=0),
-#                 margin=dict(l=0, r=0, t=40, b=0), height=210,
-#                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 xaxis=dict(tickfont=dict(size=10, color="#bbb"),
-#                            showgrid=False, zeroline=False, tickangle=-20),
-#                 yaxis=dict(tickfont=dict(size=10, color="#bbb"),
-#                            gridcolor="#eee", zeroline=False),
-#                 bargap=0.35,
-#             )
-#             st.plotly_chart(_bar_fig, use_container_width=True,
-#                             config={"displayModeBar": False})
-
-#         with _cc2:
-#             _bc = _filt.groupby("brand")["today_kwh"].sum().reset_index()
-#             _pie_palette = ["#C85A00", "#F5A623", "#1A6FA8", "#22c55e",
-#                             "#a855f7", "#ec4899", "#06b6d4"]
-#             _pie_fig = _pgo.Figure(_pgo.Pie(
-#                 labels=_bc["brand"].tolist(),
-#                 values=_bc["today_kwh"].round(1).tolist(),
-#                 hole=0.58,
-#                 marker=dict(colors=_pie_palette[:len(_bc)]),
-#                 textinfo="none",
-#             ))
-#             _pie_fig.update_layout(
-#                 title=dict(text="By inverter brand",
-#                            font=dict(size=12, color="#666"), x=0),
-#                 margin=dict(l=0, r=0, t=40, b=0), height=210,
-#                 legend=dict(font=dict(size=10, color="#666"),
-#                             orientation="v", x=1, y=0.5),
-#                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#             )
-#             st.plotly_chart(_pie_fig, use_container_width=True,
-#                             config={"displayModeBar": False})
-
-#         # ── Brand filter pills ────────────────────────────────────
-#         _all_brands = ["All"] + sorted(_filt["brand"].unique().tolist())
-#         _brand_pill = st.radio("Brand", _all_brands, horizontal=True,
-#                                label_visibility="collapsed",
-#                                key="dash_brand_pill")
-#         _tbl_rows = _filt if _brand_pill == "All" else \
-#                     _filt[_filt["brand"] == _brand_pill]
-
-#         # ── Projects table ────────────────────────────────────────
-#         _rows_html = ""
-#         for _, _r in _tbl_rows.iterrows():
-#             _sc = ("#22c55e" if _r["Status"] == "Online"
-#                    else "#F5A623" if _r["Status"] == "Partial"
-#                    else "#ef4444")
-#             _rows_html += f"""
-#       <tr style="border-bottom:1px solid #f5f5f5;">
-#         <td style="padding:11px 13px;">
-#           <div style="font-weight:600;color:#1a1a1a;font-size:13px;">{_r['plant_name']}</div>
-#           <div style="font-size:10px;color:#aaa;">{int(_r['n_inverters'])} inverters &middot; {_r['Capacity']}</div>
-#         </td>
-#         <td style="padding:11px 13px;">
-#           <span style="background:#f0f0f0;border-radius:4px;padding:2px 7px;
-#             font-size:10px;color:#555;">{_r['brand']}</span>
-#         </td>
-#         <td style="padding:11px 13px;font-size:12px;color:#666;">{_r['Location']}</td>
-#         <td style="padding:11px 13px;text-align:right;font-size:12px;">
-#           <b>{_r['power_kw']:.1f}</b> <span style="font-size:10px;color:#aaa;">kW</span></td>
-#         <td style="padding:11px 13px;text-align:right;font-size:12px;">
-#           <b>{_r['today_kwh']:.1f}</b> <span style="font-size:10px;color:#aaa;">kWh</span></td>
-#         <td style="padding:11px 13px;text-align:right;font-size:12px;">
-#           <b>{_r['total_kwh']:.1f}</b> <span style="font-size:10px;color:#aaa;">MWh</span></td>
-#         <td style="padding:11px 13px;text-align:center;">
-#           <span style="background:{_sc}20;color:{_sc};border-radius:12px;
-#             padding:3px 9px;font-size:10px;font-weight:600;">{_r['Status']}</span>
-#         </td>
-#       </tr>"""
-
-#         st.markdown(f"""
-# <div style="background:#fff;border-radius:10px;overflow:hidden;
-#   border:1px solid #eee;margin-bottom:12px;">
-#   <table style="width:100%;border-collapse:collapse;">
-#     <thead>
-#       <tr style="background:#f9f9f9;border-bottom:1px solid #eee;">
-#         <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
-#           font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Plant</th>
-#         <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
-#           font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Brand</th>
-#         <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
-#           font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Location</th>
-#         <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
-#           font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Live Power</th>
-#         <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
-#           font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Yield Today</th>
-#         <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
-#           font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</th>
-#         <th style="padding:10px 13px;text-align:center;font-size:10px;color:#999;
-#           font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Status</th>
-#       </tr>
-#     </thead>
-#     <tbody>{_rows_html}
-#     </tbody>
-#   </table>
-# </div>""", unsafe_allow_html=True)
-
-#         # ── Open Dashboard selector ───────────────────────────────
-#         if not _tbl_rows.empty:
-#             _nc1, _nc2, _ = st.columns([3, 2, 4])
-#             with _nc1:
-#                 _sel_pl = st.selectbox(
-#                     "Select plant to open:",
-#                     _tbl_rows["plant_name"].tolist(),
-#                     label_visibility="visible",
-#                     key="dash_sel_plant",
-#                 )
-#             with _nc2:
-#                 st.write("")
-#                 if st.button("Open Dashboard →", type="primary",
-#                              key="dash_open_btn"):
-#                     st.session_state["_pending_plant"] = _sel_pl
-#                     st.session_state["_pending_page"]  = "Overview"
-#                     st.rerun()
-
-# # ══════════════════════════════════════════════════════════════
-# #  OVERVIEW
-# # ══════════════════════════════════════════════════════════════
-# elif page == "Overview":
-#     import io as _io
-
-#     _pmeta  = st.session_state.get("plant_meta", {}).get(
-#         active_plant if active_plant != "All Plants" else "", {})
-#     _cap_str  = _pmeta.get("capacity", "—")
-#     _loc_str  = _pmeta.get("location", "—")
-#     _brand_str = _pmeta.get("brand", sel_brands[0] if sel_brands else "—")
-
-#     # ── Resolve plant_id + store raw plant records ────────────────
-#     _pid_cache     = st.session_state.get("_plant_id_cache")
-#     _plant_records = st.session_state.get("_plant_records", {})
-#     _chart_pid     = None
-#     _chart_brand   = None
-#     if _pid_cache is None:
-#         _pid_cache = {}
-#         _plant_records = {}
-#         try:
-#             from utils.solis_api import get_plants as _gsp_k
-#             for _p in _gsp_k():
-#                 _pn = _p.get("stationName", "")
-#                 # Prefer 'id'; fall back to 'stationId' or 'sn' if id is empty/null
-#                 _pid = (_p.get("id") or _p.get("stationId") or
-#                         _p.get("plantId") or _p.get("sn") or "")
-#                 _pid_cache[_pn]     = (str(_pid), "Solis")
-#                 _plant_records[_pn] = _p   # keep full record for unit-aware KPIs
-#         except Exception:
-#             pass
-#         try:
-#             from utils.growatt_api import _get_plants as _ggp_k
-#             for _p in _ggp_k():
-#                 _pn = _p.get("plantNameEncryption") or _p.get("plantName", "")
-#                 _pid_cache[_pn] = (
-#                     str(_p.get("pId") or _p.get("plantId", "")), "Growatt")
-#         except Exception:
-#             pass
-#         st.session_state["_plant_id_cache"] = _pid_cache
-#         st.session_state["_plant_records"]   = _plant_records
-#     if active_plant != "All Plants" and active_plant in _pid_cache:
-#         _chart_pid, _chart_brand = _pid_cache[active_plant]
-
-#     # Override: use plant_id directly from live df (most reliable — same data as KPIs)
-#     if active_plant != "All Plants" and not df.empty and "plant_id" in df.columns:
-#         _df_plant = df[df["plant_name"] == active_plant]
-#         if not _df_plant.empty:
-#             _pid_from_df = str(_df_plant.iloc[0].get("plant_id") or "")
-#             if _pid_from_df:
-#                 _chart_pid   = _pid_from_df
-#                 _chart_brand = str(_df_plant.iloc[0].get("brand") or _chart_brand or "Solis")
-
-#     # ── KPI calculations ──────────────────────────────────────
-#     total_power = float(df["power_kw"].sum()) if not df.empty else 0.0
-#     daily_kwh   = float(df["today_kwh"].sum()) if not df.empty else 0.0
-#     total_mwh   = float(df["total_kwh"].sum()) if not df.empty else 0.0
-#     n_on  = int((df["status"].str.lower()=="online").sum()) if not df.empty else 0
-#     n_tot = len(df) if not df.empty else 0
-
-#     _now_dt      = datetime.now()
-#     _cur_mon_str = _now_dt.strftime("%Y-%m")
-#     _cur_yr_str  = str(_now_dt.year)
-
-#     # ── Monthly yield ─────────────────────────────────────────────
-#     # Solis: monthEnergy+monthEnergyStr from userStationList is the real-time
-#     # running total (same number the Solis app KPI displays).
-#     # stationDayEnergyList only contains completed days so it misses today.
-#     monthly_kwh = 0.0
-#     if _chart_brand == "Solis" and active_plant != "All Plants":
-#         _prec = _plant_records.get(active_plant, {})
-#         if _prec:
-#             try:
-#                 from utils.solis_api import _to_kwh as _s2kwh
-#                 monthly_kwh = _s2kwh(
-#                     _prec.get("monthEnergy", 0),
-#                     _prec.get("monthEnergyStr", "kWh"))
-#             except Exception:
-#                 pass
-
-#     if monthly_kwh == 0 and active_plant == "All Plants":
-#         # Portfolio total from fetch_summary (handles all-plant unit conversion)
-#         try:
-#             from utils.solis_api import fetch_summary as _fs
-#             _summ = _fs()
-#             if _summ.get("monthly_mwh", 0) > 0:
-#                 monthly_kwh = float(_summ["monthly_mwh"]) * 1000
-#                 if _summ.get("total_mwh", 0) > 0:
-#                     total_mwh = float(_summ["total_mwh"])
-#         except Exception:
-#             pass
-
-#     if monthly_kwh == 0 and _chart_brand == "Growatt" and _chart_pid:
-#         # Growatt: sum completed days from API
-#         try:
-#             from utils.growatt_api import get_plant_daily_history as _gpdh_k
-#             _api_mon = _gpdh_k(_chart_pid, _cur_mon_str)
-#             if _api_mon:
-#                 monthly_kwh = sum(float(r.get("energy_kwh") or 0) for r in _api_mon)
-#         except Exception:
-#             pass
-
-#     if monthly_kwh == 0:
-#         # DB fallback (sparse but better than nothing)
-#         _hist_mon = get_history(hours=720)
-#         if not _hist_mon.empty and "today_kwh" in _hist_mon.columns:
-#             _hist_mon["fetched_at"] = pd.to_datetime(_hist_mon["fetched_at"])
-#             _hist_mon["today_kwh"]  = pd.to_numeric(_hist_mon["today_kwh"], errors="coerce")
-#             if active_plant != "All Plants":
-#                 _hist_mon = _hist_mon[_hist_mon["plant_name"] == active_plant]
-#             elif all_sel_plants:
-#                 _hist_mon = _hist_mon[_hist_mon["plant_name"].isin(all_sel_plants)]
-#             _m = _hist_mon[_hist_mon["fetched_at"].dt.month == _now_dt.month]
-#             if not _m.empty:
-#                 monthly_kwh = float(
-#                     _m.groupby([_m["fetched_at"].dt.date, "inverter_sn"])
-#                     ["today_kwh"].max().sum())
-
-#     if monthly_kwh == 0:
-#         monthly_kwh = daily_kwh
-#     monthly_mwh = monthly_kwh / 1000
-
-#     # ── Annual yield ──────────────────────────────────────────────
-#     # Solis: try yearEnergy+yearEnergyStr from userStationList first,
-#     # then fall back to summing stationMonthEnergyList (per-month kWh).
-#     annual_kwh = 0.0
-#     if _chart_brand == "Solis" and active_plant != "All Plants":
-#         _prec = _plant_records.get(active_plant, {})
-#         if _prec and _prec.get("yearEnergy") is not None:
-#             try:
-#                 from utils.solis_api import _to_kwh as _s2kwh
-#                 annual_kwh = _s2kwh(
-#                     _prec.get("yearEnergy", 0),
-#                     _prec.get("yearEnergyStr", "kWh"))
-#             except Exception:
-#                 pass
-#         if annual_kwh == 0 and _chart_pid:
-#             try:
-#                 from utils.solis_api import get_plant_monthly_history as _spmhy_k
-#                 _api_yr = _spmhy_k(_chart_pid, _cur_yr_str)
-#                 if _api_yr:
-#                     annual_kwh = sum(float(r.get("energy_kwh") or 0) for r in _api_yr)
-#             except Exception:
-#                 pass
-
-#     if annual_kwh == 0 and _chart_brand == "Growatt" and _chart_pid:
-#         try:
-#             from utils.growatt_api import get_plant_monthly_history as _gpmhy_k
-#             _api_yr = _gpmhy_k(_chart_pid, _cur_yr_str)
-#             if _api_yr:
-#                 annual_kwh = sum(float(r.get("energy_kwh") or 0) for r in _api_yr)
-#         except Exception:
-#             pass
-
-#     if annual_kwh == 0:
-#         _hy_k = get_history(hours=8760)
-#         if not _hy_k.empty and "today_kwh" in _hy_k.columns:
-#             _hy_k["fetched_at"] = pd.to_datetime(_hy_k["fetched_at"])
-#             _hy_k["today_kwh"]  = pd.to_numeric(_hy_k["today_kwh"], errors="coerce")
-#             if active_plant != "All Plants":
-#                 _hy_k = _hy_k[_hy_k["plant_name"] == active_plant]
-#             _hy_k = _hy_k[_hy_k["fetched_at"].dt.year == _now_dt.year]
-#             if not _hy_k.empty:
-#                 annual_kwh = float(
-#                     _hy_k.groupby(
-#                         [_hy_k["fetched_at"].dt.date.rename("_d"), "inverter_sn"])
-#                     ["today_kwh"].max().sum())
-
-#     if annual_kwh == 0:
-#         annual_kwh = monthly_kwh * 12
-#     annual_mwh = annual_kwh / 1000
-
-#     # Environmental benefits (Indian grid: 0.82 kg CO₂/kWh, 0.34 kg coal/kWh)
-#     _tot_kwh_env = total_mwh * 1000
-#     _co2_t  = round(_tot_kwh_env * 0.82  / 1000, 2)
-#     _trees  = round(_co2_t * 1000 / 21.77, 1)
-#     _coal_t = round(_tot_kwh_env * 0.34  / 1000, 2)
-
-#     # ── Top bar ───────────────────────────────────────────────
-#     _th1, _th2, _th3 = st.columns([4, 1, 1])
-#     with _th1:
-#         _dot = ("🟢" if n_on == n_tot and n_tot > 0
-#                 else "🔴" if n_on == 0 else "🟡")
-#         _plant_lbl = active_plant if active_plant != "All Plants" else f"All {', '.join(sel_brands)} Plants"
-#         st.markdown(f"""
-# <div style="padding:2px 0 14px;">
-#   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-#     <span style="font-size:20px;font-weight:800;color:#0f172a;">{_plant_lbl}</span>
-#     <span style="font-size:12px;color:#64748b;background:#f1f5f9;
-#       border-radius:6px;padding:2px 8px;">{_brand_str}</span>
-#     {_dot}
-#   </div>
-#   <div style="font-size:11px;color:#94a3b8;margin-top:3px;">
-#     Last Update: {datetime.now().strftime('%d/%m/%Y %H:%M:%S (UTC+05:30)')}
-#     {f" &nbsp;·&nbsp; PV Capacity: {_cap_str}" if _cap_str != "—" else ""}
-#     {f" &nbsp;·&nbsp; 📍 {_loc_str}" if _loc_str != "—" else ""}
-#   </div>
-# </div>""", unsafe_allow_html=True)
-#     with _th2:
-#         if st.button("← All Plants", use_container_width=True):
-#             st.session_state["_pending_page"] = "Plants"
-#             st.rerun()
-#     with _th3:
-#         if st.button("📥 Export Report", use_container_width=True,
-#                      type="primary", key="dash_export_btn"):
-#             st.session_state["_export_requested"] = True
-
-#     # Placeholder so the download button can appear right here (below header)
-#     # even though the Excel is built much later when all KPI vars are ready.
-#     _export_dl_placeholder = st.empty()
-
-#     if df.empty:
-#         st.warning("⚠️ No data. Check credentials in config.py and click Refresh.")
-#         st.stop()
-
-#     # ── Alarm banner ─────────────────────────────────────────
-#     _crit_al = [a for a in alerts if any(k in str(a.get("issue","")).lower()
-#                                          for k in ("fault","offline","error","fail"))]
-#     _warn_al = [a for a in alerts if a not in _crit_al]
-#     if not alerts and n_on == n_tot and n_tot > 0:
-#         _ab_bg  = "linear-gradient(90deg,#059669,#10b981)"
-#         _ab_txt = f"✅  All Systems Normal — {n_on}/{n_tot} inverters online · No active alarms"
-#     elif _crit_al or n_on < n_tot:
-#         _issues = len(_crit_al) or (n_tot - n_on)
-#         _ab_bg  = "linear-gradient(90deg,#dc2626,#ef4444)"
-#         _ab_txt = (f"🚨  {_issues} Critical Alert(s) · {n_on}/{n_tot} online — "
-#                    + " | ".join(f"{a['plant_name']}: {a['issue']}" for a in (_crit_al or alerts)[:3]))
-#     else:
-#         _ab_bg  = "linear-gradient(90deg,#d97706,#f59e0b)"
-#         _ab_txt = (f"⚠️  {len(_warn_al)} Warning(s) · {n_on}/{n_tot} online — "
-#                    + " | ".join(f"{a['plant_name']}: {a['issue']}" for a in _warn_al[:3]))
-#     st.markdown(f"""
-# <div style="background:{_ab_bg};border-radius:10px;padding:11px 20px;
-#   margin-bottom:14px;font-size:13px;font-weight:600;color:#fff;
-#   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-#   {_ab_txt}
-# </div>""", unsafe_allow_html=True)
-
-#     # ── 3-column layout: [gauge+KPIs | charts | right panel] ─
-#     _lc, _mc, _rc = st.columns([1.3, 2.5, 1.2])
-
-#     # ── LEFT: Gauge + 4 KPI rows ──────────────────────────────
-#     with _lc:
-#         try:
-#             _cap_kw = float(
-#                 _cap_str.replace("kWp","").replace("kW","").replace("—","0").strip() or 0)
-#         except Exception:
-#             _cap_kw = 0.0
-#         _gmax = max(_cap_kw, total_power * 1.25, 10.0)
-
-#         _gfig = go.Figure(go.Indicator(
-#             mode="gauge+number",
-#             value=total_power,
-#             number={"suffix": " kW",
-#                     "font":   {"size": 26, "color": "#f59e0b",
-#                                "family": "Plus Jakarta Sans"}},
-#             gauge={
-#                 "axis": {"range": [0, _gmax], "tickcolor": "#cbd5e1",
-#                          "tickfont": {"size": 9}, "nticks": 5},
-#                 "bar":  {"color": "#f59e0b", "thickness": 0.18},
-#                 "bgcolor": "rgba(0,0,0,0)",
-#                 "borderwidth": 0,
-#                 "steps": [
-#                     {"range": [0,           _gmax*0.33], "color": "#f0fdf4"},
-#                     {"range": [_gmax*0.33,  _gmax*0.66], "color": "#fef9c3"},
-#                     {"range": [_gmax*0.66,  _gmax],      "color": "#fff7ed"},
-#                 ],
-#                 "threshold": {"line":  {"color": "#ea580c", "width": 3},
-#                               "thickness": 0.78, "value": total_power},
-#             }
-#         ))
-#         _gfig.update_layout(
-#             height=210, margin=dict(l=16, r=16, t=20, b=0),
-#             paper_bgcolor="rgba(0,0,0,0)",
-#             font_family="Inter",
-#         )
-#         if _cap_kw > 0:
-#             _gfig.add_annotation(
-#                 text=f"PV Capacity: {_cap_str}",
-#                 x=0.5, y=-0.05, showarrow=False,
-#                 font=dict(size=10, color="#94a3b8", family="Plus Jakarta Sans"),
-#                 xanchor="center")
-#         st.plotly_chart(_gfig, use_container_width=True,
-#                         config={"displayModeBar": False})
-
-#         # 4 KPI value rows
-#         for _kl, _kv, _ke, _kc, _kb in [
-#             ("Daily Yield",
-#              f"{daily_kwh/1000:.3f} MWh" if daily_kwh >= 1000 else f"{daily_kwh:.1f} kWh",
-#              earn(daily_kwh), "#f59e0b", "#fffbeb"),
-#             ("Monthly Yield", f"{monthly_mwh:.3f} MWh",
-#              earn(monthly_kwh), "#ea580c", "#fff7ed"),
-#             ("Annual Yield",  f"{annual_mwh:.3f} MWh",
-#              earn(annual_mwh * 1000), "#f59e0b", "#fffbeb"),
-#             ("Total Yield",
-#              f"{total_mwh/1000:.3f} GWh" if total_mwh >= 1000 else f"{total_mwh:.3f} MWh",
-#              earn(total_mwh * 1000), "#3b82f6", "#eff6ff"),
-#         ]:
-#             st.markdown(f"""
-# <div style="background:{_kb};border-left:3px solid {_kc};border-radius:0 10px 10px 0;
-#   padding:9px 13px;margin-bottom:7px;display:flex;
-#   justify-content:space-between;align-items:center;">
-#   <div>
-#     <div style="font-size:9px;color:#64748b;text-transform:uppercase;
-#       letter-spacing:.5px;margin-bottom:2px;">{_kl}</div>
-#     <div style="font-size:17px;font-weight:800;color:{_kc};line-height:1.1;">{_kv}</div>
-#   </div>
-#   <div style="text-align:right;">
-#     <div style="font-size:9px;color:#94a3b8;">≈ INR</div>
-#     <div style="font-size:12px;font-weight:700;color:#475569;">{_ke}</div>
-#   </div>
-# </div>""", unsafe_allow_html=True)
-
-#     # ── CENTRE: Operating Data charts ─────────────────────────
-#     with _mc:
-#         st.markdown("""
-# <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;
-#   padding:16px 18px;margin-bottom:0;">
-#   <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">
-#     Operating Data
-#   </div>""", unsafe_allow_html=True)
-
-#         _tab_day, _tab_mon, _tab_yr, _tab_life = st.tabs(["Day", "Month", "Year", "Lifetime"])
-
-#         # _chart_pid / _chart_brand already resolved above the KPI block
-
-#         with _tab_day:
-#             # Date picker
-#             _today = datetime.now().date()
-#             _sel_date = st.date_input(
-#                 "Select Date", value=_today, max_value=_today,
-#                 key="chart_day_date"
-#             )
-#             _dp          = pd.DataFrame()
-#             _day_src     = "none"
-#             _day_str_api = _sel_date.strftime("%Y-%m-%d")
-#             _pname_q     = active_plant if active_plant != "All Plants" else ""
-
-#             def _to_chart_df(time_pwr_dict, date_str):
-#                 """Convert {HH:MM: kw} dict → DataFrame with fetched_at + power_kw."""
-#                 rows = []
-#                 for t, p in sorted(time_pwr_dict.items()):
-#                     try:
-#                         rows.append({
-#                             "fetched_at": pd.to_datetime(f"{date_str} {t}"),
-#                             "power_kw":   float(p or 0),
-#                         })
-#                     except Exception:
-#                         pass
-#                 return pd.DataFrame(rows) if rows else pd.DataFrame()
-
-#             # ── Source 1: session-state (populated on every refresh, instant) ─
-#             _ss_day = st.session_state.get("_ss_intraday", {}).get(_day_str_api, {})
-#             if _pname_q:
-#                 _ss_pts = dict(_ss_day.get(_pname_q, {}))
-#             else:
-#                 _ss_pts = {}
-#                 for _pn_s, _ppts_s in _ss_day.items():
-#                     for _t_s, _p_s in _ppts_s.items():
-#                         _ss_pts[_t_s] = _ss_pts.get(_t_s, 0.0) + _p_s
-#             if _ss_pts:
-#                 _dp      = _to_chart_df(_ss_pts, _day_str_api)
-#                 _day_src = "session"
-
-#             # ── Source 2: intraday_power DB (populated by 1-min DB saves) ─────
-#             try:
-#                 from utils.database import get_intraday as _get_id
-#                 if _pname_q:
-#                     _id_df = _get_id(_pname_q, _day_str_api)
-#                 else:
-#                     from utils.database import _conn as _dbc2
-#                     _c2    = _dbc2()
-#                     _id_df = pd.read_sql(
-#                         "SELECT time_hm, power_kw FROM intraday_power "
-#                         "WHERE date=%s ORDER BY time_hm",
-#                         _c2, params=(_day_str_api,))
-#                     _c2.close()
-#                     if not _id_df.empty:
-#                         _id_df = _id_df.groupby("time_hm")["power_kw"].sum().reset_index()
-
-#                 if not _id_df.empty:
-#                     # Merge DB into session data — DB may have more points (older entries)
-#                     _db_pts = dict(zip(_id_df["time_hm"],
-#                                        pd.to_numeric(_id_df["power_kw"],
-#                                                      errors="coerce").fillna(0)))
-#                     _merged = {**_db_pts, **_ss_pts}  # session overrides DB for same time
-#                     if _merged:
-#                         _dp      = _to_chart_df(_merged, _day_str_api)
-#                         _day_src = "db" if not _ss_pts else "session+db"
-#             except Exception:
-#                 pass
-
-#             # ── Source 3: inverter_data fallback (same DB, broader table) ─────
-#             if _dp.empty:
-#                 try:
-#                     _hd = get_history(hours=168)
-#                     if not _hd.empty:
-#                         _hd["fetched_at"] = pd.to_datetime(_hd["fetched_at"])
-#                         _hd["power_kw"]   = pd.to_numeric(_hd["power_kw"], errors="coerce")
-#                         if active_plant != "All Plants":
-#                             _hd = _hd[_hd["plant_name"] == active_plant]
-#                         _hd = _hd[_hd["fetched_at"].dt.date == _sel_date]
-#                         if not _hd.empty:
-#                             _dp      = _hd.groupby("fetched_at")["power_kw"].sum().reset_index()
-#                             _day_src = "db"
-#                 except Exception:
-#                     pass
-
-#             _flh = round(daily_kwh / _cap_kw, 2) if _cap_kw > 0 else 0.0
-#             _ds1, _ds2, _ds3 = st.columns(3)
-#             _ds1.metric("Daily Yield",
-#                         f"{daily_kwh/1000:.3f} MWh" if daily_kwh >= 1000 else f"{daily_kwh:.1f} kWh")
-#             _ds2.metric("Daily Earning", earn(daily_kwh))
-#             _ds3.metric("Full Load Hours", f"{_flh:.2f} h" if _cap_kw > 0 else "—")
-
-#             if not _dp.empty:
-#                 # Fixed full-day range using pd.Timestamp so types match x data
-#                 import pandas as _pd2
-#                 _day_range_start = _pd2.Timestamp(f"{_day_str_api} 06:00:00")
-#                 _day_range_end   = _pd2.Timestamp(f"{_day_str_api} 18:30:00")
-#                 # Clamp any out-of-range timestamps to keep the axis correct
-#                 _dp = _dp[(_dp["fetched_at"] >= _day_range_start) &
-#                           (_dp["fetched_at"] <= _day_range_end)].copy()
-#                 if _dp.empty:
-#                     # All points were outside 06:00–18:30; still show the chart
-#                     _day_range_start = _pd2.Timestamp(f"{_day_str_api} 06:00:00")
-#                     _day_range_end   = _pd2.Timestamp(f"{_day_str_api} 18:30:00")
-
-#                 _fd = go.Figure()
-#                 _fd.add_trace(go.Scatter(
-#                     x=_dp["fetched_at"], y=_dp["power_kw"],
-#                     fill="tozeroy", fillcolor="rgba(245,158,11,.15)",
-#                     line=dict(color="#f59e0b", width=2.5),
-#                     mode="lines+markers",
-#                     marker=dict(size=5, color="#f59e0b",
-#                                 line=dict(width=1, color="#d97706")),
-#                     name="Power",
-#                     hovertemplate=(
-#                         "<b>%{x|%H:%M}</b><br>"
-#                         "Power: <b>%{y:.3f} kW</b>"
-#                         "<extra></extra>"
-#                     ),
-#                 ))
-#                 _fd.update_layout(
-#                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Inter", font_color="#64748b",
-#                     margin=dict(l=0, r=0, t=8, b=50), height=310,
-#                     hovermode="closest", showlegend=False,
-#                     xaxis=dict(
-#                         showgrid=False, tickformat="%H:%M",
-#                         title="Time", zeroline=False,
-#                         range=[_day_range_start, _day_range_end],
-#                         rangeslider=dict(visible=True, thickness=0.08),
-#                         rangeselector=dict(
-#                             buttons=[
-#                                 dict(count=4,  label="4h",       step="hour",
-#                                      stepmode="backward"),
-#                                 dict(count=8,  label="8h",       step="hour",
-#                                      stepmode="backward"),
-#                                 dict(step="all", label="Full Day"),
-#                             ],
-#                             bgcolor="#f8fafc", activecolor="#f59e0b",
-#                             font=dict(size=10),
-#                         ),
-#                     ),
-#                     yaxis=dict(showgrid=True, gridcolor="#f8fafc",
-#                                title="Power (kW)", zeroline=False),
-#                 )
-#                 st.plotly_chart(_fd, use_container_width=True,
-#                                 config={"displayModeBar": True, "scrollZoom": True})
-#                 _nonzero_pts = int((_dp["power_kw"] > 0).sum())
-#                 _last_saved  = st.session_state.get("_last_db_save_hm", "—")
-#                 _db_err      = st.session_state.get("_db_save_err", "")
-#                 _src_lbl     = {
-#                     "session":    "📡 Session",
-#                     "db":         "💾 DB",
-#                     "session+db": "📡 Session + 💾 DB",
-#                 }.get(_day_src, _day_src)
-#                 _cap = (f"Source: {_src_lbl} — {len(_dp)} pts "
-#                         f"({_nonzero_pts} with power > 0)  |  Last DB save: {_last_saved}")
-#                 if _db_err:
-#                     _cap += f"  |  ⚠️ DB error: {_db_err}"
-#                 st.caption(_cap)
-#             else:
-#                 _db_err = st.session_state.get("_db_save_err", "")
-#                 st.info(
-#                     f"No data yet for {_sel_date.strftime('%d %b %Y')}. "
-#                     "Power readings are saved to DB every minute while the app is open — "
-#                     "the chart builds up automatically throughout the day."
-#                     + (f"\n\n⚠️ DB error: {_db_err}" if _db_err else "")
-#                 )
-
-#         with _tab_mon:
-#             # Month + Year pickers — shows day-by-day breakdown within the month
-#             _now = datetime.now()
-#             _mc1, _mc2 = st.columns(2)
-#             _sel_mon_idx = _mc1.selectbox(
-#                 "Month",
-#                 options=list(range(1, 13)),
-#                 format_func=lambda m: datetime(2000, m, 1).strftime("%B"),
-#                 index=_now.month - 1, key="chart_mon_month"
-#             )
-#             _sel_mon_yr = _mc2.selectbox(
-#                 "Year",
-#                 options=list(range(_now.year - 3, _now.year + 1)),
-#                 index=3, key="chart_mon_year"
-#             )
-#             _sel_mon_str = f"{_sel_mon_yr}-{_sel_mon_idx:02d}"
-
-#             _mon_rows = []
-#             _mon_src  = "api"
-
-#             # Primary: API — per-day totals for the month
-#             if _chart_pid:
-#                 try:
-#                     if _chart_brand == "Solis":
-#                         from utils.solis_api import get_plant_daily_history as _spdh
-#                         _mon_rows = _spdh(_chart_pid, _sel_mon_str)
-#                     else:
-#                         from utils.growatt_api import get_plant_daily_history as _gpdh
-#                         _mon_rows = _gpdh(_chart_pid, _sel_mon_str)
-#                 except Exception:
-#                     pass
-
-#             # Fallback: DB grouped by day
-#             if not _mon_rows:
-#                 _mon_src = "db"
-#                 _hm = get_history(hours=24 * 31 * 3)
-#                 if not _hm.empty and "today_kwh" in _hm.columns:
-#                     _hm["fetched_at"] = pd.to_datetime(_hm["fetched_at"])
-#                     _hm["today_kwh"]  = pd.to_numeric(_hm["today_kwh"], errors="coerce")
-#                     if active_plant != "All Plants":
-#                         _hm = _hm[_hm["plant_name"] == active_plant]
-#                     _hm = _hm[(_hm["fetched_at"].dt.year  == _sel_mon_yr) &
-#                                (_hm["fetched_at"].dt.month == _sel_mon_idx)]
-#                     if not _hm.empty:
-#                         _dmdb = (_hm.groupby([_hm["fetched_at"].dt.date, "inverter_sn"])
-#                                  ["today_kwh"].max().groupby(level=0).sum().reset_index())
-#                         _dmdb.columns = ["date", "energy_kwh"]
-#                         _dmdb["date"] = _dmdb["date"].astype(str)
-#                         _mon_rows = _dmdb.to_dict("records")
-
-#             _ms1, _ms2, _ms3 = st.columns(3)
-#             _ms1.metric("Monthly Yield", f"{monthly_mwh:.3f} MWh")
-#             _ms2.metric("Monthly Earning", earn(monthly_kwh))
-#             _mon_days = len(_mon_rows) if _mon_rows else 0
-#             _ms3.metric("Days with Data", str(_mon_days))
-
-#             if _mon_rows:
-#                 _dm_df = pd.DataFrame(_mon_rows)
-#                 _dx = "date" if "date" in _dm_df.columns else _dm_df.columns[0]
-#                 _dm_df[_dx] = pd.to_datetime(_dm_df[_dx], errors="coerce")
-#                 _dm_df = _dm_df.dropna(subset=[_dx]).sort_values(_dx)
-#                 # X-axis: day numbers "01", "02" ... matching Solis app style
-#                 _dm_df["_day"] = _dm_df[_dx].dt.day.apply(lambda d: f"{d:02d}")
-#                 _fm = go.Figure()
-#                 _fm.add_trace(go.Bar(
-#                     x=_dm_df["_day"], y=_dm_df["energy_kwh"],
-#                     marker_color="rgba(234,88,12,.55)", name="Yield",
-#                     marker_cornerradius=2,
-#                     hovertemplate="Day %{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
-#                 ))
-#                 _fm.add_trace(go.Scatter(
-#                     x=_dm_df["_day"], y=_dm_df["energy_kwh"],
-#                     line=dict(color="#ea580c", width=2), mode="lines+markers",
-#                     marker=dict(size=4), name="Trend",
-#                 ))
-#                 _fm.update_layout(
-#                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Inter", font_color="#64748b",
-#                     margin=dict(l=0, r=0, t=8, b=0), height=270,
-#                     bargap=0.2, hovermode="x unified", showlegend=False,
-#                     xaxis=dict(showgrid=False, zeroline=False, type="category",
-#                                title="Day of Month"),
-#                     yaxis=dict(showgrid=True, gridcolor="#f8fafc",
-#                                title="kWh", zeroline=False),
-#                 )
-#                 st.plotly_chart(_fm, use_container_width=True,
-#                                 config={"displayModeBar": False})
-#                 _mon_tot = float(_dm_df["energy_kwh"].sum())
-#                 st.caption(
-#                     f"Source: {'API' if _mon_src == 'api' else 'Local DB'} — "
-#                     f"{_sel_mon_str} total: {_mon_tot:.1f} kWh")
-#             else:
-#                 st.info(f"No data for {_sel_mon_str}. Check API credentials.")
-
-#         with _tab_yr:
-#             # Year picker — shows month-by-month breakdown within the year
-#             import calendar as _cal
-#             _now_yr = datetime.now().year
-#             _sel_yr = st.selectbox(
-#                 "Year",
-#                 options=list(range(_now_yr - 3, _now_yr + 1)),
-#                 index=3, key="chart_yr_year"
-#             )
-#             _yr_str  = str(_sel_yr)
-#             _yr_rows = []
-#             _yr_src  = "api"
-
-#             # Primary: API — per-month totals for the year
-#             if _chart_pid:
-#                 try:
-#                     if _chart_brand == "Solis":
-#                         from utils.solis_api import get_plant_monthly_history as _spmhy
-#                         _yr_rows = _spmhy(_chart_pid, _yr_str)
-#                     else:
-#                         from utils.growatt_api import get_plant_monthly_history as _gpmhy
-#                         _yr_rows = _gpmhy(_chart_pid, _yr_str)
-#                 except Exception:
-#                     pass
-
-#             # Fallback: DB grouped by month
-#             if not _yr_rows:
-#                 _yr_src = "db"
-#                 _hy = get_history(hours=8760 * 2)
-#                 if not _hy.empty and "today_kwh" in _hy.columns:
-#                     _hy["fetched_at"] = pd.to_datetime(_hy["fetched_at"])
-#                     _hy["today_kwh"]  = pd.to_numeric(_hy["today_kwh"], errors="coerce")
-#                     if active_plant != "All Plants":
-#                         _hy = _hy[_hy["plant_name"] == active_plant]
-#                     _hy = _hy[_hy["fetched_at"].dt.year == _sel_yr]
-#                     if not _hy.empty:
-#                         _ym = (_hy.groupby([_hy["fetched_at"].dt.year.rename("_yr"),
-#                                             _hy["fetched_at"].dt.month.rename("_mo"),
-#                                             "inverter_sn"])["today_kwh"]
-#                                .max().groupby(level=[0, 1]).sum().reset_index())
-#                         _ym.columns = ["_yr", "_mo", "energy_kwh"]
-#                         _ym["month"] = _ym.apply(
-#                             lambda r: f"{int(r['_yr'])}-{int(r['_mo']):02d}", axis=1)
-#                         _yr_rows = _ym[["month", "energy_kwh"]].to_dict("records")
-
-#             _ys1, _ys2, _ys3 = st.columns(3)
-#             _ys1.metric("Annual Yield", f"{annual_mwh:.3f} MWh")
-#             _ys2.metric("Annual Earning", earn(annual_mwh * 1000))
-#             _ys3.metric("Months with Data", str(len(_yr_rows)))
-
-#             if _yr_rows:
-#                 _yr_df = pd.DataFrame(_yr_rows)
-#                 _xc = "month" if "month" in _yr_df.columns else _yr_df.columns[0]
-#                 _yr_df = _yr_df.dropna(subset=[_xc]).sort_values(_xc)
-#                 _yr_df["energy_kwh"] = pd.to_numeric(_yr_df["energy_kwh"], errors="coerce").fillna(0)
-#                 # X-axis: month abbreviations — "2026-01" → "Jan"
-#                 def _mo_abbr(m):
-#                     try: return _cal.month_abbr[int(str(m).split("-")[1])]
-#                     except Exception: return str(m)
-#                 _yr_df["_label"] = _yr_df[_xc].apply(_mo_abbr)
-#                 _fy = go.Figure()
-#                 _fy.add_trace(go.Bar(
-#                     x=_yr_df["_label"], y=_yr_df["energy_kwh"],
-#                     marker_color="rgba(234,88,12,.55)", name="Yield",
-#                     marker_cornerradius=2,
-#                     hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
-#                 ))
-#                 _fy.add_trace(go.Scatter(
-#                     x=_yr_df["_label"], y=_yr_df["energy_kwh"],
-#                     line=dict(color="#ea580c", width=2), mode="lines+markers",
-#                     marker=dict(size=5), name="Trend",
-#                 ))
-#                 _fy.update_layout(
-#                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Inter", font_color="#64748b",
-#                     margin=dict(l=0, r=0, t=8, b=0), height=270,
-#                     bargap=0.25, hovermode="x unified", showlegend=False,
-#                     xaxis=dict(showgrid=False, zeroline=False, type="category",
-#                                categoryorder="array",
-#                                categoryarray=[_cal.month_abbr[i] for i in range(1, 13)]),
-#                     yaxis=dict(showgrid=True, gridcolor="#f8fafc",
-#                                title="kWh", zeroline=False),
-#                 )
-#                 st.plotly_chart(_fy, use_container_width=True,
-#                                 config={"displayModeBar": False})
-#                 _yr_tot = float(_yr_df["energy_kwh"].sum())
-#                 st.caption(
-#                     f"Source: {'API' if _yr_src == 'api' else 'Local DB'} — "
-#                     f"{_yr_str} total: {_yr_tot/1000:.3f} MWh")
-#             else:
-#                 st.info(f"No data for {_yr_str}. Check API credentials.")
-
-#         with _tab_life:
-#             # Lifetime view — year-by-year totals (all available years)
-#             _now_yr2     = datetime.now().year
-#             _life_rows   = []
-#             _life_src    = "api"
-
-#             # Primary: API — sum monthly values for each year
-#             if _chart_pid:
-#                 for _y in range(_now_yr2 - 4, _now_yr2 + 1):
-#                     try:
-#                         if _chart_brand == "Solis":
-#                             from utils.solis_api import get_plant_monthly_history as _spmhL
-#                             _mL = _spmhL(_chart_pid, str(_y))
-#                         else:
-#                             from utils.growatt_api import get_plant_monthly_history as _gpmhL
-#                             _mL = _gpmhL(_chart_pid, str(_y))
-#                         _ytot = sum(float(r.get("energy_kwh", 0)) for r in (_mL or []))
-#                         if _ytot > 0:
-#                             _life_rows.append({"year": str(_y), "energy_kwh": _ytot})
-#                     except Exception:
-#                         pass
-
-#             # Fallback: DB grouped by year
-#             if not _life_rows:
-#                 _life_src = "db"
-#                 _hyL = get_history(hours=8760 * 5)
-#                 if not _hyL.empty and "today_kwh" in _hyL.columns:
-#                     _hyL["fetched_at"] = pd.to_datetime(_hyL["fetched_at"])
-#                     _hyL["today_kwh"]  = pd.to_numeric(_hyL["today_kwh"], errors="coerce")
-#                     if active_plant != "All Plants":
-#                         _hyL = _hyL[_hyL["plant_name"] == active_plant]
-#                     if not _hyL.empty:
-#                         _ydb = (_hyL.groupby([_hyL["fetched_at"].dt.year.rename("_yr"),
-#                                               _hyL["fetched_at"].dt.month.rename("_mo"),
-#                                               "inverter_sn"])["today_kwh"]
-#                                 .max().groupby(level=[0, 1]).sum()
-#                                 .groupby(level=0).sum().reset_index())
-#                         _ydb.columns = ["year", "energy_kwh"]
-#                         _ydb["year"] = _ydb["year"].astype(str)
-#                         _life_rows = _ydb.to_dict("records")
-
-#             _tl1, _tl2, _tl3 = st.columns(3)
-#             _grand_kwh = sum(r.get("energy_kwh", 0) for r in _life_rows)
-#             _tl1.metric("Total Yield",   f"{_grand_kwh/1000:.3f} MWh")
-#             _tl2.metric("Total Earning", earn(_grand_kwh))
-#             _tl3.metric("Years Active",  str(len(_life_rows)))
-
-#             if _life_rows:
-#                 _lf_df = pd.DataFrame(_life_rows).sort_values("year")
-#                 _lf_df["energy_kwh"] = pd.to_numeric(_lf_df["energy_kwh"], errors="coerce").fillna(0)
-#                 _fl = go.Figure()
-#                 _fl.add_trace(go.Bar(
-#                     x=_lf_df["year"], y=_lf_df["energy_kwh"],
-#                     marker_color="rgba(234,88,12,.55)", name="Yield",
-#                     marker_cornerradius=3,
-#                     hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
-#                     text=_lf_df["energy_kwh"].apply(lambda v: f"{v/1000:.2f} MWh"),
-#                     textposition="outside",
-#                     textfont=dict(size=11, color="#78716c"),
-#                 ))
-#                 _fl.add_trace(go.Scatter(
-#                     x=_lf_df["year"], y=_lf_df["energy_kwh"],
-#                     line=dict(color="#f59e0b", width=2), mode="lines+markers",
-#                     marker=dict(size=6), name="Trend",
-#                 ))
-#                 _fl.update_layout(
-#                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Inter", font_color="#64748b",
-#                     margin=dict(l=0, r=0, t=30, b=0), height=280,
-#                     bargap=0.35, hovermode="x unified", showlegend=False,
-#                     xaxis=dict(showgrid=False, zeroline=False, type="category",
-#                                tickfont=dict(size=13, color="#1c1917")),
-#                     yaxis=dict(showgrid=True, gridcolor="#f8fafc",
-#                                title="kWh", zeroline=False),
-#                 )
-#                 st.plotly_chart(_fl, use_container_width=True,
-#                                 config={"displayModeBar": False})
-#                 st.caption(
-#                     f"Source: {'API' if _life_src == 'api' else 'Local DB'} — "
-#                     f"lifetime: {_grand_kwh/1000:.3f} MWh across {len(_lf_df)} yr(s)")
-#             else:
-#                 st.info("No lifetime data available. Verify API credentials.")
-
-#         st.markdown("</div>", unsafe_allow_html=True)
-
-#     # ── RIGHT: Plant info + Environmental benefits + Inverters ─
-#     with _rc:
-#         # Plant Information
-#         st.markdown(f"""
-# <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;
-#   padding:16px;margin-bottom:10px;">
-#   <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">
-#     Plant Information
-#   </div>
-#   <table style="width:100%;font-size:12px;border-collapse:collapse;line-height:1.8;">
-#     <tr>
-#       <td style="color:#94a3b8;width:45%;">Status</td>
-#       <td style="font-weight:600;color:{'#10b981' if n_on > 0 else '#ef4444'};">
-#         {'● Online' if n_on > 0 else '● Offline'} ({n_on}/{n_tot})</td>
-#     </tr>
-#     <tr>
-#       <td style="color:#94a3b8;">Plant</td>
-#       <td style="font-weight:600;color:#0f172a;">{_plant_lbl}</td>
-#     </tr>
-#     <tr>
-#       <td style="color:#94a3b8;">Brand</td>
-#       <td style="font-weight:600;color:#0f172a;">{_brand_str}</td>
-#     </tr>
-#     <tr>
-#       <td style="color:#94a3b8;">PV Capacity</td>
-#       <td style="font-weight:600;color:#0f172a;">{_cap_str}</td>
-#     </tr>
-#     <tr>
-#       <td style="color:#94a3b8;">Inverters</td>
-#       <td style="font-weight:600;color:#0f172a;">{n_on} on / {n_tot} total</td>
-#     </tr>
-#     <tr>
-#       <td style="color:#94a3b8;">Location</td>
-#       <td style="font-weight:600;color:#0f172a;">{_loc_str}</td>
-#     </tr>
-#     <tr>
-#       <td style="color:#94a3b8;">Tariff</td>
-#       <td style="font-weight:600;color:#0f172a;">₹{RATE_PER_KWH}/kWh</td>
-#     </tr>
-#   </table>
-# </div>""", unsafe_allow_html=True)
-
-#         # Environmental Benefits
-#         st.markdown(f"""
-# <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;
-#   padding:16px;margin-bottom:10px;">
-#   <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">
-#     Environmental Benefits
-#   </div>
-#   <div style="display:flex;flex-direction:column;gap:10px;">
-#     <div style="display:flex;align-items:center;gap:10px;">
-#       <div style="width:34px;height:34px;background:#f0fdf4;border-radius:8px;
-#         display:flex;align-items:center;justify-content:center;
-#         font-size:17px;flex-shrink:0;">🌳</div>
-#       <div>
-#         <div style="font-size:16px;font-weight:800;color:#10b981;">{_trees:,.1f}</div>
-#         <div style="font-size:10px;color:#64748b;">Equivalent Trees Planted</div>
-#       </div>
-#     </div>
-#     <div style="display:flex;align-items:center;gap:10px;">
-#       <div style="width:34px;height:34px;background:#eff6ff;border-radius:8px;
-#         display:flex;align-items:center;justify-content:center;
-#         font-size:17px;flex-shrink:0;">☁️</div>
-#       <div>
-#         <div style="font-size:16px;font-weight:800;color:#3b82f6;">{_co2_t:,.2f} t</div>
-#         <div style="font-size:10px;color:#64748b;">CO₂ Reduction</div>
-#       </div>
-#     </div>
-#     <div style="display:flex;align-items:center;gap:10px;">
-#       <div style="width:34px;height:34px;background:#fffbeb;border-radius:8px;
-#         display:flex;align-items:center;justify-content:center;
-#         font-size:17px;flex-shrink:0;">⚡</div>
-#       <div>
-#         <div style="font-size:16px;font-weight:800;color:#f59e0b;">{_coal_t:,.2f} t</div>
-#         <div style="font-size:10px;color:#64748b;">Standard Coal Saved</div>
-#       </div>
-#     </div>
-#   </div>
-# </div>""", unsafe_allow_html=True)
-
-#         # Inverter status list
-#         if not df.empty:
-#             st.markdown("""
-# <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
-#   <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;">
-#     Inverters
-#   </div>""", unsafe_allow_html=True)
-#             for _, _inv in df.head(10).iterrows():
-#                 _ist  = str(_inv.get("status","")).lower()
-#                 _ic   = ("#10b981" if _ist == "online"
-#                          else "#ef4444" if _ist == "offline" else "#f59e0b")
-#                 _ipwr = float(_inv.get("power_kw", 0) or 0)
-#                 _isn  = str(_inv.get("inverter_sn","—"))
-#                 _ipn  = str(_inv.get("plant_name","—"))
-#                 st.markdown(f"""
-# <div style="display:flex;justify-content:space-between;align-items:center;
-#   padding:6px 0;border-bottom:1px solid #f8fafc;">
-#   <div>
-#     <div style="font-size:11px;font-weight:600;color:#0f172a;">{_isn}</div>
-#     <div style="font-size:10px;color:#94a3b8;">{_ipn}</div>
-#   </div>
-#   <div style="text-align:right;">
-#     <div style="font-size:12px;font-weight:700;color:#ea580c;">{_ipwr:.1f} kW</div>
-#     <div style="font-size:10px;font-weight:600;color:{_ic};">
-#       {'● ' + str(_inv.get('status','—')).capitalize()}</div>
-#   </div>
-# </div>""", unsafe_allow_html=True)
-#             st.markdown("</div>", unsafe_allow_html=True)
-
-#     # ── Excel Export ──────────────────────────────────────────
-#     # Build the Excel and fill the placeholder that sits just below the header,
-#     # so the user never needs to scroll down to find the download button.
-#     if st.session_state.get("_export_requested", False):
-#         import io as _io_exp
-#         _xbuf = _io_exp.BytesIO()
-#         try:
-#             with pd.ExcelWriter(_xbuf, engine="openpyxl") as _xw:
-#                 pd.DataFrame({
-#                     "Metric": ["Plant", "Date", "Daily Yield (kWh)", "Monthly Yield (MWh)",
-#                                "Annual Yield (MWh)", "Total Yield (MWh)",
-#                                "Live Power (kW)", "Total Savings (INR)",
-#                                "CO2 Reduction (t)", "Trees Equivalent", "Coal Saved (t)"],
-#                     "Value": [_plant_lbl, datetime.now().strftime("%Y-%m-%d"),
-#                               round(daily_kwh, 2), round(monthly_mwh, 3),
-#                               round(annual_mwh, 3), round(total_mwh, 3),
-#                               round(total_power, 2),
-#                               round(total_mwh * 1000 * RATE_PER_KWH, 2),
-#                               _co2_t, _trees, _coal_t],
-#                 }).to_excel(_xw, sheet_name="KPI Summary", index=False)
-#                 df.to_excel(_xw, sheet_name="Inverter Data", index=False)
-#                 _hexp = get_history(hours=720)
-#                 if not _hexp.empty:
-#                     if active_plant != "All Plants":
-#                         _hexp = _hexp[_hexp["plant_name"] == active_plant]
-#                     _hexp.to_excel(_xw, sheet_name="History (30d)", index=False)
-#             _xbuf.seek(0)
-#             _xl_bytes = _xbuf.read()
-#             _xl_fname = (f"{_plant_lbl.replace(' ','_')}_report_"
-#                          f"{datetime.now().strftime('%Y%m%d')}.xlsx")
-#             st.session_state["_export_requested"] = False
-#             # Render the download button in the placeholder right below the header
-#             with _export_dl_placeholder.container():
-#                 st.success("✅ Report ready — click to download:")
-#                 st.download_button(
-#                     "📥 Download Excel Report",
-#                     data=_xl_bytes,
-#                     file_name=_xl_fname,
-#                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#                     key="export_download_btn",
-#                     use_container_width=True,
-#                 )
-#         except Exception as _xe:
-#             st.session_state["_export_requested"] = False
-#             st.error(f"Export failed: {_xe}")
-
-
-# # ══════════════════════════════════════════════════════════════
-# #  O&M
-# # ══════════════════════════════════════════════════════════════
-# elif page == "O&M":
-#     sub = st.radio("", ["🔔  Alarm Information","⚡  Device Overview"],
-#                    horizontal=True, label_visibility="collapsed")
-#     sub = sub.split("  ",1)[1].strip()
-#     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-
-#     alarm_log = get_alert_log(200)
-#     all_alarms = []
-#     for a in alerts:
-#         all_alarms.append({"device_type":"Inverter","level":"Critical","status":"Active",
-#             "plant_name":a.get("plant_name","—"),"sn":a.get("inverter_sn","—"),
-#             "content":a.get("issue","—"),"brand":a.get("brand","—"),
-#             "time":datetime.now().strftime("%Y-%m-%d %H:%M")})
-#     if not alarm_log.empty:
-#         for _, r in alarm_log.iterrows():
-#             all_alarms.append({"device_type":"Inverter","level":"Warning","status":"Resolved",
-#                 "plant_name":r.get("plant_name","—"),"sn":r.get("inverter_sn","—"),
-#                 "content":r.get("issue","—"),"brand":r.get("brand","—"),
-#                 "time":r.get("alerted_at","—")})
-
-#     if sub == "Alarm Information":
-#         st.markdown('<div class="page-hdr"><h1>Alarm Information</h1>'
-#                     '<p>Fault detection and alert history</p></div>',
-#                     unsafe_allow_html=True)
-
-#         plant_opts = ["All"] + sorted(df["plant_name"].dropna().unique()) if not df.empty else ["All"]
-#         sn_opts    = ["All"] + sorted(df["inverter_sn"].dropna().unique()) if not df.empty else ["All"]
-#         brand_opts = ["All"] + sorted(df["brand"].dropna().unique())       if not df.empty else ["All"]
-
-#         fc1,fc2,fc3,fc4,fc5 = st.columns(5)
-#         with fc1: fp = st.selectbox("Plant Name",  plant_opts)
-#         with fc2: fs = st.selectbox("S/N",         sn_opts)
-#         with fc3: fb = st.selectbox("Brand",        brand_opts)
-#         with fc4: fst= st.selectbox("Status",       ["All","Active","Resolved"])
-#         with fc5: fl = st.selectbox("Level",        ["All","Critical","Warning"])
-
-#         filt = all_alarms[:]
-#         if fp !="All": filt=[a for a in filt if a["plant_name"]==fp]
-#         if fs !="All": filt=[a for a in filt if a["sn"]        ==fs]
-#         if fb !="All": filt=[a for a in filt if a["brand"]     ==fb]
-#         if fst!="All": filt=[a for a in filt if a["status"]    ==fst]
-#         if fl !="All": filt=[a for a in filt if a["level"]     ==fl]
-
-#         m1,m2,m3 = st.columns(3)
-#         m1.metric("Total", len(filt))
-#         m2.metric("Active",   sum(1 for a in filt if a["status"]=="Active"))
-#         m3.metric("Resolved", sum(1 for a in filt if a["status"]=="Resolved"))
-
-#         if not filt:
-#             st.success("✅ No alarms — all systems operating normally.")
-#         else:
-#             st.markdown('<div class="tbl">', unsafe_allow_html=True)
-#             st.markdown('<div class="tbl-hdr tbl-alarm">'
-#                         '<div>Device</div><div>Level</div><div>Status</div>'
-#                         '<div>Plant</div><div>S/N</div><div>Issue</div><div>Time</div>'
-#                         '</div>', unsafe_allow_html=True)
-#             for a in filt:
-#                 st.markdown(
-#                     f'<div class="tbl-row tbl-alarm">'
-#                       f'<div>{a["device_type"]}</div>'
-#                       f'<div>{badge(a["level"],"level")}</div>'
-#                       f'<div>{badge(a["status"],"status_alarm")}</div>'
-#                       f'<div>{chip(a["brand"])} {a["plant_name"]}</div>'
-#                       f'<div style="font-size:11px;color:var(--text3);font-family:\'JetBrains Mono\',monospace;">{a["sn"]}</div>'
-#                       f'<div>{a["content"]}</div>'
-#                       f'<div style="font-size:11px;color:var(--text3);">{a["time"]}</div>'
-#                     f'</div>', unsafe_allow_html=True)
-#             st.markdown('</div>', unsafe_allow_html=True)
-
-#     else:
-#         st.markdown('<div class="page-hdr"><h1>Device Overview</h1>'
-#                     '<p>Live readings for every inverter</p></div>',
-#                     unsafe_allow_html=True)
-#         if df.empty:
-#             st.warning("⚠️ No data."); st.stop()
-
-#         fc1,fc2,fc3,fc4 = st.columns(4)
-#         with fc1: bf = st.selectbox("Brand",  ["All"]+sorted(df["brand"].dropna().unique()),       key="do_b")
-#         with fc2: pf = st.selectbox("Plant",  ["All"]+sorted(df["plant_name"].dropna().unique()),  key="do_p")
-#         with fc3: sf = st.selectbox("S/N",    ["All"]+sorted(df["inverter_sn"].dropna().unique()), key="do_s")
-#         with fc4: stf= st.selectbox("Status", ["All"]+sorted(df["status"].dropna().unique()),      key="do_st")
-
-#         vw = df.copy()
-#         if bf !="All": vw=vw[vw["brand"]       ==bf]
-#         if pf !="All": vw=vw[vw["plant_name"]  ==pf]
-#         if sf !="All": vw=vw[vw["inverter_sn"] ==sf]
-#         if stf!="All": vw=vw[vw["status"]      ==stf]
-
-#         st.markdown(
-#             f'<div class="stat-row">'
-#               f'<div class="stat-item"><div class="stat-val">{len(vw)}</div><div class="stat-lbl">Inverters</div></div>'
-#               f'<div class="stat-item"><div class="stat-val">{f(vw["power_kw"].sum(),2)} kW</div><div class="stat-lbl">Total Power</div></div>'
-#               f'<div class="stat-item"><div class="stat-val">{f(vw["today_kwh"].sum(),1)} kWh</div><div class="stat-lbl">Daily Yield</div></div>'
-#               f'<div class="stat-item"><div class="stat-val">{int((vw["status"].str.lower()=="online").sum())}</div><div class="stat-lbl">Online</div></div>'
-#             f'</div>', unsafe_allow_html=True)
-
-#         alert_sns = {a.get("inverter_sn") for a in alerts}
-#         for _, row in vw.iterrows():
-#             sn    = str(row.get("inverter_sn","N/A"))
-#             brand = str(row.get("brand",""))
-#             st_   = str(row.get("status",""))
-#             params = [
-#                 ("Power Now",   f(row.get("power_kw"),2),  "kW"),
-#                 ("Daily Yield", f(row.get("today_kwh"),1), "kWh"),
-#                 ("Total Yield", f(row.get("total_kwh"),3), "MWh"),
-#                 ("Temperature", f(row.get("temperature"),1),"°C"),
-#                 ("AC Voltage",  f(row.get("voltage"),1),   "V"),
-#                 ("AC Current",  f(row.get("current_a"),1), "A"),
-#             ]
-#             p_html = "".join(
-#                 f'<div><div class="param-label">{l}</div>'
-#                 f'<div class="param-val">{v}<span class="param-unit"> {u}</span></div></div>'
-#                 for l,v,u in params)
-#             border = "border-left:3px solid var(--red);" if sn in alert_sns else ""
-#             st.markdown(
-#                 f'<div class="inv-card" style="{border}">'
-#                   f'<div class="inv-header">'
-#                     f'<div><div class="inv-name">{row.get("plant_name","")}</div>'
-#                     f'<div class="inv-meta">S/N: {sn} · {chip(brand)} · {row.get("last_update","—")}</div></div>'
-#                     + badge(st_) +
-#                   f'</div>'
-#                   f'<div class="inv-params">{p_html}</div>'
-#                 f'</div>', unsafe_allow_html=True)
-
-
-# # ══════════════════════════════════════════════════════════════
-# #  REPORT  — pulls historical data from Solis API directly
-# # ══════════════════════════════════════════════════════════════
-# elif page == "Report":
-#     st.markdown('<div class="page-hdr"><h1>Plant Report</h1>'
-#                 '<p>Historical generation data from Solis Cloud</p></div>',
-#                 unsafe_allow_html=True)
-
-#     rtype = st.radio("", ["Daily","Monthly","Annual","Total"],
-#                      horizontal=True, label_visibility="collapsed")
-#     st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
-
-#     # Plant comes from the sidebar active_plant selector
-#     sel_plant = active_plant   # 'All Plants' or a specific plant name
-
-#     fc1, fc2 = st.columns([2, 1])
-#     with fc1:
-#         st.markdown(
-#             f'<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;'
-#             f'padding:10px 14px;font-size:13px;font-weight:600;color:#166534;">'
-#             f'📍 {sel_plant}</div>',
-#             unsafe_allow_html=True)
-#     with fc2: sel_date = st.date_input("Date", value=date.today())
-
-#     # Shared line chart helper
-#     def line_chart(fig, h=360):
-#         fig = chart_style(fig, h)
-#         fig.update_traces(selector=dict(type="scatter"), line=dict(width=2.5))
-#         fig.update_layout(hovermode="x unified")
-#         return fig
-
-#     # Get plant IDs for selected plant
-#     from utils.solis_api import (get_plants as _get_solis_plants,
-#                                   get_all_plants_daily, get_all_plants_monthly,
-#                                   get_plant_daily_history   as solis_daily,
-#                                   get_plant_monthly_history as solis_monthly)
-#     from utils.growatt_api import (get_plant_daily_history   as growatt_daily,
-#                                    get_plant_monthly_history as growatt_monthly,
-#                                    _get_plants               as _get_growatt_plants)
-
-#     @st.cache_data(ttl=300)
-#     def _plants_cached():
-#         plants = []
-#         try:
-#             for p in _get_solis_plants():
-#                 plants.append({"name": p.get("stationName"), "id": p.get("id"), "brand": "Solis"})
-#         except Exception: pass
-#         try:
-#             for p in _get_growatt_plants():
-#                 pid   = str(p.get("pId") or p.get("plantId",""))
-#                 pname = p.get("plantNameEncryption") or p.get("plantName","")
-#                 plants.append({"name": pname, "id": pid, "brand": "Growatt"})
-#         except Exception: pass
-#         return plants
-
-#     all_plants    = _plants_cached()
-#     plant_id_map  = {p["name"]: (p["id"], p["brand"]) for p in all_plants}
-
-#     def get_daily_history(plant_name, month_str):
-#         info = plant_id_map.get(plant_name)
-#         if not info: return []
-#         pid, brand = info
-#         if brand == "Growatt": return growatt_daily(pid, month_str)
-#         return solis_daily(pid, month_str)
-
-#     def get_monthly_history(plant_name, year_str):
-#         info = plant_id_map.get(plant_name)
-#         if not info: return []
-#         pid, brand = info
-#         if brand == "Growatt": return growatt_monthly(pid, year_str)
-#         return solis_monthly(pid, year_str)
-
-#     # ── DAILY ────────────────────────────────────────────────
-#     if rtype == "Daily":
-#         # Determine brand of selected plant
-#         sel_brand_for_report = "Solis"
-#         if sel_plant != "All Plants":
-#             info = plant_id_map.get(sel_plant)
-#             if info: sel_brand_for_report = info[1]
-
-#         # For Growatt: use stationDay API (has per-day hourly data)
-#         # For Solis: use local DB (5-min readings collected by the app)
-#         if sel_brand_for_report == "Growatt" and sel_plant != "All Plants":
-#             month_str_d = sel_date.strftime("%Y-%m")
-#             with st.spinner("Fetching daily data from Growatt…"):
-#                 rows = get_daily_history(sel_plant, month_str_d)
-
-#             if not rows:
-#                 st.info(f"No data returned from Growatt for {sel_date.strftime('%B %Y')}.")
-#             else:
-#                 # Filter to selected date
-#                 day_rows = [r for r in rows if r.get("date","").startswith(str(sel_date))]
-#                 if not day_rows:
-#                     # Show full month as fallback
-#                     day_rows = rows
-#                     st.info(f"Showing full month data — no hourly breakdown available for {sel_date}.")
-
-#                 daily_df = pd.DataFrame(day_rows)
-#                 daily_df["date"] = pd.to_datetime(daily_df["date"], errors="coerce")
-#                 daily_df = daily_df.dropna(subset=["date"]).sort_values("date")
-
-#                 sec(f"Daily Generation — {sel_plant} ({sel_date.strftime('%B %Y')})")
-#                 fig = go.Figure()
-#                 fig.add_trace(go.Bar(
-#                     x=daily_df["date"], y=daily_df["energy_kwh"],
-#                     name="Yield (kWh)", marker_color="rgba(16,185,129,.25)",
-#                     marker_line_width=0,
-#                 ))
-#                 fig.add_trace(go.Scatter(
-#                     x=daily_df["date"], y=daily_df["energy_kwh"],
-#                     name="Yield", mode="lines+markers",
-#                     line=dict(color="#10b981", width=2.5),
-#                     marker=dict(size=6, color="#10b981"),
-#                 ))
-#                 fig.update_layout(
-#                     plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                     font_family="Inter", font_color="#64748b",
-#                     margin=dict(l=0,r=0,t=16,b=0), height=360,
-#                     hovermode="x unified", bargap=0.25,
-#                     legend=dict(bgcolor="rgba(0,0,0,0)"),
-#                     yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
-#                 )
-#                 fig.update_xaxes(showgrid=False, zeroline=False, tickformat="%d %b")
-#                 st.plotly_chart(fig, use_container_width=True)
-
-#                 tot = daily_df["energy_kwh"].sum()
-#                 c1,c2 = st.columns(2)
-#                 c1.metric("Month Total", f"{tot:.1f} kWh")
-#                 c2.metric("Estimated Earning", earn(tot))
-
-#         else:
-#             # Solis / All Plants — use local DB (5-min power readings)
-#             hist_df = get_history(hours=24*365*2)
-#             if hist_df.empty:
-#                 st.info("📭 No intraday data yet — the app collects readings every 5 min. "
-#                         "Come back after the app has been running for a while.")
-#             else:
-#                 hist_df["fetched_at"] = pd.to_datetime(hist_df["fetched_at"])
-#                 hist_df["power_kw"]   = pd.to_numeric(hist_df["power_kw"],  errors="coerce")
-#                 hist_df["today_kwh"]  = pd.to_numeric(hist_df["today_kwh"], errors="coerce")
-#                 if sel_plant != "All Plants":
-#                     hist_df = hist_df[hist_df["plant_name"] == sel_plant]
-
-#                 day = hist_df[hist_df["fetched_at"].dt.date == sel_date].sort_values("fetched_at")
-#                 if day.empty:
-#                     st.info(f"No intraday data for {sel_date}. "
-#                             f"Try today's date — data builds up every 5 minutes the app is running.")
-#                 else:
-#                     sec("Power Output Throughout the Day (kW)")
-#                     fig = px.line(day, x="fetched_at", y="power_kw", color="inverter_sn",
-#                                   color_discrete_sequence=PALETTE,
-#                                   labels={"fetched_at":"Time","power_kw":"Power (kW)",
-#                                           "inverter_sn":"Inverter"})
-#                     st.plotly_chart(line_chart(fig, 360), use_container_width=True)
-
-#                     sec("Peak Power & Daily Generation per Inverter")
-#                     sm = (day.groupby(["plant_name","inverter_sn","brand"])
-#                           .agg(Peak_kW=("power_kw","max"), Daily_kWh=("today_kwh","max"))
-#                           .reset_index()
-#                           .rename(columns={"plant_name":"Plant","inverter_sn":"S/N","brand":"Brand"}))
-#                     st.dataframe(sm, use_container_width=True, hide_index=True)
-
-#     # ── MONTHLY ───────────────────────────────────────────────
-#     elif rtype == "Monthly":
-#         month_str = sel_date.strftime("%Y-%m")
-
-#         with st.spinner(f"Fetching daily data for {sel_date.strftime('%B %Y')}…"):
-#             if sel_plant == "All Plants":
-#                 api_df = get_all_plants_daily(month_str)
-#                 if not api_df.empty:
-#                     daily = (api_df.groupby("date")["energy_kwh"]
-#                              .sum().reset_index())
-#                     daily.columns = ["Date","Daily Yield (kWh)"]
-#                     income_df = api_df.groupby("date")["income"].sum().reset_index()
-#                     income_df.columns = ["Date","Income (INR)"]
-#                     daily = daily.merge(income_df, on="Date", how="left")
-#                 else:
-#                     daily = pd.DataFrame()
-#             else:
-#                 rows = get_daily_history(sel_plant, month_str)
-#                 if rows:
-#                     daily = pd.DataFrame(rows).rename(columns={
-#                         "date":"Date","energy_kwh":"Daily Yield (kWh)","income":"Income (INR)"})
-#                     daily["Date"] = pd.to_datetime(daily["Date"], errors="coerce")
-#                 else:
-#                     daily = pd.DataFrame()
-
-#         if daily.empty or "Daily Yield (kWh)" not in daily.columns:
-#             st.info(f"No data from Solis API for {sel_date.strftime('%B %Y')}.")
-#         else:
-#             daily = daily.dropna(subset=["Date"]).sort_values("Date")
-
-#             # Combined bar + line chart matching Solis style
-#             sec(f"Daily Generation — {sel_date.strftime('%B %Y')}")
-#             fig = go.Figure()
-#             # Bar: yield
-#             fig.add_trace(go.Bar(
-#                 x=daily["Date"], y=daily["Daily Yield (kWh)"],
-#                 name="Yield (kWh)", marker_color="rgba(234,88,12,.25)",
-#                 marker_line_width=0,
-#             ))
-#             # Line: yield trend
-#             fig.add_trace(go.Scatter(
-#                 x=daily["Date"], y=daily["Daily Yield (kWh)"],
-#                 name="Yield", mode="lines+markers",
-#                 line=dict(color="#ea580c", width=2.5),
-#                 marker=dict(size=5, color="#ea580c"),
-#             ))
-#             # Line: revenue (right axis)
-#             if "Income (INR)" in daily.columns:
-#                 fig.add_trace(go.Scatter(
-#                     x=daily["Date"], y=daily["Income (INR)"],
-#                     name="Revenue (INR)", mode="lines+markers",
-#                     line=dict(color="#f59e0b", width=2, dash="dot"),
-#                     marker=dict(size=5, color="#f59e0b"),
-#                     yaxis="y2",
-#                 ))
-#             fig.update_layout(
-#                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Inter", font_color="#64748b",
-#                 margin=dict(l=0,r=60,t=16,b=0), height=380,
-#                 hovermode="x unified", bargap=0.25,
-#                 legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
-#                             yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
-#                 yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9",
-#                            zeroline=False, tickfont_size=11),
-#                 yaxis2=dict(title="INR", overlaying="y", side="right",
-#                             showgrid=False, zeroline=False, tickfont_size=11),
-#             )
-#             fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11,
-#                              tickformat="%d", dtick="D1")
-#             st.plotly_chart(fig, use_container_width=True)
-
-#             tot = daily["Daily Yield (kWh)"].sum()
-#             m1,m2,m3 = st.columns(3)
-#             m1.metric("Month Total", f"{tot:.1f} kWh")
-#             m2.metric("Month Total (MWh)", f"{tot/1000:.3f} MWh")
-#             m3.metric("Estimated Earning", earn(tot))
-
-#     # ── ANNUAL ────────────────────────────────────────────────
-#     elif rtype == "Annual":
-#         year_str = str(sel_date.year)
-
-#         with st.spinner(f"Fetching monthly data for {year_str}…"):
-#             if sel_plant == "All Plants":
-#                 api_df = get_all_plants_monthly(year_str)
-#                 if not api_df.empty:
-#                     monthly = (api_df.groupby("month")["energy_kwh"]
-#                                .sum().reset_index())
-#                     monthly.columns = ["Month","kWh"]
-#                 else:
-#                     monthly = pd.DataFrame()
-#             else:
-#                 rows = get_monthly_history(sel_plant, year_str)
-#                 if rows:
-#                     monthly = pd.DataFrame(rows).rename(columns={"month":"Month","energy_kwh":"kWh"})
-#                 else:
-#                     monthly = pd.DataFrame()
-
-#         if monthly.empty or "kWh" not in monthly.columns:
-#             st.info(f"No data from Solis API for {year_str}.")
-#         else:
-#             monthly = monthly[monthly["kWh"] > 0]
-
-#             sec(f"Monthly Generation — {year_str}")
-#             fig = go.Figure()
-#             fig.add_trace(go.Bar(
-#                 x=monthly["Month"], y=monthly["kWh"],
-#                 name="Yield (kWh)", marker_color="rgba(245,158,11,.3)",
-#                 marker_line_width=0,
-#             ))
-#             fig.add_trace(go.Scatter(
-#                 x=monthly["Month"], y=monthly["kWh"],
-#                 name="Trend", mode="lines+markers",
-#                 line=dict(color="#f59e0b", width=2.5),
-#                 marker=dict(size=7, color="#f59e0b"),
-#             ))
-#             fig.update_layout(
-#                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Inter", font_color="#64748b",
-#                 margin=dict(l=0,r=0,t=16,b=0), height=360,
-#                 hovermode="x unified", bargap=0.3,
-#                 legend=dict(bgcolor="rgba(0,0,0,0)"),
-#                 yaxis=dict(showgrid=True, gridcolor="#f1f5f9",
-#                            zeroline=False, tickfont_size=11),
-#             )
-#             fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11)
-#             st.plotly_chart(fig, use_container_width=True)
-
-#             tot_yr = monthly["kWh"].sum()
-#             m1,m2,m3 = st.columns(3)
-#             m1.metric("Year Total", f"{tot_yr:.1f} kWh")
-#             m2.metric("Year Total (MWh)", f"{tot_yr/1000:.3f} MWh")
-#             m3.metric("Est. Annual Earning", earn(tot_yr))
-
-#     # ── TOTAL ─────────────────────────────────────────────────
-#     else:
-#         sec("Total Yield per Plant (All-time)")
-#         if not df.empty:
-#             gt = (df.groupby(["plant_name","brand"])
-#                   .agg(total_mwh=("total_kwh","sum"), daily_kwh=("today_kwh","sum"))
-#                   .reset_index())
-
-#             fig = go.Figure()
-#             for i, row in gt.iterrows():
-#                 fig.add_trace(go.Bar(
-#                     x=[row["plant_name"]], y=[row["total_mwh"]],
-#                     name=row["plant_name"],
-#                     marker_color=PALETTE[i % len(PALETTE)],
-#                     marker_line_width=0,
-#                 ))
-#             fig.update_layout(
-#                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-#                 font_family="Inter", font_color="#64748b",
-#                 margin=dict(l=0,r=0,t=16,b=0), height=340,
-#                 showlegend=False, bargap=0.35,
-#                 yaxis=dict(title="MWh", showgrid=True, gridcolor="#f1f5f9",
-#                            zeroline=False, tickfont_size=11),
-#             )
-#             fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11)
-#             st.plotly_chart(fig, use_container_width=True)
-
-#             gt_disp = gt.rename(columns={"plant_name":"Plant","brand":"Brand",
-#                                           "total_mwh":"Total Yield (MWh)",
-#                                           "daily_kwh":"Today (kWh)"})
-#             st.dataframe(gt_disp, use_container_width=True, hide_index=True)
-
-
-# # ══════════════════════════════════════════════════════════════
-# #  SERVICE
-# # ══════════════════════════════════════════════════════════════
-# elif page == "Service":
-#     st.markdown('<div class="page-hdr"><h1>Plant Management</h1>'
-#                 '<p>All registered plants and operational details</p></div>',
-#                 unsafe_allow_html=True)
-#     if df.empty:
-#         st.warning("⚠️ No data."); st.stop()
-
-#     fc1,fc2 = st.columns(2)
-#     with fc1: pf2 = st.selectbox("Plant", ["All"]+sorted(df["plant_name"].dropna().unique()), key="pm_p")
-#     with fc2: bf2 = st.selectbox("Brand", ["All"]+sorted(df["brand"].dropna().unique()),      key="pm_b")
-
-#     ps = (df.groupby(["plant_name","brand"])
-#           .agg(power_kw=("power_kw","sum"), today_kwh=("today_kwh","sum"),
-#                total_kwh=("total_kwh","sum"), inv_count=("inverter_sn","count"))
-#           .reset_index())
-#     if pf2!="All": ps=ps[ps["plant_name"]==pf2]
-#     if bf2!="All": ps=ps[ps["brand"]==bf2]
-
-#     st.markdown(
-#         f'<div class="stat-row">'
-#           f'<div class="stat-item"><div class="stat-val">{len(ps)}</div><div class="stat-lbl">Plants</div></div>'
-#           f'<div class="stat-item"><div class="stat-val">{f(ps["power_kw"].sum(),2)} kW</div><div class="stat-lbl">Total Power</div></div>'
-#           f'<div class="stat-item"><div class="stat-val">{f(ps["today_kwh"].sum(),1)} kWh</div><div class="stat-lbl">Daily Yield</div></div>'
-#           f'<div class="stat-item"><div class="stat-val">{f(ps["total_kwh"].sum(),1)} MWh</div><div class="stat-lbl">Total Yield</div></div>'
-#         f'</div>', unsafe_allow_html=True)
-
-#     st.markdown('<div class="tbl">', unsafe_allow_html=True)
-#     st.markdown('<div class="tbl-hdr tbl-plant">'
-#                 '<div>Plant Name</div><div>Brand</div><div>Organisation</div>'
-#                 '<div>Inverters</div><div>Power (kW)</div>'
-#                 '<div>Daily Yield</div><div>Total Yield</div><div>Status</div>'
-#                 '</div>', unsafe_allow_html=True)
-#     for _, row in ps.iterrows():
-#         pr   = df[df["plant_name"]==row["plant_name"]]
-#         on   = int((pr["status"].str.lower()=="online").sum())
-#         tot  = int(row["inv_count"])
-#         pst  = "Online" if on==tot and tot>0 else ("Offline" if on==0 else "Warning")
-#         dy   = float(row["today_kwh"] or 0)
-#         dy_s = f"{dy/1000:.3f} MWh" if dy>=1000 else f"{dy:.1f} kWh"
-#         ty   = float(row["total_kwh"] or 0)
-#         ty_s = f"{ty/1000:.3f} GWh" if ty>=1000 else f"{ty:.3f} MWh"
-#         st.markdown(
-#             f'<div class="tbl-row tbl-plant">'
-#               f'<div class="cell-link">{row["plant_name"]}</div>'
-#               f'<div>{chip(row["brand"])}</div>'
-#               f'<div>Fractal Energy</div>'
-#               f'<div>{on}/{tot}</div>'
-#               f'<div><b>{f(row["power_kw"],2)}</b> kW</div>'
-#               f'<div>{dy_s}</div><div>{ty_s}</div>'
-#               f'<div>{badge(pst)}</div>'
-#             f'</div>', unsafe_allow_html=True)
-#     st.markdown('</div>', unsafe_allow_html=True)
-
-
-# # ══════════════════════════════════════════════════════════════
-# #  ALARMS
-# # ══════════════════════════════════════════════════════════════
-# elif page == "Alarms":
-#     # Build unified alarm list: live critical alerts + resolved history
-#     _alarm_log = get_alert_log(200)
-#     _all_alarms = []
-#     for _a in alerts:
-#         _all_alarms.append({
-#             "severity": "critical",
-#             "title":    _a.get("issue", "Inverter fault"),
-#             "meta":     f'{_a.get("plant_name","—")} · S/N: {_a.get("inverter_sn","—")} · {_a.get("brand","—")} · {datetime.now().strftime("%H:%M")}',
-#             "status":   "Active",
-#             "plant":    _a.get("plant_name",""),
-#         })
-#     if not _alarm_log.empty:
-#         for _, _lr in _alarm_log.iterrows():
-#             _all_alarms.append({
-#                 "severity": "warning",
-#                 "title":    _lr.get("issue", "Past alert"),
-#                 "meta":     f'{_lr.get("plant_name","—")} · S/N: {_lr.get("inverter_sn","—")} · {_lr.get("brand","—")} · {_lr.get("alerted_at","—")}',
-#                 "status":   "Resolved",
-#                 "plant":    _lr.get("plant_name",""),
-#             })
-
-#     st.markdown("""<style>
-#     .alm-card{border:1px solid #e8e8e8;border-radius:8px;padding:11px 13px;margin-bottom:8px;
-#       display:flex;align-items:flex-start;gap:11px;background:#fff;}
-#     .alm-card.critical{border-left:3px solid #E24B4A;}
-#     .alm-card.warning {border-left:3px solid #EF9F27;}
-#     .alm-icon{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;
-#       justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;}
-#     .alm-icon.critical{background:#FCEBEB;color:#A32D2D;}
-#     .alm-icon.warning {background:#FAEEDA;color:#854F0B;}
-#     .alm-content{flex:1;min-width:0;}
-#     .alm-title{font-size:12px;font-weight:600;color:#1a1a1a;}
-#     .alm-meta{font-size:11px;color:#999;margin-top:3px;}
-#     .alm-empty{font-size:12px;color:#aaa;text-align:center;padding:32px 0;}
-#     .alm-note{font-size:11px;color:#888;background:#f9f9f9;border-radius:6px;
-#       padding:8px 12px;margin-top:12px;border-left:3px solid #F5A623;}
-#     .alm-badge{display:inline-block;padding:2px 8px;border-radius:10px;
-#       font-size:10px;font-weight:600;white-space:nowrap;}
-#     .alm-badge.critical{background:#FCEBEB;color:#A32D2D;}
-#     .alm-badge.warning {background:#FAEEDA;color:#854F0B;}
-#     .alm-badge.resolved{background:#e6f9ef;color:#166634;}
-#     </style>""", unsafe_allow_html=True)
-
-#     _crit_n = sum(1 for a in _all_alarms if a["severity"] == "critical")
-#     _warn_n = sum(1 for a in _all_alarms if a["severity"] == "warning")
-#     _icon_map  = {"critical": "!", "warning": "~", "info": "i"}
-#     _label_map = {"critical": "Critical", "warning": "Warning", "info": "Info"}
-
-#     # ── Filters row ───────────────────────────────────────────
-#     _fc1, _fc2, _fc3 = st.columns([3, 1, 2])
-#     with _fc1:
-#         _sev_filter = st.radio(
-#             "",
-#             [f"All ({len(_all_alarms)})", f"Critical ({_crit_n})", f"Warning ({_warn_n})"],
-#             horizontal=True, label_visibility="collapsed", key="alm_sev")
-#         _sev_key = "all" if _sev_filter.startswith("All") else \
-#                    "critical" if _sev_filter.startswith("Critical") else "warning"
-#     with _fc2:
-#         _show_resolved = st.checkbox("Show Resolved", value=True, key="alm_resolved")
-#     with _fc3:
-#         _plant_opts = ["All plants"] + sorted({a["plant"] for a in _all_alarms if a["plant"]})
-#         _sel_plant_alm = st.selectbox("Plant", _plant_opts,
-#                                       label_visibility="collapsed", key="alm_plant")
-
-#     # ── Apply filters ─────────────────────────────────────────
-#     _filtered = _all_alarms[:]
-#     if _sev_key != "all":
-#         _filtered = [a for a in _filtered if a["severity"] == _sev_key]
-#     if not _show_resolved:
-#         _filtered = [a for a in _filtered if a["status"] == "Active"]
-#     if _sel_plant_alm != "All plants":
-#         _filtered = [a for a in _filtered if a["plant"] == _sel_plant_alm]
-
-#     # ── Alarm cards ───────────────────────────────────────────
-#     if not _filtered:
-#         st.markdown('<div class="alm-empty">✅ No alarms match the selected filters.</div>',
-#                     unsafe_allow_html=True)
-#     else:
-#         _cards_html = ""
-#         for _alarm in _filtered:
-#             _sev  = _alarm["severity"]
-#             _icon = _icon_map.get(_sev, "i")
-#             _lbl  = _label_map.get(_sev, _sev.title())
-#             _stat_cls = "resolved" if _alarm["status"] == "Resolved" else _sev
-#             _badge_lbl = "Resolved" if _alarm["status"] == "Resolved" else _lbl
-#             _cards_html += (
-#                 f'<div class="alm-card {_sev}">'
-#                   f'<div class="alm-icon {_sev}">{_icon}</div>'
-#                   f'<div class="alm-content">'
-#                     f'<div class="alm-title">{_alarm["title"]}</div>'
-#                     f'<div class="alm-meta">{_alarm["meta"]}</div>'
-#                   f'</div>'
-#                   f'<span class="alm-badge {_stat_cls}">{_badge_lbl}</span>'
-#                 f'</div>'
-#             )
-#         st.markdown(_cards_html, unsafe_allow_html=True)
-
-#     st.markdown(
-#         '<div class="alm-note">Alarms are auto-pulled from each inverter brand\'s API. '
-#         'Email and SMS notifications are configurable per project in Settings.</div>',
-#         unsafe_allow_html=True)
-
-
-# # ══════════════════════════════════════════════════════════════
-# #  SETTINGS
-# # ══════════════════════════════════════════════════════════════
-# elif page == "Settings":
-#     st.markdown('<div class="page-hdr"><h1>Settings</h1>'
-#                 '<p>Credentials, alerts and app configuration</p></div>',
-#                 unsafe_allow_html=True)
-
-#     from config import (SOLIS_API_KEY, GROWATT_USERNAME, SUNGROW_APP_KEY,
-#                         EMAIL_USER, TO_EMAILS, RATE_PER_KWH)
-
-#     st.markdown("#### 🔑 API Credentials")
-#     for brand,ok,hint in [
-#         ("Solis",   bool(SOLIS_API_KEY),
-#          SOLIS_API_KEY[:10]+"…" if SOLIS_API_KEY else "Not configured"),
-#         ("Growatt", bool(GROWATT_USERNAME),
-#          GROWATT_USERNAME or "Set GROWATT_USERNAME in config.py"),
-#         ("Sungrow", bool(SUNGROW_APP_KEY),
-#          SUNGROW_APP_KEY[:10]+"…" if SUNGROW_APP_KEY else "Set SUNGROW_APP_KEY in config.py"),
-#     ]:
-#         c1,c2,c3 = st.columns([1,1,4])
-#         c1.markdown(f"**{brand}**")
-#         c2.markdown("✅ OK" if ok else "⚠️ Not set")
-#         c3.markdown(f"`{hint}`")
-
-#     st.divider()
-#     st.markdown("#### 📧 Email Alerts")
-#     st.markdown(f"**Sender:** `{EMAIL_USER}`")
-#     st.markdown(f"**Recipients:** `{', '.join(TO_EMAILS)}`")
-#     st.divider()
-#     st.markdown("#### 💰 Tariff Rate")
-#     st.info(f"Current rate: **₹{RATE_PER_KWH}/kWh** — edit `RATE_PER_KWH` in config.py")
-#     st.divider()
-#     st.markdown("#### 👤 Logged in as")
-#     st.info(f"`{st.session_state.user}`")
-#     st.divider()
-#     st.markdown("#### 🗂 Project Structure")
-#     st.code("""
-# solar_dashboard/
-# ├── app.py              ← streamlit run app.py
-# ├── config.py           ← ✏️  credentials & settings
-# ├── requirements.txt
-# ├── data/solar_data.db  ← auto-created
-# └── utils/
-#     ├── solis_api.py    ├── growatt_api.py
-#     ├── sungrow_api.py  ├── aggregator.py
-#     ├── database.py     └── alerts.py
-#     """, language="")
-
-
+# ============================================================
+#  app.py  —  Solar Dashboard  |  streamlit run app.py
+# ============================================================
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, date, timedelta
-import calendar as _calendar
-import io as _io
 
 from config import REFRESH_INTERVAL_SECONDS, RATE_PER_KWH
 from utils.database import init_db, get_history, get_alert_log
@@ -14902,94 +12135,268 @@ st.set_page_config(page_title="Solar Dashboard · Fractal Energy",
                    initial_sidebar_state="collapsed")
 
 # ══════════════════════════════════════════════════════════════
-#  GLOBAL CSS
+#  GLOBAL CSS  —  Navy · Teal · Amber theme
 # ══════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
 :root{
-  --primary:#C85A00;--primary-l:#FFF0E6;--primary-d:#A84B00;
-  --amber:#F5A623;--amber-l:#FFF8E8;--amber-d:#D4880A;
-  --green:#16a34a;--green-l:#dcfce7;--red:#dc2626;--red-l:#fee2e2;
-  --blue:#1A6FA8;--blue-l:#E6F1FB;
-  --bg:#f4f4f4;--card:#ffffff;--border:#e2e8f0;--border2:#cbd5e1;
-  --text:#1a1a1a;--text2:#555555;--text3:#999999;
-  --sb-bg:#0D2B45;--shadow:0 1px 3px rgba(13,43,69,.05),0 4px 16px rgba(13,43,69,.05);
-  --shadow-lg:0 8px 32px rgba(13,43,69,.12);--shadow-p:0 4px 20px rgba(200,90,0,.25);
-  --navy:#0D2B45;--teal:#C85A00;--teal-l:#FFF0E6;--teal-d:#A84B00;
-  --orange:#F5A623;--orange-l:#FFF8E8;--sky:#1A6FA8;--sky-l:#E6F1FB;
+  /* ── Fractal Energy palette ── */
+  --primary:   #C85A00;
+  --primary-l: #FFF0E6;
+  --primary-d: #A84B00;
+  --amber:     #F5A623;
+  --amber-l:   #FFF8E8;
+  --amber-d:   #D4880A;
+  --yellow:    #F5A623;
+  --yellow-l:  #FFF8E8;
+
+  /* ── Semantic ── */
+  --green:     #16a34a;
+  --green-l:   #dcfce7;
+  --red:       #dc2626;
+  --red-l:     #fee2e2;
+  --blue:      #1A6FA8;
+  --blue-l:    #E6F1FB;
+
+  /* ── Surfaces ── */
+  --bg:        #f4f4f4;
+  --card:      #ffffff;
+  --border:    #e2e8f0;
+  --border2:   #cbd5e1;
+
+  /* ── Text ── */
+  --text:      #1a1a1a;
+  --text2:     #555555;
+  --text3:     #999999;
+
+  /* ── Sidebar (navy) ── */
+  --sb-bg:     #0D2B45;
+  --sb-border: rgba(255,255,255,.09);
+
+  /* ── Shadows ── */
+  --shadow:    0 1px 3px rgba(13,43,69,.05),0 4px 16px rgba(13,43,69,.05);
+  --shadow-lg: 0 8px 32px rgba(13,43,69,.12);
+  --shadow-p:  0 4px 20px rgba(200,90,0,.25);
+
+  /* ── legacy aliases for old inline HTML ── */
+  --navy:      #0D2B45;
+  --navy2:     #0D2B45;
+  --navy3:     #0D2B45;
+  --teal:      #C85A00;
+  --teal-l:    #FFF0E6;
+  --teal-d:    #A84B00;
+  --orange:    #F5A623;
+  --orange-l:  #FFF8E8;
+  --sky:       #1A6FA8;
+  --sky-l:     #E6F1FB;
+
+  /* ── Shadows ── */
+  --shadow:    0 1px 4px rgba(13,43,69,.06),0 4px 20px rgba(13,43,69,.05);
+  --shadow-lg: 0 8px 40px rgba(13,43,69,.12);
   --shadow-teal:0 4px 20px rgba(200,90,0,.25);
 }
+
+/* ── Fonts ── */
 html,body,[data-testid="stAppViewContainer"],[data-testid="stMain"]{
-  background:var(--bg)!important;font-family:'Inter',sans-serif!important;color:var(--text);}
+  background:var(--bg)!important;
+  font-family:'Inter',sans-serif!important;
+  color:var(--text);
+}
 [data-testid="stHeader"]{background:transparent!important;display:none;}
 #MainMenu,footer{visibility:hidden;}
 [data-testid="stDecoration"]{display:none;}
 .block-container{padding:0 28px 24px!important;max-width:100%!important;}
-[data-testid="stSidebar"],[data-testid="stSidebarNav"],
-section[data-testid="stSidebar"],[data-testid="stSidebarCollapsedControl"],
-button[kind="headerNoPadding"]{display:none!important;width:0!important;visibility:hidden!important;}
 
-/* ── TOP NAV ── */
-.topnav{background:#0D2B45;padding:0 22px;height:54px;display:flex;align-items:center;
-  position:sticky;top:0;z-index:999;margin:0 -28px 20px;}
-.topnav-brand{display:flex;align-items:center;gap:8px;margin-right:28px;text-decoration:none;}
+/* ══ SIDEBAR — hidden, replaced by top nav ══════════════════ */
+[data-testid="stSidebar"],
+[data-testid="stSidebarNav"],
+section[data-testid="stSidebar"],
+[data-testid="stSidebarCollapsedControl"],
+button[kind="headerNoPadding"]{
+  display:none!important;width:0!important;
+  visibility:hidden!important;overflow:hidden!important;
+}
+
+/* ══ LOGIN PAGE ═══════════════════════════════════════════ */
+.login-split{min-height:100vh;display:flex;}
+.login-left{
+  flex:0 0 42%;
+  background:linear-gradient(160deg,#1c1917 0%,#292524 60%,#1a1816 100%);
+  padding:60px 48px;display:flex;flex-direction:column;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.login-left::before{
+  content:'';position:absolute;top:-120px;right:-80px;width:380px;height:380px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(234,88,12,.18) 0%,transparent 70%);
+}
+.login-left::after{
+  content:'';position:absolute;bottom:-100px;left:-60px;width:300px;height:300px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(245,158,11,.12) 0%,transparent 70%);
+}
+.login-brand-icon{
+  width:54px;height:54px;
+  background:linear-gradient(135deg,var(--primary),var(--amber));
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:26px;margin-bottom:18px;
+  box-shadow:0 8px 24px rgba(234,88,12,.3);position:relative;z-index:1;
+}
+.login-brand-name{
+  font-size:28px;font-weight:800;color:#fafaf9;letter-spacing:-.5px;
+  margin-bottom:6px;position:relative;z-index:1;
+}
+.login-brand-sub{
+  font-size:14px;color:#78716c;line-height:1.6;margin-bottom:44px;
+  max-width:280px;position:relative;z-index:1;
+}
+.login-stat-row{display:flex;gap:14px;flex-wrap:wrap;position:relative;z-index:1;}
+.login-stat-card{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);
+  border-radius:12px;padding:16px 18px;min-width:86px;
+}
+.login-stat-val{font-size:22px;font-weight:800;color:#fb923c;line-height:1;}
+.login-stat-lbl{font-size:11px;color:#78716c;margin-top:4px;line-height:1.3;}
+.login-right{
+  flex:1;background:#fff;padding:60px 52px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+.login-right-inner{max-width:360px;}
+.login-right-title{
+  font-size:24px;font-weight:800;color:var(--text);
+  letter-spacing:-.4px;margin-bottom:6px;
+}
+.login-right-sub{font-size:14px;color:var(--text3);margin-bottom:28px;}
+.login-roles{
+  margin-top:18px;font-size:12px;color:var(--text3);
+  padding-top:14px;border-top:1px solid var(--border);
+}
+/* right panel input styles */
+.login-right [data-testid="stTextInput"] input{
+  background:#fafafa!important;border:1.5px solid #ddd!important;
+  border-radius:8px!important;font-size:14px!important;
+  transition:border-color .15s!important;
+}
+.login-right [data-testid="stTextInput"] input:focus{
+  border-color:#C85A00!important;
+  box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
+}
+.login-right .stButton>button{
+  width:100%!important;padding:13px!important;font-size:15px!important;
+}
+/* login-inputs context (used in the split card) */
+.login-inputs [data-testid="stTextInput"] input{
+  background:#fafafa!important;border:1.5px solid #ddd!important;
+  border-radius:8px!important;font-size:14px!important;
+}
+.login-inputs [data-testid="stTextInput"] input:focus{
+  border-color:#C85A00!important;box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
+}
+.login-inputs [data-testid="stTextInput"]>label{
+  font-size:12px!important;font-weight:600!important;color:#666!important;
+  text-transform:none!important;letter-spacing:0!important;
+}
+.login-inputs .stButton>button{
+  width:100%!important;padding:12px!important;font-size:14px!important;
+  border-radius:8px!important;
+}
+
+/* ══ PAGE HEADER ══════════════════════════════════════════ */
+.page-hdr{margin-bottom:24px;}
+.page-hdr h1{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-.5px;}
+.page-hdr p{font-size:13px;color:var(--text3);margin-top:4px;}
+
+/* ══ TOP NAV BAR ══════════════════════════════════════════ */
+[data-testid="stSidebar"],[data-testid="stSidebarNav"]{display:none!important;}
+.topnav{
+  background:#0D2B45;padding:0 22px;height:54px;
+  display:flex;align-items:center;
+  position:sticky;top:0;z-index:999;
+  margin:0 -28px 20px;
+}
+.topnav-brand{
+  display:flex;align-items:center;gap:8px;margin-right:28px;
+  text-decoration:none;
+}
 .topnav-brand-icon{font-size:20px;line-height:1;}
 .topnav-brand-text{display:flex;flex-direction:column;line-height:1.15;}
 .topnav-brand-name{font-size:13px;font-weight:700;color:#F5A623;}
 .topnav-brand-sub{font-size:10px;color:rgba(245,166,35,.5);}
-.ntab{height:54px;padding:0 14px;display:flex;align-items:center;font-size:12px;
-  font-weight:500;color:rgba(255,255,255,.6);text-decoration:none;
-  border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;}
+.ntab{
+  height:54px;padding:0 14px;display:flex;align-items:center;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.6);
+  text-decoration:none;border-bottom:2px solid transparent;
+  transition:color .15s,border-color .15s;white-space:nowrap;
+}
 .ntab:hover{color:#fff;border-bottom-color:rgba(245,166,35,.35);}
 .ntab.active{color:#fff;border-bottom-color:#F5A623;font-weight:600;}
 .nav-right{display:flex;align-items:center;gap:12px;margin-left:auto;}
-.nav-bell{position:relative;cursor:pointer;color:rgba(255,255,255,.75);
-  font-size:16px;line-height:1;text-decoration:none;display:block;}
-.nav-bell-badge{position:absolute;top:-5px;right:-7px;background:#E24B4A;color:#fff;
-  font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;padding:0 3px;}
-.nav-avatar{width:30px;height:30px;border-radius:50%;background:#C85A00;color:#fff;
-  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.nav-bell{
+  position:relative;cursor:pointer;color:rgba(255,255,255,.75);
+  font-size:16px;line-height:1;text-decoration:none;display:block;
+}
+.nav-bell-badge{
+  position:absolute;top:-5px;right:-7px;
+  background:#E24B4A;color:#fff;
+  font-size:9px;font-weight:700;
+  min-width:15px;height:15px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;padding:0 3px;
+}
+.nav-avatar{
+  width:30px;height:30px;border-radius:50%;
+  background:#C85A00;color:#fff;
+  font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
 
-/* ── FAULT BANNER ── */
-.fault-banner{background:#FCEBEB;border-bottom:1px solid #F09595;padding:9px 22px;
-  display:flex;align-items:center;gap:10px;margin:-20px -28px 16px;}
-.fault-dot{width:8px;height:8px;border-radius:50%;background:#E24B4A;flex-shrink:0;}
-.fault-text{font-size:12px;color:#A32D2D;font-weight:500;flex:1;}
-.fault-link{font-size:11px;color:#A32D2D;cursor:pointer;text-decoration:underline;white-space:nowrap;}
-
-/* ── KPI CARDS ── */
-.kpi-card{background:var(--card);border-radius:10px;padding:18px;border:1px solid var(--border);
-  box-shadow:var(--shadow);border-left:3px solid var(--primary);transition:transform .15s,box-shadow .15s;}
+/* ══ KPI CARDS ════════════════════════════════════════════ */
+.kpi-card{
+  background:var(--card);border-radius:10px;padding:18px 18px;
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s;
+  border-left:3px solid var(--primary);
+}
+.kpi-card::after{content:none;}
 .kpi-card.amber{border-left-color:var(--amber);}
 .kpi-card.green{border-left-color:var(--green);}
 .kpi-card.blue {border-left-color:var(--blue);}
+.kpi-card.navy {border-left-color:var(--primary);}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
-.kpi-label{font-size:10.5px;color:var(--text3);font-weight:600;text-transform:uppercase;
-  letter-spacing:.1em;margin-bottom:8px;}
+
+.kpi-icon{
+  width:46px;height:46px;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  margin-bottom:12px;
+}
+.kpi-icon.teal  {background:var(--primary-l);color:var(--primary);}
+.kpi-icon.orange{background:var(--primary-l);color:var(--primary);}
+.kpi-icon.amber {background:var(--amber-l);color:var(--amber-d);}
+.kpi-icon.green {background:var(--green-l);color:var(--green);}
+.kpi-icon.navy  {background:var(--amber-l);color:var(--amber-d);}
+
+.kpi-label{
+  font-size:10.5px;color:var(--text3);font-weight:600;
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;
+}
 .kpi-value{font-size:28px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-.5px;}
 .kpi-unit{font-size:14px;font-weight:600;color:var(--text2);margin-left:3px;}
 .kpi-meta{font-size:12px;color:var(--text3);margin-top:8px;line-height:1.4;}
 .kpi-meta b{color:var(--primary);font-weight:600;}
 
-/* ── REPORT KPI CARDS (top-border style) ── */
-.rep-kpi{background:#fff;border-radius:8px;padding:11px 13px;
-  border-top:3px solid #F5A623;border:1px solid var(--border);box-shadow:var(--shadow);}
-.rep-kpi.primary{border-top-color:#C85A00;}
-.rep-kpi-lbl{font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-  letter-spacing:.05em;margin-bottom:5px;}
-.rep-kpi-val{font-size:17px;font-weight:700;color:#1a1a1a;line-height:1;}
-.rep-kpi-unit{font-size:10px;color:#888;margin-top:2px;}
-
-/* ── ALARM CARDS ── */
-.alarm-card{background:var(--card);border-radius:12px;padding:14px 16px;border:1px solid var(--border);
-  border-left:4px solid var(--border2);margin-bottom:9px;display:flex;gap:12px;align-items:flex-start;
-  box-shadow:var(--shadow);}
-.alarm-card.critical{border-left-color:#E24B4A;}
-.alarm-card.warning {border-left-color:#EF9F27;}
-.alarm-card.info    {border-left-color:#1A6FA8;}
+/* ══ ALARM CARDS ══════════════════════════════════════════ */
+.alarm-card{
+  background:var(--card);border-radius:12px;padding:14px 16px;
+  border:1px solid var(--border);border-left:4px solid var(--border2);
+  margin-bottom:9px;display:flex;gap:12px;align-items:flex-start;
+  box-shadow:var(--shadow);
+}
+.alarm-card.critical{border-left-color:#E24B4A;background:linear-gradient(90deg,#FFF5F5,#fff);}
+.alarm-card.warning {border-left-color:#EF9F27;background:linear-gradient(90deg,#FAEEDA,#fff);}
+.alarm-card.info    {border-left-color:#1A6FA8;background:linear-gradient(90deg,#E6F1FB,#fff);}
 .alarm-icon{width:30px;height:30px;border-radius:7px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
 .alarm-icon.critical{background:var(--red-l);color:var(--red);}
@@ -14997,52 +12404,85 @@ button[kind="headerNoPadding"]{display:none!important;width:0!important;visibili
 .alarm-icon.info    {background:var(--blue-l);color:var(--blue);}
 .alarm-title{font-size:13px;font-weight:700;color:var(--text);}
 .alarm-meta{font-size:11px;color:var(--text3);margin-top:3px;}
-.alarm-badge{margin-left:auto;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;flex-shrink:0;}
+.alarm-badge{margin-left:auto;padding:3px 9px;border-radius:6px;
+  font-size:11px;font-weight:700;flex-shrink:0;}
 .alarm-badge.critical{background:var(--red-l);color:var(--red);}
 .alarm-badge.warning {background:var(--amber-l);color:var(--amber-d);}
 .alarm-badge.info    {background:var(--blue-l);color:var(--blue);}
 
-/* ── SECTION HEADER ── */
-.sec-hdr{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;
-  gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--border);}
-.sec-hdr-dot{width:8px;height:8px;border-radius:50%;
-  background:linear-gradient(135deg,var(--primary),var(--amber));flex-shrink:0;}
+/* ══ SECTION HEADER ═══════════════════════════════════════ */
+.sec-hdr{
+  font-size:13px;font-weight:700;color:var(--text);
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:14px;padding-bottom:10px;
+  border-bottom:2px solid var(--border);
+}
+.sec-hdr-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:linear-gradient(135deg,var(--primary),var(--amber));
+  flex-shrink:0;
+}
 
-/* ── CARD ── */
-.card{background:var(--card);border-radius:16px;padding:22px;
-  border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;}
+/* ══ CARD WRAPPER ═════════════════════════════════════════ */
+.card{
+  background:var(--card);border-radius:16px;padding:22px;
+  border:1px solid var(--border);box-shadow:var(--shadow);margin-bottom:16px;
+}
 
-/* ── INVERTER CARD ── */
-.inv-card{background:var(--card);border-radius:16px;padding:22px;border:1px solid var(--border);
-  box-shadow:var(--shadow);margin-bottom:14px;transition:border-color .15s,box-shadow .15s;}
+/* ══ INVERTER CARD ════════════════════════════════════════ */
+.inv-card{
+  background:var(--card);border-radius:16px;padding:22px;
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  margin-bottom:14px;transition:border-color .15s,box-shadow .15s;
+}
 .inv-card:hover{border-color:var(--primary);box-shadow:var(--shadow-teal);}
-.inv-header{display:flex;justify-content:space-between;align-items:flex-start;
-  margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.inv-card.alert-card{border-left:3px solid var(--red);}
+.inv-header{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:18px;padding-bottom:14px;
+  border-bottom:1px solid var(--border);
+}
 .inv-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.3px;}
 .inv-meta{font-size:11px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace;}
 .inv-params{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;}
-.param-label{font-size:10px;color:var(--text3);text-transform:uppercase;
-  letter-spacing:.08em;font-weight:600;margin-bottom:4px;}
+.param-label{
+  font-size:10px;color:var(--text3);text-transform:uppercase;
+  letter-spacing:.08em;font-weight:600;margin-bottom:4px;
+}
 .param-val{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.3px;}
 .param-unit{font-size:11px;color:var(--text3);margin-left:2px;}
+.inv-footer{margin-top:14px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
 
-/* ── TABLE ── */
-.tbl{background:var(--card);border-radius:16px;border:1px solid var(--border);
-  overflow:hidden;box-shadow:var(--shadow);}
-.tbl-hdr,.tbl-row{display:grid;padding:0 20px;align-items:center;gap:10px;}
-.tbl-hdr{background:linear-gradient(90deg,#f8fafc,#f1f5f9);border-bottom:2px solid var(--border);
-  font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;
-  letter-spacing:.1em;height:44px;}
-.tbl-row{min-height:54px;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s;}
+/* ══ TABLES ═══════════════════════════════════════════════ */
+.tbl{
+  background:var(--card);border-radius:16px;
+  border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow);
+}
+.tbl-hdr,.tbl-row{
+  display:grid;padding:0 20px;align-items:center;gap:10px;
+}
+.tbl-hdr{
+  background:linear-gradient(90deg,#f8fafc,#f1f5f9);
+  border-bottom:2px solid var(--border);
+  font-size:10px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.1em;height:44px;
+}
+.tbl-row{
+  min-height:54px;border-bottom:1px solid var(--border);
+  font-size:13px;transition:background .1s;
+}
 .tbl-row:last-child{border-bottom:none;}
 .tbl-row:hover{background:#f8fafc;}
 .tbl-plant{grid-template-columns:2fr 1fr 1.1fr 1fr 1fr 1.1fr 1.3fr 1fr;}
 .tbl-alarm{grid-template-columns:1fr 1fr 1fr 1.5fr 1.4fr 2.2fr 1.2fr;}
 .cell-link{color:var(--primary);font-weight:700;cursor:pointer;font-size:13px;}
 
-/* ── BADGES ── */
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
-  padding:4px 10px;border-radius:20px;letter-spacing:.02em;}
+/* ══ BADGES ═══════════════════════════════════════════════ */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;padding:4px 10px;
+  border-radius:20px;letter-spacing:.02em;
+}
 .badge::before{content:'';width:6px;height:6px;border-radius:50%;}
 .b-online {background:var(--green-l);color:#065f46;}
 .b-online::before{background:var(--green);}
@@ -15059,47 +12499,102 @@ button[kind="headerNoPadding"]{display:none!important;width:0!important;visibili
 .b-critical{background:var(--red-l);color:#991b1b;font-weight:800;}
 .b-critical::before{background:var(--red);}
 
-/* ── CHIPS ── */
-.chip{display:inline-block;font-size:10px;font-weight:800;padding:3px 9px;
-  border-radius:6px;letter-spacing:.1em;text-transform:uppercase;}
+/* ══ CHIPS ════════════════════════════════════════════════ */
+.chip{
+  display:inline-block;font-size:10px;font-weight:800;
+  padding:3px 9px;border-radius:6px;
+  letter-spacing:.1em;text-transform:uppercase;
+}
 .chip-solis  {background:#dbeafe;color:#1e40af;}
 .chip-growatt{background:#d1fae5;color:#065f46;}
 .chip-sungrow{background:#ffedd5;color:#c2410c;}
 
-/* ── STAT ROW ── */
-.stat-row{background:var(--card);border-radius:14px;padding:16px 24px;border:1px solid var(--border);
-  display:flex;gap:32px;margin-bottom:20px;align-items:center;flex-wrap:wrap;box-shadow:var(--shadow);}
+/* ══ ALERT STRIP ══════════════════════════════════════════ */
+.alert-strip{
+  background:linear-gradient(135deg,#fff1f2,#ffe4e6);
+  border:1px solid #fecdd3;border-left:4px solid var(--red);
+  border-radius:12px;padding:16px 18px;margin-bottom:12px;
+  display:flex;gap:14px;align-items:flex-start;
+}
+.alert-strip-ico{font-size:20px;flex-shrink:0;}
+.alert-strip-ttl{font-size:14px;font-weight:700;color:var(--red);}
+.alert-strip-msg{font-size:12px;color:#7f1d1d;margin-top:3px;}
+
+/* ══ STAT ROW ═════════════════════════════════════════════ */
+.stat-row{
+  background:var(--card);border-radius:14px;padding:16px 24px;
+  border:1px solid var(--border);display:flex;gap:32px;
+  margin-bottom:20px;align-items:center;flex-wrap:wrap;
+  box-shadow:var(--shadow);
+}
 .stat-item{text-align:center;}
 .stat-val{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
-.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;
-  text-transform:uppercase;letter-spacing:.08em;}
+.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;}
 
-/* ── STREAMLIT OVERRIDES ── */
-.stButton>button{background:linear-gradient(135deg,var(--primary),var(--primary-d))!important;
+/* ══ STREAMLIT OVERRIDES ══════════════════════════════════ */
+.stButton>button{
+  background:linear-gradient(135deg,var(--primary),var(--primary-d))!important;
   color:#fff!important;border:none!important;border-radius:10px!important;
-  font-family:'Inter',sans-serif!important;font-weight:700!important;font-size:13px!important;
-  padding:10px 24px!important;box-shadow:0 4px 12px rgba(200,90,0,.3)!important;
-  transition:all .15s!important;}
+  font-family:'Inter',sans-serif!important;
+  font-weight:700!important;font-size:13px!important;
+  padding:10px 24px!important;letter-spacing:.01em!important;
+  box-shadow:0 4px 12px rgba(200,90,0,.3)!important;
+  transition:all .15s!important;
+}
 .stButton>button:hover{transform:translateY(-1px)!important;box-shadow:0 6px 20px rgba(200,90,0,.4)!important;}
-div[data-testid="stSelectbox"]>label,div[data-testid="stTextInput"]>label{
-  font-size:12px!important;font-weight:700!important;color:var(--text2)!important;
-  text-transform:uppercase!important;letter-spacing:.06em!important;}
-[data-testid="stMetric"]{background:var(--card);border-radius:12px;padding:16px 18px;
-  border:1px solid var(--border);box-shadow:var(--shadow);}
-[data-testid="stMetricLabel"]{font-size:11px!important;font-weight:700!important;
-  color:var(--text3)!important;text-transform:uppercase!important;letter-spacing:.08em!important;}
-[data-testid="stMetricValue"]{font-size:24px!important;font-weight:800!important;
-  color:var(--text)!important;letter-spacing:-.4px!important;}
-div[data-testid="stTextInput"] input{border-radius:10px!important;border-color:var(--border2)!important;
-  font-size:14px!important;font-family:'Inter',sans-serif!important;}
-div[data-testid="stSelectbox"]>div>div{border-radius:10px!important;border-color:var(--border2)!important;
-  font-size:13px!important;}
+div[data-testid="stSelectbox"]>label,
+div[data-testid="stTextInput"]>label{
+  font-size:12px!important;font-weight:700!important;
+  color:var(--text2)!important;text-transform:uppercase!important;letter-spacing:.06em!important;
+}
+[data-testid="stRadio"]>label{font-size:13px!important;font-weight:600!important;}
+.stRadio>div{gap:4px!important;}
+.stAlert{border-radius:12px!important;}
+div[data-testid="stTextInput"] input{
+  border-radius:10px!important;border-color:var(--border2)!important;
+  font-size:14px!important;font-family:'Inter',sans-serif!important;
+}
+div[data-testid="stSelectbox"]>div>div{
+  border-radius:10px!important;border-color:var(--border2)!important;
+  font-size:13px!important;
+}
+
+/* ══ LOGIN STREAMLIT INPUT OVERRIDES ═══════════════════════ */
+/* Applied when sidebar is hidden = login / loading screens */
+[data-testid="stSidebar"]:not([style*="visible"]) ~ * div[data-testid="stTextInput"] input,
+.login-inputs div[data-testid="stTextInput"] input{
+  background:rgba(255,255,255,.07)!important;
+  border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:10px!important;color:#fafaf9!important;
+  font-size:14px!important;padding:12px 14px!important;
+}
+.login-inputs div[data-testid="stTextInput"] input:focus{
+  border-color:rgba(234,88,12,.6)!important;
+  box-shadow:0 0 0 3px rgba(234,88,12,.15)!important;
+}
+.login-inputs div[data-testid="stTextInput"]>label{
+  color:rgba(255,255,255,.5)!important;
+}
+.login-inputs .stButton>button{
+  width:100%!important;padding:14px!important;font-size:15px!important;
+  box-shadow:0 6px 20px rgba(234,88,12,.4)!important;
+}
+
+/* ══ DIVIDER ══════════════════════════════════════════════ */
 .divider{height:1px;background:var(--border);margin:20px 0;}
+
+/* ══ METRIC OVERRIDES ═════════════════════════════════════ */
+[data-testid="stMetric"]{
+  background:var(--card);border-radius:12px;padding:16px 18px;
+  border:1px solid var(--border);box-shadow:var(--shadow);
+}
+[data-testid="stMetricLabel"]{font-size:11px!important;font-weight:700!important;color:var(--text3)!important;text-transform:uppercase!important;letter-spacing:.08em!important;}
+[data-testid="stMetricValue"]{font-size:24px!important;font-weight:800!important;color:var(--text)!important;letter-spacing:-.4px!important;}
 </style>
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
-#  DB INIT
+#  INIT
 # ══════════════════════════════════════════════════════════════
 try:
     init_db()
@@ -15107,227 +12602,282 @@ except Exception as _db_init_err:
     st.error(
         "**Database not connected.**\n\n"
         "Add your Neon connection string to Streamlit Cloud secrets:\n\n"
+        "**Manage app → Settings → Secrets** → add:\n"
         "```\nNEON_DATABASE_URL = \"postgresql://user:pass@host.neon.tech/db?sslmode=require\"\n```\n\n"
         f"Error: `{_db_init_err}`"
     )
     st.stop()
 
-# ══════════════════════════════════════════════════════════════
-#  NEON DB — EXTENDED SCHEMA FOR HISTORICAL REPORTING
-#  Creates monthly_yield and manual_yield tables if not exist.
-#  These complement the existing daily_yield + intraday_power tables.
-# ══════════════════════════════════════════════════════════════
+# ── Report DB tables & helpers ────────────────────────────────────────────────
+
 def _init_report_tables():
-    """Ensure monthly_yield and manual_yield tables exist in Neon."""
     try:
         from utils.database import _conn
         c = _conn()
         cur = c.cursor()
-        # Monthly aggregated yield per plant
         cur.execute("""
-            CREATE TABLE IF NOT EXISTS monthly_yield (
-                plant_name  TEXT        NOT NULL,
-                month       TEXT        NOT NULL,  -- format: YYYY-MM
-                energy_kwh  REAL        NOT NULL,
-                source      TEXT        DEFAULT 'api',
-                updated_at  TIMESTAMPTZ DEFAULT NOW(),
-                PRIMARY KEY (plant_name, month)
+            CREATE TABLE IF NOT EXISTS report_monthly_yield (
+                id         SERIAL PRIMARY KEY,
+                plant_name TEXT NOT NULL,
+                month      TEXT NOT NULL,
+                source     TEXT NOT NULL DEFAULT 'api',
+                energy_kwh REAL NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL,
+                UNIQUE(plant_name, month)
             )
         """)
-        # Manual historical data entry (for back-filling past months)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS manual_yield (
-                plant_name  TEXT        NOT NULL,
-                period      TEXT        NOT NULL,  -- YYYY-MM or YYYY
-                period_type TEXT        NOT NULL,  -- 'monthly' or 'annual'
-                energy_kwh  REAL        NOT NULL,
+                id          SERIAL PRIMARY KEY,
+                plant_name  TEXT NOT NULL,
+                period      TEXT NOT NULL,
+                period_type TEXT NOT NULL DEFAULT 'month',
+                energy_kwh  REAL NOT NULL DEFAULT 0,
                 notes       TEXT,
-                entered_at  TIMESTAMPTZ DEFAULT NOW(),
-                PRIMARY KEY (plant_name, period, period_type)
+                entered_at  TEXT NOT NULL,
+                UNIQUE(plant_name, period, period_type)
             )
         """)
         c.commit()
+        # Add UNIQUE to existing manual_yield table if it was created without it
+        try:
+            cur.execute(
+                "ALTER TABLE manual_yield "
+                "ADD CONSTRAINT manual_yield_uniq UNIQUE(plant_name, period, period_type)"
+            )
+            c.commit()
+        except Exception:
+            c.rollback()  # constraint already exists — safe to ignore
+        cur.close()
         c.close()
-    except Exception as e:
-        print(f"_init_report_tables error: {e}")
+    except Exception as _e:
+        print(f"[report tables] {_e}")
 
 _init_report_tables()
 
-# ── Neon DB helpers for report data ──────────────────────────
-def _save_monthly_yield(plant_name: str, month_str: str, kwh: float, source: str = "api"):
-    """Upsert a plant's monthly energy total."""
-    if not plant_name or not month_str or kwh <= 0:
-        return
+
+def _save_monthly_yield(plant_name, month_str, energy_kwh, source="api"):
     try:
         from utils.database import _conn
+        from datetime import datetime as _dt
         c = _conn()
         cur = c.cursor()
         cur.execute("""
-            INSERT INTO monthly_yield (plant_name, month, energy_kwh, source, updated_at)
-            VALUES (%s, %s, %s, %s, NOW())
-            ON CONFLICT (plant_name, month) DO UPDATE
-              SET energy_kwh = EXCLUDED.energy_kwh,
-                  source     = EXCLUDED.source,
-                  updated_at = NOW()
-        """, (plant_name, month_str, kwh, source))
+            INSERT INTO report_monthly_yield (plant_name, month, source, energy_kwh, updated_at)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (plant_name, month)
+            DO UPDATE SET energy_kwh = EXCLUDED.energy_kwh,
+                          source     = EXCLUDED.source,
+                          updated_at = EXCLUDED.updated_at
+        """, (plant_name, month_str, source, float(energy_kwh or 0),
+              _dt.now().isoformat(sep=" ", timespec="seconds")))
         c.commit()
+        cur.close()
         c.close()
-    except Exception as e:
-        print(f"_save_monthly_yield error: {e}")
+    except Exception as _e:
+        print(f"[_save_monthly_yield] {_e}")
 
-def _get_monthly_yield_db(plant_name: str, year_str: str) -> list:
-    """Return list of {month, energy_kwh} dicts from DB for a given year."""
+
+def _get_monthly_yield_db(plant_name, year_str=None):
     try:
         from utils.database import _conn
+        import pandas as _pd2
         c = _conn()
-        cur = c.cursor()
-        cur.execute("""
-            SELECT month, energy_kwh FROM monthly_yield
-            WHERE plant_name = %s AND month LIKE %s
-            ORDER BY month
-        """, (plant_name, f"{year_str}-%"))
-        rows = cur.fetchall()
+        if year_str:
+            df2 = _pd2.read_sql(
+                "SELECT month, energy_kwh, source FROM report_monthly_yield "
+                "WHERE plant_name=%s AND month LIKE %s ORDER BY month",
+                c, params=(plant_name, f"{year_str}-%"))
+        else:
+            df2 = _pd2.read_sql(
+                "SELECT month, energy_kwh, source FROM report_monthly_yield "
+                "WHERE plant_name=%s ORDER BY month",
+                c, params=(plant_name,))
         c.close()
-        return [{"month": r[0], "energy_kwh": r[1]} for r in rows]
-    except Exception as e:
-        print(f"_get_monthly_yield_db error: {e}")
-        return []
+        return df2
+    except Exception as _e:
+        print(f"[_get_monthly_yield_db] {_e}")
+        import pandas as _pd2
+        return _pd2.DataFrame()
 
-def _get_daily_yield_db(plant_name: str, month_str: str) -> list:
-    """Return list of {date, energy_kwh} from daily_yield table."""
+
+def _get_daily_yield_db(plant_name, month_str):
+    try:
+        from utils.database import get_daily_yield_month
+        return get_daily_yield_month(plant_name, month_str)
+    except Exception as _e:
+        print(f"[_get_daily_yield_db] {_e}")
+        import pandas as _pd2
+        return _pd2.DataFrame()
+
+
+def _save_manual_yield(plant_name, period, period_type, energy_kwh, notes=""):
     try:
         from utils.database import _conn
-        c = _conn()
-        cur = c.cursor()
-        cur.execute("""
-            SELECT date::text, SUM(energy_kwh) as energy_kwh
-            FROM daily_yield
-            WHERE plant_name = %s AND date::text LIKE %s
-            GROUP BY date ORDER BY date
-        """, (plant_name, f"{month_str}%"))
-        rows = cur.fetchall()
-        c.close()
-        return [{"date": r[0], "energy_kwh": r[1]} for r in rows]
-    except Exception as e:
-        print(f"_get_daily_yield_db error: {e}")
-        return []
-
-def _save_manual_yield(plant_name: str, period: str, period_type: str,
-                       kwh: float, notes: str = ""):
-    """Save manually entered historical yield data."""
-    try:
-        from utils.database import _conn
+        from datetime import datetime as _dt
         c = _conn()
         cur = c.cursor()
         cur.execute("""
             INSERT INTO manual_yield (plant_name, period, period_type, energy_kwh, notes, entered_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (plant_name, period, period_type) DO UPDATE
-              SET energy_kwh = EXCLUDED.energy_kwh,
-                  notes      = EXCLUDED.notes,
-                  entered_at = NOW()
-        """, (plant_name, period, period_type, kwh, notes))
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (plant_name, period, period_type)
+            DO UPDATE SET energy_kwh = EXCLUDED.energy_kwh,
+                          notes      = EXCLUDED.notes,
+                          entered_at = EXCLUDED.entered_at
+        """, (plant_name, period, period_type, float(energy_kwh or 0), notes,
+              _dt.now().isoformat(sep=" ", timespec="seconds")))
         c.commit()
+        cur.close()
         c.close()
-        return True
-    except Exception as e:
-        print(f"_save_manual_yield error: {e}")
-        return False
+    except Exception as _e:
+        print(f"[_save_manual_yield] {_e}")
 
-def _get_manual_yield(plant_name: str, period_type: str) -> list:
-    """Return all manually entered yields for a plant."""
+
+def _get_manual_yield(plant_name=None, period_type=None):
     try:
         from utils.database import _conn
+        import pandas as _pd2
         c = _conn()
-        cur = c.cursor()
-        cur.execute("""
-            SELECT period, energy_kwh, notes FROM manual_yield
-            WHERE plant_name = %s AND period_type = %s
-            ORDER BY period
-        """, (plant_name, period_type))
-        rows = cur.fetchall()
+        if plant_name and period_type:
+            df2 = _pd2.read_sql(
+                "SELECT plant_name, period, period_type, energy_kwh, notes, entered_at "
+                "FROM manual_yield WHERE plant_name=%s AND period_type=%s ORDER BY entered_at DESC",
+                c, params=(plant_name, period_type))
+        elif plant_name:
+            df2 = _pd2.read_sql(
+                "SELECT plant_name, period, period_type, energy_kwh, notes, entered_at "
+                "FROM manual_yield WHERE plant_name=%s ORDER BY entered_at DESC",
+                c, params=(plant_name,))
+        else:
+            df2 = _pd2.read_sql(
+                "SELECT plant_name, period, period_type, energy_kwh, notes, entered_at "
+                "FROM manual_yield ORDER BY entered_at DESC",
+                c)
         c.close()
-        return [{"period": r[0], "energy_kwh": r[1], "notes": r[2]} for r in rows]
-    except Exception as e:
-        print(f"_get_manual_yield error: {e}")
-        return []
+        return df2
+    except Exception as _e:
+        print(f"[_get_manual_yield] {_e}")
+        import pandas as _pd2
+        return _pd2.DataFrame()
+
 
 # ══════════════════════════════════════════════════════════════
 #  SESSION STATE
 # ══════════════════════════════════════════════════════════════
-USERS = {"admin": "1234"}
+USERS = {
+    "admin":    "1234"
+}
 
 for key, default in [
     ("logged_in",      False),
     ("user",           ""),
     ("plant_selected", False),
     ("sel_brands",     ["Solis"]),
-    ("sel_plants",     []),
+    ("sel_plants",     []),        # list of selected plant names
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
 
 # ══════════════════════════════════════════════════════════════
-#  PAGE 1 — LOGIN
+#  STEP 1 — LOGIN
 # ══════════════════════════════════════════════════════════════
 LOGIN_CSS = """<style>
-[data-testid="stSidebar"],[data-testid="stSidebarNav"],
+/* Hide sidebar on login */
+[data-testid="stSidebar"],
+[data-testid="stSidebarNav"],
 [data-testid="stSidebarCollapsedControl"]{display:none!important;}
+/* Remove all padding so columns fill screen */
 .block-container{padding:0!important;max-width:100%!important;margin:0!important;}
 [data-testid="stAppViewContainer"]{padding:0!important;}
+/* Full-height column layout */
 [data-testid="stHorizontalBlock"]{gap:0!important;height:100vh;min-height:100vh;}
 [data-testid="column"]:first-child{
-  background:#0D2B45!important;padding:60px 48px!important;
-  display:flex!important;flex-direction:column!important;justify-content:center!important;}
+  background:#0D2B45!important;
+  padding:60px 48px!important;
+  display:flex!important;flex-direction:column!important;justify-content:center!important;
+}
+[data-testid="column"]:first-child *{color:rgba(255,255,255,.55);}
 [data-testid="column"]:last-child{
-  background:#ffffff!important;padding:60px 48px!important;
-  display:flex!important;flex-direction:column!important;justify-content:center!important;}
+  background:#ffffff!important;
+  padding:60px 48px!important;
+  display:flex!important;flex-direction:column!important;justify-content:center!important;
+}
+/* Input styling in the right (white) panel */
 [data-testid="column"]:last-child [data-testid="stTextInput"] input{
   background:#f8f8f8!important;border:1.5px solid #e0e0e0!important;
-  border-radius:8px!important;font-size:14px!important;padding:11px 14px!important;}
+  border-radius:8px!important;font-size:14px!important;padding:11px 14px!important;
+}
 [data-testid="column"]:last-child [data-testid="stTextInput"] input:focus{
-  border-color:#C85A00!important;box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;}
+  border-color:#C85A00!important;box-shadow:0 0 0 3px rgba(200,90,0,.1)!important;
+}
 [data-testid="column"]:last-child [data-testid="stTextInput"] label{
-  font-size:12px!important;font-weight:600!important;color:#555!important;}
+  font-size:12px!important;font-weight:600!important;
+  color:#555!important;margin-bottom:4px!important;
+}
 [data-testid="column"]:last-child .stButton>button{
   background:#C85A00!important;color:#fff!important;border:none!important;
-  border-radius:8px!important;font-size:14px!important;font-weight:600!important;
-  padding:12px!important;width:100%!important;margin-top:8px!important;}
+  border-radius:8px!important;font-size:14px!important;
+  font-weight:600!important;padding:12px!important;width:100%!important;
+  margin-top:8px!important;
+}
 [data-testid="column"]:last-child .stButton>button:hover{background:#A84B00!important;}
 html,body,[data-testid="stApp"],[data-testid="stAppViewContainer"]{background:#fff!important;}
 </style>"""
 
 if not st.session_state.logged_in:
     st.markdown(LOGIN_CSS, unsafe_allow_html=True)
+
     _lcol, _rcol = st.columns([0.44, 0.56])
 
     with _lcol:
         st.markdown("""
-<div>
+<div style="margin-bottom:28px;">
   <div style="width:54px;height:54px;border-radius:50%;
     background:rgba(245,166,35,.18);display:flex;align-items:center;
     justify-content:center;margin-bottom:22px;font-size:26px;">&#9728;</div>
-  <div style="font-size:30px;font-weight:800;color:#F5A623;
+  <div style="font-size:28px;font-weight:800;color:#F5A623;
     letter-spacing:-.4px;margin-bottom:10px;">Fractal Energy</div>
-  <div style="font-size:14px;color:rgba(255,255,255,.45);line-height:1.8;">
-    Unified inverter monitoring for solar projects
+  <div style="font-size:13px;color:rgba(255,255,255,.45);line-height:1.8;">
+    Unified solar monitoring platform<br>for multi-brand inverter fleets
   </div>
-  <div style="margin-top:40px;font-size:11px;color:rgba(255,255,255,.2);
-    padding-top:20px;border-top:1px solid rgba(255,255,255,.08);">
-    Role-based access &nbsp;·&nbsp; Admin &nbsp;·&nbsp; Engineer &nbsp;·&nbsp; Viewer
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:40px;">
+  <div style="display:flex;align-items:center;gap:11px;">
+    <span style="width:22px;height:22px;border-radius:50%;
+      background:rgba(245,166,35,.2);display:flex;align-items:center;
+      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:12px;color:rgba(255,255,255,.45);">Multi-brand inverter support (Solis, Growatt)</span>
   </div>
+  <div style="display:flex;align-items:center;gap:11px;">
+    <span style="width:22px;height:22px;border-radius:50%;
+      background:rgba(245,166,35,.2);display:flex;align-items:center;
+      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:12px;color:rgba(255,255,255,.45);">Real-time monitoring &amp; alerts</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:11px;">
+    <span style="width:22px;height:22px;border-radius:50%;
+      background:rgba(245,166,35,.2);display:flex;align-items:center;
+      justify-content:center;font-size:11px;color:#F5A623;flex-shrink:0;">&#10003;</span>
+    <span style="font-size:12px;color:rgba(255,255,255,.45);">Yield &amp; performance reports</span>
+  </div>
+</div>
+<div style="font-size:11px;color:rgba(255,255,255,.2);
+  padding-top:20px;border-top:1px solid rgba(255,255,255,.08);">
+  Role-based access · Admin · Engineer · Viewer
 </div>""", unsafe_allow_html=True)
 
     with _rcol:
         st.markdown("""
 <div style="margin-bottom:28px;">
-  <div style="font-size:22px;font-weight:700;color:#1a1a1a;letter-spacing:-.3px;margin-bottom:6px;">
-    Sign in to your account</div>
+  <div style="font-size:22px;font-weight:700;color:#1a1a1a;
+    letter-spacing:-.3px;margin-bottom:6px;">Sign in to your account</div>
   <div style="font-size:13px;color:#aaa;">Enter your credentials to continue</div>
 </div>""", unsafe_allow_html=True)
 
-        _email    = st.text_input("EMAIL ADDRESS", placeholder="admin@fractalenergy.in", key="login_email")
-        _password = st.text_input("PASSWORD", placeholder="••••••••", type="password", key="login_password")
+        _email    = st.text_input("EMAIL ADDRESS", placeholder="admin@fractalenergy.in",
+                                  label_visibility="visible", key="login_email")
+        _password = st.text_input("PASSWORD", placeholder="••••••••", type="password",
+                                  label_visibility="visible", key="login_password")
         if st.button("Sign In  →", use_container_width=True, key="login_btn"):
             if _email in USERS and USERS[_email] == _password:
                 st.session_state.logged_in = True
@@ -15339,20 +12889,21 @@ if not st.session_state.logged_in:
         st.markdown("""
 <div style="margin-top:20px;font-size:11px;color:#ccc;text-align:center;
   padding-top:16px;border-top:1px solid #f0f0f0;">
-  Secured by Fractal Energy &nbsp;·&nbsp; Solar Monitor v3.0
+  Secured by Fractal Energy &nbsp;·&nbsp; Solar Monitor v2.0
 </div>""", unsafe_allow_html=True)
 
     st.stop()
 
-# ══════════════════════════════════════════════════════════════
-#  STEP 2 — AUTO-LOAD ALL PLANTS (once after login)
-# ══════════════════════════════════════════════════════════════
 DARK_PAGE_CSS = """<style>
-[data-testid="stSidebar"],[data-testid="stSidebarNav"],
+[data-testid="stSidebar"],
+[data-testid="stSidebarNav"],
 [data-testid="stSidebarCollapsedControl"]{display:none!important;}
 .block-container{padding:0!important;max-width:100%!important;}
 </style>"""
 
+# ══════════════════════════════════════════════════════════════
+#  STEP 2 — AUTO-LOAD ALL PLANTS  (runs once after login)
+# ══════════════════════════════════════════════════════════════
 if not st.session_state.plant_selected:
     st.markdown(DARK_PAGE_CSS, unsafe_allow_html=True)
 
@@ -15362,13 +12913,13 @@ if not st.session_state.plant_selected:
         try:
             from utils.solis_api import get_plants as _sp
             for p in _sp():
-                cap_raw = p.get("capacity", "")
+                cap_raw = p.get("capacity","")
                 available.append({
                     "brand":    "Solis",
-                    "name":     p.get("stationName", ""),
-                    "id":       p.get("id", ""),
+                    "name":     p.get("stationName",""),
+                    "id":       p.get("id",""),
                     "capacity": f"{cap_raw} kWp" if cap_raw else "—",
-                    "location": p.get("city", "") or p.get("address", "") or "—",
+                    "location": p.get("city","") or p.get("address","") or "—",
                 })
         except Exception as e:
             print(f"Plant loader Solis error: {e}")
@@ -15376,37 +12927,51 @@ if not st.session_state.plant_selected:
             from utils.growatt_api import _get_plants, login as glogin
             glogin()
             for p in _get_plants():
-                cap_raw = p.get("nominalPower", "")
+                cap_raw = p.get("nominalPower","")
                 available.append({
                     "brand":    "Growatt",
-                    "name":     p.get("plantNameEncryption") or p.get("plantName", ""),
-                    "id":       str(p.get("pId") or p.get("plantId", "")),
+                    "name":     p.get("plantNameEncryption") or p.get("plantName",""),
+                    "id":       str(p.get("pId") or p.get("plantId","")),
                     "capacity": f"{float(cap_raw)/1000:.1f} kWp" if cap_raw else "—",
-                    "location": p.get("country", "") or "—",
+                    "location": p.get("country","") or "—",
                 })
         except Exception as e:
             print(f"Plant loader Growatt error: {e}")
         return available
 
     st.markdown("""
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:#0D2B45;position:fixed;top:0;left:0;right:0;bottom:0;">
-  <div style="text-align:center;color:#fff;">
-    <div style="font-size:40px;margin-bottom:20px;">☀️</div>
-    <div style="font-size:20px;font-weight:700;color:#F5A623;">Loading your plants…</div>
-    <div style="font-size:13px;color:rgba(255,255,255,.45);margin-top:8px;">
-      Connecting to inverter APIs</div>
-  </div>
-</div>""", unsafe_allow_html=True)
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#1c1917 0%,#292524 55%,#1a1816 100%);
+    position:fixed;top:0;left:0;right:0;bottom:0;">
+      <div style="text-align:center;color:#fff;">
+        <div style="width:72px;height:72px;background:linear-gradient(135deg,#ea580c,#f59e0b);
+          border-radius:20px;display:flex;align-items:center;justify-content:center;
+          font-size:34px;margin:0 auto 20px;box-shadow:0 10px 32px rgba(234,88,12,.4);">☀️</div>
+        <div style="font-size:20px;font-weight:700;color:#fafaf9;">Loading your plants…</div>
+        <div style="font-size:13px;color:#78716c;margin-top:8px;">Connecting to Solis &amp; Growatt</div>
+      </div>
+    </div>""", unsafe_allow_html=True)
 
     with st.spinner(""):
         available_plants = _fetch_available_plants()
 
     sel_plant_names = [p["name"] for p in available_plants if p["name"]]
-    active_brands = []
+    active_brands   = []
     if any(p["brand"] == "Solis"   for p in available_plants): active_brands.append("Solis")
     if any(p["brand"] == "Growatt" for p in available_plants): active_brands.append("Growatt")
 
+    # Fallback: derive active brands from which credentials are configured
+    # (ensures fetch still runs even if the plant-list API call timed out)
+    if not active_brands:
+        try:
+            from config import SOLIS_API_KEY, GROWATT_USERNAME, SUNGROW_APP_KEY
+            if SOLIS_API_KEY:    active_brands.append("Solis")
+            if GROWATT_USERNAME: active_brands.append("Growatt")
+            if SUNGROW_APP_KEY:  active_brands.append("Sungrow")
+        except Exception:
+            pass
+
+    # Store capacity & location for the Plants portfolio page
     st.session_state.plant_meta = {
         p["name"]: {"capacity": p["capacity"], "location": p["location"], "brand": p["brand"]}
         for p in available_plants if p["name"]
@@ -15453,8 +13018,9 @@ def chart_style(fig, h=300):
     fig.update_layout(
         plot_bgcolor="#fff", paper_bgcolor="#fff",
         font_color="#64748b", font_family="Inter",
-        margin=dict(l=0, r=0, t=16, b=0), height=h, bargap=0.28,
+        margin=dict(l=0,r=0,t=16,b=0), height=h,
         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(size=12, color="#64748b")),
+        bargap=0.28,
     )
     fig.update_traces(marker_line_width=0)
     fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11,
@@ -15464,18 +13030,19 @@ def chart_style(fig, h=300):
     return fig
 
 PALETTE = ["#ea580c","#f59e0b","#3b82f6","#f97316","#10b981","#8b5cf6","#06b6d4","#ec4899"]
+BRAND_COLORS = {"Solis":"#3b82f6","Growatt":"#10b981","Sungrow":"#f97316"}
 
-def sec(title):
-    st.markdown(f'<div class="sec-hdr"><div class="sec-hdr-dot"></div>{title}</div>',
+def sec(title, icon=""):
+    st.markdown(f'<div class="sec-hdr"><div class="sec-hdr-dot"></div>{icon} {title}</div>',
                 unsafe_allow_html=True)
 
-def topnav(active_page: str, fault_count: int = 0):
+def topnav(active_page, fault_count=0):
     user_initials = (st.session_state.get("user") or "AK")[:2].upper()
-    bell_badge = (f'<div class="nav-bell-badge">{fault_count}</div>'
-                  if fault_count > 0 else "")
+    badge_html = (
+        f'<div class="nav-bell-badge">{fault_count}</div>' if fault_count > 0 else ""
+    )
     tabs = [
-        ("dashboard", "All Plants"),
-        ("overview",  "Dashboard"),
+        ("dashboard", "Dashboard"),
         ("reports",   "Reports"),
         ("alarms",    "Alarms"),
         ("settings",  "Settings"),
@@ -15485,46 +13052,56 @@ def topnav(active_page: str, fault_count: int = 0):
         for k, label in tabs
     )
     st.markdown(f"""
-<div class="topnav">
-  <a class="topnav-brand" href="?page=dashboard">
-    <div class="topnav-brand-icon">☀️</div>
-    <div class="topnav-brand-text">
-      <div class="topnav-brand-name">Fractal Energy</div>
-      <div class="topnav-brand-sub">Solar Monitor</div>
-    </div>
-  </a>
-  {tabs_html}
-  <div class="nav-right">
-    <a class="nav-bell ntab" href="?page=alarms" style="padding:0 8px">🔔{bell_badge}</a>
-    <div class="nav-avatar">{user_initials}</div>
-  </div>
-</div>""", unsafe_allow_html=True)
+    <div class="topnav">
+      <a class="topnav-brand" href="?page=dashboard">
+        <div class="topnav-brand-icon">☀️</div>
+        <div class="topnav-brand-text">
+          <div class="topnav-brand-name">Fractal Energy</div>
+          <div class="topnav-brand-sub">Solar Monitor</div>
+        </div>
+      </a>
+      {tabs_html}
+      <div class="nav-right">
+        <a class="nav-bell ntab" href="?page=alarms" style="padding:0 8px">
+          🔔{badge_html}
+        </a>
+        <div class="nav-avatar">{user_initials}</div>
+      </div>
+    </div>""", unsafe_allow_html=True)
 
-# ── Navigation ────────────────────────────────────────────────
-sel_brands     = st.session_state.get("sel_brands", ["Solis"])
-all_sel_plants = st.session_state.get("sel_plants", [])
+# ── Navigation — URL-param routing (no sidebar) ──────────────────────────────
+sel_brands = st.session_state.get("sel_brands", ["Solis"])
+show_debug = False
 
+# Consume pending navigation set by plant-card buttons
 if "_pending_page" in st.session_state:
-    _pp    = st.session_state.pop("_pending_page")
-    _pplnt = st.session_state.pop("_pending_plant", None)
-    if _pplnt:
-        st.session_state["active_plant"] = _pplnt
-    _to = {"Plants": "dashboard", "Overview": "overview", "Dashboard": "overview",
-            "Report": "reports", "Reports": "reports",
-            "Alarms": "alarms", "Settings": "settings"}.get(_pp, "dashboard")
-    st.query_params["page"] = _to
+    _pp = st.session_state.pop("_pending_page")
+    _pplant = st.session_state.pop("_pending_plant", None)
+    if _pplant:
+        st.session_state["active_plant"] = _pplant
+    _to_qpage = {
+        "Plants": "dashboard", "Overview": "overview",
+        "Report": "reports", "Alarms": "alarms", "Settings": "settings",
+    }.get(_pp, "dashboard")
+    st.query_params["page"] = _to_qpage
     st.rerun()
 
 _qpage = st.query_params.get("page", "dashboard")
-page   = {"dashboard": "Plants", "overview": "Overview",
-           "reports": "Report", "alarms": "Alarms", "settings": "Settings"}.get(_qpage, "Plants")
+page = {
+    "dashboard": "Plants",
+    "overview":  "Overview",
+    "reports":   "Report",
+    "alarms":    "Alarms",
+    "settings":  "Settings",
+}.get(_qpage, "Plants")
+active_plant   = st.session_state.get("active_plant", "All Plants")
+all_sel_plants = st.session_state.get("sel_plants", [])
 
-active_plant = st.session_state.get("active_plant", "All Plants")
-
-_topnav_active = "overview" if _qpage == "overview" else _qpage
+# Render topnav (uses cached fault count from previous run)
+_topnav_active = "dashboard" if _qpage in ("dashboard", "overview") else _qpage
 topnav(_topnav_active, st.session_state.get("_fault_count", 0))
 
-# ── Fetch live data ───────────────────────────────────────────
+# ── Fetch data ────────────────────────────────────────────────
 @st.cache_data(ttl=REFRESH_INTERVAL_SECONDS)
 def load(brands, plants):
     result = fetch_all_brands(list(brands))
@@ -15533,6 +13110,8 @@ def load(brands, plants):
     if plants:
         result = [r for r in result if r.get("plant_name") in plants]
     return result
+
+_fetch_errors = []
 
 with st.spinner("Fetching live data…"):
     try:
@@ -15543,23 +13122,29 @@ with st.spinner("Fetching live data…"):
         for _brand in sel_brands:
             try:
                 from utils import solis_api as _sapi, growatt_api as _gapi
-                _recs = _sapi.fetch_all() if _brand == "Solis" else \
-                        _gapi.fetch_all() if _brand == "Growatt" else []
+                if _brand == "Solis":
+                    _recs = _sapi.fetch_all()
+                elif _brand == "Growatt":
+                    _recs = _gapi.fetch_all()
+                else:
+                    _recs = []
                 records.extend(_recs)
             except Exception as _e:
-                print(f"{_brand}: {_e}")
+                _fetch_errors.append(f"{_brand}: {_e}")
         if all_sel_plants:
             records = [r for r in records if r.get("plant_name") in all_sel_plants]
 
-# ── Persist live data to Neon DB ─────────────────────────────
+# ── Persist every refresh's live data (runs on each auto-refresh) ────────────
 import time as _time
+from datetime import datetime as _dtnow
+
 _now_ts    = _time.time()
-_snap_time = datetime.now()
+_snap_time = _dtnow.now()
 _snap_hm   = _snap_time.strftime("%H:%M")
 _snap_date = _snap_time.strftime("%Y-%m-%d")
-_snap_mon  = _snap_time.strftime("%Y-%m")
 _snap_ts   = _snap_time.isoformat(sep=" ", timespec="seconds")
 
+# Aggregate power and yield per plant from live records
 _plant_pwr = {}
 _plant_kwh = {}
 for _r in records:
@@ -15568,16 +13153,16 @@ for _r in records:
         _plant_pwr[_pn] = _plant_pwr.get(_pn, 0.0) + float(_r.get("power_kw") or 0)
         _plant_kwh[_pn] = _plant_kwh.get(_pn, 0.0) + float(_r.get("today_kwh") or 0)
 
-# Session-state intraday accumulator (survives auto-refresh, no DB)
+# Step A: always update session_state — survives auto-refreshes, no DB needed
 if _plant_pwr:
-    _ss_id   = st.session_state.setdefault("_ss_intraday", {})
-    _day_slt = _ss_id.setdefault(_snap_date, {})
+    _ss_id    = st.session_state.setdefault("_ss_intraday", {})
+    _day_slot = _ss_id.setdefault(_snap_date, {})
     for _pn, _pwr in _plant_pwr.items():
-        _day_slt.setdefault(_pn, {})[_snap_hm] = _pwr
+        _day_slot.setdefault(_pn, {})[_snap_hm] = _pwr
 
-# Persist to Neon DB once per minute
-_last_save = st.session_state.get("_last_intraday_save", 0)
-if records and (_now_ts - _last_save >= 60):
+# Step B: persist to SQLite (at most once per minute) for cross-session history
+_last_id_save = st.session_state.get("_last_intraday_save", 0)
+if records and (_now_ts - _last_id_save >= 60):
     try:
         from utils.database import (save_readings as _sv_r,
                                     save_intraday as _sv_id,
@@ -15590,28 +13175,26 @@ if records and (_now_ts - _last_save >= 60):
                 _sv_dy(_pn, _snap_date, _kwh)
         st.session_state["_last_intraday_save"] = _now_ts
         st.session_state["_last_db_save_hm"]    = _snap_hm
-    except Exception as _se:
-        st.session_state["_db_save_err"] = str(_se)
+    except Exception as _save_err:
+        st.session_state["_db_save_err"] = str(_save_err)
 
-# Persist monthly totals to Neon DB (once per hour)
-_last_mon_save = st.session_state.get("_last_monthly_save", 0)
-if records and (_now_ts - _last_mon_save >= 3600):
+# ── Hourly: save monthly yield to report_monthly_yield ────────────────────────
+_last_ms = st.session_state.get("_last_monthly_save", 0)
+if records and (_now_ts - _last_ms >= 3600):
     try:
-        from utils.solis_api import get_plants as _gsp_m
-        from utils.solis_api import _to_kwh as _s2kwh_m
-        _precs_m = {p.get("stationName", ""): p for p in _gsp_m()}
-        for _pn_m, _prec_m in _precs_m.items():
-            if _prec_m.get("monthEnergy") is not None:
-                _mkwh = _s2kwh_m(_prec_m.get("monthEnergy", 0), _prec_m.get("monthEnergyStr", "kWh"))
-                if _mkwh > 0:
-                    _save_monthly_yield(_pn_m, _snap_mon, _mkwh, source="api")
+        _month_str_ms = _snap_date[:7]
+        for _pn, _kwh in _plant_kwh.items():
+            if _kwh > 0:
+                _save_monthly_yield(_pn, _month_str_ms, _kwh, source="live")
         st.session_state["_last_monthly_save"] = _now_ts
-    except Exception:
-        pass
+    except Exception as _ms_err:
+        print(f"[monthly save] {_ms_err}")
 
-# Filter to active plant
-records_view = ([r for r in records if r.get("plant_name") == active_plant]
-                if active_plant and active_plant != "All Plants" else records)
+# Filter to active plant chosen in sidebar
+if active_plant and active_plant != "All Plants":
+    records_view = [r for r in records if r.get("plant_name") == active_plant]
+else:
+    records_view = records
 
 alerts = check_alerts(records, st.session_state)
 st.session_state["_fault_count"] = len(alerts)
@@ -15619,24 +13202,46 @@ st.session_state["_fault_count"] = len(alerts)
 df = pd.DataFrame()
 if records_view:
     df = pd.DataFrame(records_view)
-    for c_col in ["power_kw", "today_kwh", "total_kwh", "temperature", "voltage", "current_a"]:
-        if c_col in df.columns:
-            df[c_col] = pd.to_numeric(df[c_col], errors="coerce")
+    for c in ["power_kw","today_kwh","total_kwh","temperature","voltage","current_a"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
     if "status" in df.columns:
         df["status"] = df["status"].astype(str).str.strip()
 
+# ── Debug ─────────────────────────────────────────────────────
+if show_debug and not df.empty:
+    st.markdown("### 🔍 Debug: Raw API Data")
+    st.dataframe(df, use_container_width=True)
+    try:
+        from utils.solis_api import fetch_summary as _fsum, _raw_plants_cache
+        summ = _fsum()
+        st.write("**fetch_summary():**", summ)
+    except Exception as ex:
+        st.error(f"Debug error: {ex}")
+    st.divider()
+
+
+# ── Unified plant filter vars for all pages ─────────────────
+# sel_plants = plants chosen at login (all_sel_plants)
+# active_plant = currently viewed plant (from sidebar dropdown)
+sel_plants = all_sel_plants  # alias for backward compat
 
 # ══════════════════════════════════════════════════════════════
-#  PAGE 2 — ALL PLANTS (portfolio overview, route: ?page=dashboard)
+#  PLANTS — Portfolio overview (default landing page)
 # ══════════════════════════════════════════════════════════════
 if page == "Plants":
+    import io as _io
+
     plant_meta = st.session_state.get("plant_meta", {})
 
+    # ── Page header ──────────────────────────────────────────
     st.markdown(f"""
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+<div style="display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:18px;">
   <div>
-    <div style="font-size:20px;font-weight:800;color:#1a1a1a;letter-spacing:-.3px;">
-      All Plants</div>
+    <div style="font-size:18px;font-weight:700;color:#1a1a1a;letter-spacing:-.2px;">
+      Plant Portfolio
+    </div>
     <div style="font-size:12px;color:#999;margin-top:3px;">
       Live monitoring across all connected inverters
     </div>
@@ -15645,48 +13250,60 @@ if page == "Plants":
 </div>""", unsafe_allow_html=True)
 
     if not records:
-        st.warning("No plant data returned. Check your API credentials in config.py.")
+        st.warning("No plant data — API returned no inverters. Check credentials and click **Refresh Now**.")
+        if _fetch_errors:
+            for _fe in _fetch_errors:
+                st.error(f"🔴 {_fe}")
+        # Show what credentials are actually loaded (helps diagnose secrets issues)
         from config import SOLIS_API_KEY, GROWATT_USERNAME
-        st.info(f"Solis key: `{'✅ set' if SOLIS_API_KEY else '❌ empty'}` · "
-                f"Growatt user: `{'✅ set' if GROWATT_USERNAME else '❌ empty'}`")
+        st.info(
+            f"Loaded credentials — "
+            f"Solis key: `{'✅ set' if SOLIS_API_KEY else '❌ empty'}` · "
+            f"Growatt user: `{'✅ set' if GROWATT_USERNAME else '❌ empty'}`"
+        )
     else:
+        # ── Build per-plant summary ───────────────────────────
         _pdf = pd.DataFrame(records)
-        for _c in ["power_kw", "today_kwh", "total_kwh"]:
+        for _c in ["power_kw","today_kwh","total_kwh"]:
             if _c in _pdf.columns:
                 _pdf[_c] = pd.to_numeric(_pdf[_c], errors="coerce").fillna(0)
-        if "status"      not in _pdf.columns: _pdf["status"]      = "Unknown"
-        if "inverter_sn" not in _pdf.columns: _pdf["inverter_sn"] = "—"
+        if "status" not in _pdf.columns:
+            _pdf["status"] = "Unknown"
+        if "inverter_sn" not in _pdf.columns:
+            _pdf["inverter_sn"] = "—"
 
-        _pg = _pdf.groupby(["plant_name", "brand"]).agg(
+        _pg = (_pdf.groupby(["plant_name","brand"]).agg(
             power_kw    = ("power_kw",    "sum"),
             today_kwh   = ("today_kwh",   "sum"),
             total_kwh   = ("total_kwh",   "sum"),
             n_inverters = ("inverter_sn", "nunique"),
             n_online    = ("status",      lambda x: (x.str.lower() == "online").sum()),
             n_total     = ("status",      "count"),
-        ).reset_index()
+        ).reset_index())
 
         _pg["Location"] = _pg["plant_name"].map(
             lambda n: plant_meta.get(n, {}).get("location", "—"))
         _pg["Capacity"] = _pg["plant_name"].map(
             lambda n: plant_meta.get(n, {}).get("capacity", "—"))
-        _pg["Status"]   = _pg.apply(
+        _pg["Status"] = _pg.apply(
             lambda r: "Online"  if r["n_online"] == r["n_total"] and r["n_total"] > 0
                  else "Partial" if r["n_online"] > 0
                  else "Offline", axis=1)
 
+        # Apply default sort (best performing first) and reset index
         _filt = _pg.sort_values("power_kw", ascending=False).reset_index(drop=True)
 
-        _tp  = float(_filt["power_kw"].sum())
-        _td  = float(_filt["today_kwh"].sum())
-        _tt  = float(_filt["total_kwh"].sum())
-        _noi = int(_filt["n_online"].sum())
-        _nti = int(_filt["n_total"].sum())
-        _nop = len(_filt[_filt["Status"] == "Online"])
-        _co2 = _td * 0.82
-        _trees = max(1, int(_co2 / 22)) if _co2 > 0 else 0
+        # ── Portfolio totals ──────────────────────────────────────
+        _tp           = float(_filt["power_kw"].sum())
+        _td           = float(_filt["today_kwh"].sum())
+        _tt           = float(_filt["total_kwh"].sum())
+        _n_online_inv = int(_filt["n_online"].sum())
+        _n_total_inv  = int(_filt["n_total"].sum())
+        _n_online_pl  = len(_filt[_filt["Status"] == "Online"])
+        _co2_kg       = _td * 0.82
+        _trees        = max(1, int(_co2_kg / 22)) if _co2_kg > 0 else 0
 
-        # ── Portfolio KPI cards ───────────────────────────────
+        # ── KPI Cards ────────────────────────────────────────────
         st.markdown(f"""
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
   <div style="background:#fff;border-radius:10px;padding:13px 16px;
@@ -15695,7 +13312,7 @@ if page == "Plants":
       letter-spacing:.05em;margin-bottom:6px;">Yield Today</div>
     <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
       {_td:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kWh</span></div>
-    <div style="font-size:10px;color:#aaa;margin-top:4px;">{_noi} of {_nti} inverters online</div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px;">{_n_online_inv} of {_n_total_inv} inverters online</div>
   </div>
   <div style="background:#fff;border-radius:10px;padding:13px 16px;
     border-left:3px solid #C85A00;box-shadow:0 1px 4px rgba(0,0,0,.06);">
@@ -15709,295 +13326,334 @@ if page == "Plants":
     <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
       letter-spacing:.05em;margin-bottom:6px;">CO&#8322; Offset</div>
     <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-      {_co2:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kg</span></div>
-    <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8776; {_trees} trees today</div>
+      {_co2_kg:,.0f}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">kg</span></div>
+    <div style="font-size:10px;color:#aaa;margin-top:4px;">&#8776; {_trees} trees saved today</div>
   </div>
   <div style="background:#fff;border-radius:10px;padding:13px 16px;
     border-left:3px solid #22c55e;box-shadow:0 1px 4px rgba(0,0,0,.06);">
     <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
       letter-spacing:.05em;margin-bottom:6px;">Plants Online</div>
     <div style="font-size:22px;font-weight:700;color:#1a1a1a;line-height:1;">
-      {_nop}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">/ {len(_filt)}</span></div>
+      {_n_online_pl}<span style="font-size:12px;color:#888;font-weight:400;margin-left:4px;">/ {len(_filt)}</span></div>
     <div style="font-size:10px;color:#aaa;margin-top:4px;">Total: {_tt:,.1f} MWh lifetime</div>
   </div>
 </div>""", unsafe_allow_html=True)
 
-        # ── Charts row ────────────────────────────────────────
+        # ── Charts row ───────────────────────────────────────────
+        import plotly.graph_objects as _pgo
         _cc1, _cc2 = st.columns([2, 1])
+
         with _cc1:
-            _bv = _filt["today_kwh"].round(1).tolist()
-            _bn = _filt["plant_name"].tolist()
-            _pk = max(_bv) if _bv else 0
-            _bc = ["#C85A00" if v == _pk else "#F5A623" for v in _bv]
-            _bf = go.Figure(go.Bar(x=_bn, y=_bv, marker=dict(color=_bc, line=dict(width=0))))
-            _bf.update_layout(
+            _bar_vals   = _filt["today_kwh"].round(1).tolist()
+            _bar_names  = _filt["plant_name"].tolist()
+            _peak_val   = max(_bar_vals) if _bar_vals else 0
+            _bar_colors = ["#C85A00" if v == _peak_val else "#F5A623" for v in _bar_vals]
+            _bar_fig = _pgo.Figure(_pgo.Bar(
+                x=_bar_names, y=_bar_vals,
+                marker=dict(color=_bar_colors, line=dict(width=0)),
+            ))
+            _bar_fig.update_layout(
                 title=dict(text="Generation today (kWh per plant)",
                            font=dict(size=12, color="#666"), x=0),
-                margin=dict(l=0, r=0, t=40, b=0), height=220,
+                margin=dict(l=0, r=0, t=40, b=0), height=210,
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
-                xaxis=dict(tickfont=dict(size=10, color="#bbb"), showgrid=False,
-                           zeroline=False, tickangle=-20),
-                yaxis=dict(tickfont=dict(size=10, color="#bbb"), gridcolor="#eee",
-                           zeroline=False), bargap=0.35)
-            st.plotly_chart(_bf, use_container_width=True, config={"displayModeBar": False})
+                xaxis=dict(tickfont=dict(size=10, color="#bbb"),
+                           showgrid=False, zeroline=False, tickangle=-20),
+                yaxis=dict(tickfont=dict(size=10, color="#bbb"),
+                           gridcolor="#eee", zeroline=False),
+                bargap=0.35,
+            )
+            st.plotly_chart(_bar_fig, use_container_width=True,
+                            config={"displayModeBar": False})
 
         with _cc2:
-            _bc2 = _filt.groupby("brand")["today_kwh"].sum().reset_index()
-            _pie_pal = ["#C85A00","#F5A623","#1A6FA8","#22c55e","#a855f7"]
-            _pf = go.Figure(go.Pie(
-                labels=_bc2["brand"].tolist(), values=_bc2["today_kwh"].round(1).tolist(),
-                hole=0.58, marker=dict(colors=_pie_pal[:len(_bc2)]), textinfo="none"))
-            _pf.update_layout(
-                title=dict(text="By inverter brand", font=dict(size=12, color="#666"), x=0),
-                margin=dict(l=0, r=0, t=40, b=0), height=220,
-                legend=dict(font=dict(size=10, color="#666")),
-                plot_bgcolor="#fff", paper_bgcolor="#fff")
-            st.plotly_chart(_pf, use_container_width=True, config={"displayModeBar": False})
+            _bc = _filt.groupby("brand")["today_kwh"].sum().reset_index()
+            _pie_palette = ["#C85A00", "#F5A623", "#1A6FA8", "#22c55e",
+                            "#a855f7", "#ec4899", "#06b6d4"]
+            _pie_fig = _pgo.Figure(_pgo.Pie(
+                labels=_bc["brand"].tolist(),
+                values=_bc["today_kwh"].round(1).tolist(),
+                hole=0.58,
+                marker=dict(colors=_pie_palette[:len(_bc)]),
+                textinfo="none",
+            ))
+            _pie_fig.update_layout(
+                title=dict(text="By inverter brand",
+                           font=dict(size=12, color="#666"), x=0),
+                margin=dict(l=0, r=0, t=40, b=0), height=210,
+                legend=dict(font=dict(size=10, color="#666"),
+                            orientation="v", x=1, y=0.5),
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+            )
+            st.plotly_chart(_pie_fig, use_container_width=True,
+                            config={"displayModeBar": False})
 
-        # ── Brand filter ──────────────────────────────────────
+        # ── Brand filter pills ────────────────────────────────────
         _all_brands = ["All"] + sorted(_filt["brand"].unique().tolist())
-        _bp = st.radio("Brand filter", _all_brands, horizontal=True,
-                       label_visibility="collapsed", key="dash_brand_pill")
-        _tbl_rows = _filt if _bp == "All" else _filt[_filt["brand"] == _bp]
+        _brand_pill = st.radio("Brand", _all_brands, horizontal=True,
+                               label_visibility="collapsed",
+                               key="dash_brand_pill")
+        _tbl_rows = _filt if _brand_pill == "All" else \
+                    _filt[_filt["brand"] == _brand_pill]
 
-        # ── Plants table ──────────────────────────────────────
+        # ── Projects table ────────────────────────────────────────
         _rows_html = ""
         for _, _r in _tbl_rows.iterrows():
             _sc = ("#22c55e" if _r["Status"] == "Online"
-                   else "#F5A623" if _r["Status"] == "Partial" else "#ef4444")
-            _ico = ("✅" if _r["Status"] == "Online"
-                    else "⚠️" if _r["Status"] == "Partial" else "🔴")
+                   else "#F5A623" if _r["Status"] == "Partial"
+                   else "#ef4444")
             _rows_html += f"""
-<tr style="border-bottom:1px solid #f5f5f5;" onmouseover="this.style.background='#fff8f5'"
-    onmouseout="this.style.background='transparent'">
-  <td style="padding:11px 13px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="font-size:14px;">{_ico}</span>
-      <div>
-        <div style="font-weight:600;color:#1a1a1a;font-size:13px;">{_r['plant_name']}</div>
-        <div style="font-size:10px;color:#aaa;">{int(_r['n_inverters'])} inverters &middot; {_r['Capacity']}</div>
-      </div>
-    </div>
-  </td>
-  <td style="padding:11px 13px;">
-    <span style="background:#f0f0f0;border-radius:4px;padding:2px 7px;
-      font-size:10px;color:#555;">{_r['brand']}</span>
-  </td>
-  <td style="padding:11px 13px;font-size:12px;color:#666;">{_r['Location']}</td>
-  <td style="padding:11px 13px;text-align:right;font-size:12px;">
-    <b style="color:{'#22c55e' if _r['power_kw']>0 else '#ef4444'}">{_r['power_kw']:.1f}</b>
-    <span style="font-size:10px;color:#aaa;"> kW</span></td>
-  <td style="padding:11px 13px;text-align:right;font-size:12px;">
-    <b>{_r['today_kwh']:.1f}</b><span style="font-size:10px;color:#aaa;"> kWh</span></td>
-  <td style="padding:11px 13px;text-align:center;">
-    <span style="background:{_sc}20;color:{_sc};border-radius:12px;
-      padding:3px 9px;font-size:10px;font-weight:600;">{_r['Status']}</span>
-  </td>
-</tr>"""
+      <tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:11px 13px;">
+          <div style="font-weight:600;color:#1a1a1a;font-size:13px;">{_r['plant_name']}</div>
+          <div style="font-size:10px;color:#aaa;">{int(_r['n_inverters'])} inverters &middot; {_r['Capacity']}</div>
+        </td>
+        <td style="padding:11px 13px;">
+          <span style="background:#f0f0f0;border-radius:4px;padding:2px 7px;
+            font-size:10px;color:#555;">{_r['brand']}</span>
+        </td>
+        <td style="padding:11px 13px;font-size:12px;color:#666;">{_r['Location']}</td>
+        <td style="padding:11px 13px;text-align:right;font-size:12px;">
+          <b>{_r['power_kw']:.1f}</b> <span style="font-size:10px;color:#aaa;">kW</span></td>
+        <td style="padding:11px 13px;text-align:right;font-size:12px;">
+          <b>{_r['today_kwh']:.1f}</b> <span style="font-size:10px;color:#aaa;">kWh</span></td>
+        <td style="padding:11px 13px;text-align:right;font-size:12px;">
+          <b>{_r['total_kwh']:.1f}</b> <span style="font-size:10px;color:#aaa;">MWh</span></td>
+        <td style="padding:11px 13px;text-align:center;">
+          <span style="background:{_sc}20;color:{_sc};border-radius:12px;
+            padding:3px 9px;font-size:10px;font-weight:600;">{_r['Status']}</span>
+        </td>
+      </tr>"""
 
         st.markdown(f"""
 <div style="background:#fff;border-radius:10px;overflow:hidden;
-  border:1px solid #eee;margin-bottom:16px;">
+  border:1px solid #eee;margin-bottom:12px;">
   <table style="width:100%;border-collapse:collapse;">
     <thead>
       <tr style="background:#f9f9f9;border-bottom:1px solid #eee;">
         <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
-          font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Plant Name</th>
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Plant</th>
         <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
-          font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Brand</th>
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Brand</th>
         <th style="padding:10px 13px;text-align:left;font-size:10px;color:#999;
-          font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Location</th>
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Location</th>
         <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
-          font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Live Power</th>
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Live Power</th>
         <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
-          font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Yield Today</th>
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Yield Today</th>
+        <th style="padding:10px 13px;text-align:right;font-size:10px;color:#999;
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total</th>
         <th style="padding:10px 13px;text-align:center;font-size:10px;color:#999;
-          font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Status</th>
+          font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Status</th>
       </tr>
     </thead>
-    <tbody>{_rows_html}</tbody>
+    <tbody>{_rows_html}
+    </tbody>
   </table>
 </div>""", unsafe_allow_html=True)
 
-        # ── Open Dashboard for plant ──────────────────────────
+        # ── Open Dashboard selector ───────────────────────────────
         if not _tbl_rows.empty:
-            _dc1, _dc2, _ = st.columns([3, 2, 4])
-            with _dc1:
-                _sel_pl = st.selectbox("Open plant:", _tbl_rows["plant_name"].tolist(),
-                                       label_visibility="visible", key="dash_sel_plant")
-            with _dc2:
+            _nc1, _nc2, _ = st.columns([3, 2, 4])
+            with _nc1:
+                _sel_pl = st.selectbox(
+                    "Select plant to open:",
+                    _tbl_rows["plant_name"].tolist(),
+                    label_visibility="visible",
+                    key="dash_sel_plant",
+                )
+            with _nc2:
                 st.write("")
-                if st.button("Open Dashboard →", type="primary", key="dash_open_btn"):
+                if st.button("Open Dashboard →", type="primary",
+                             key="dash_open_btn"):
                     st.session_state["_pending_plant"] = _sel_pl
                     st.session_state["_pending_page"]  = "Overview"
                     st.rerun()
 
-        # ── Bottom 3 stat cards ───────────────────────────────
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-        _s1, _s2, _s3 = st.columns(3)
-        _n_fault = sum(1 for r in _tbl_rows.itertuples() if r.Status == "Offline")
-        _fleet_pct = round(100 * _nop / len(_filt), 1) if len(_filt) > 0 else 0
-
-        with _s1:
-            st.markdown(f"""
-<div style="background:#fff;border-radius:10px;padding:16px 20px;
-  border-left:4px solid #22c55e;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-  <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-    letter-spacing:.05em;margin-bottom:8px;">Fleet Health</div>
-  <div style="font-size:32px;font-weight:800;color:#22c55e;">{_fleet_pct}%</div>
-  <div style="font-size:11px;color:#aaa;margin-top:4px;">Systems performing optimally</div>
-</div>""", unsafe_allow_html=True)
-
-        with _s2:
-            st.markdown(f"""
-<div style="background:#fff;border-radius:10px;padding:16px 20px;
-  border-left:4px solid #F5A623;box-shadow:0 1px 4px rgba(0,0,0,.06);">
-  <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-    letter-spacing:.05em;margin-bottom:8px;">Current Output</div>
-  <div style="font-size:32px;font-weight:800;color:#F5A623;">
-    {_tp/1000:.2f}<span style="font-size:16px;font-weight:500;color:#888;margin-left:4px;">MW</span></div>
-  <div style="font-size:11px;color:#aaa;margin-top:4px;">Real-time solar feed active</div>
-</div>""", unsafe_allow_html=True)
-
-        with _s3:
-            _at = st.session_state.get("_fault_count", 0)
-            _c_col = "#E24B4A" if _at > 0 else "#22c55e"
-            st.markdown(f"""
-<div style="background:#fff;border-radius:10px;padding:16px 20px;
-  border-left:4px solid {_c_col};box-shadow:0 1px 4px rgba(0,0,0,.06);">
-  <div style="font-size:10px;color:#999;font-weight:600;text-transform:uppercase;
-    letter-spacing:.05em;margin-bottom:8px;">Active Alarms</div>
-  <div style="font-size:32px;font-weight:800;color:{_c_col};">{_at}</div>
-  <div style="font-size:11px;color:#aaa;margin-top:4px;">
-    {'Urgent attention required' if _at > 0 else 'All systems normal'}</div>
-</div>""", unsafe_allow_html=True)
-
-
 # ══════════════════════════════════════════════════════════════
-#  PAGE 3 — DASHBOARD (per plant, route: ?page=overview)
+#  OVERVIEW
 # ══════════════════════════════════════════════════════════════
 elif page == "Overview":
-    _pmeta     = st.session_state.get("plant_meta", {}).get(
+    import io as _io
+
+    _pmeta  = st.session_state.get("plant_meta", {}).get(
         active_plant if active_plant != "All Plants" else "", {})
-    _cap_str   = _pmeta.get("capacity", "—")
-    _loc_str   = _pmeta.get("location", "—")
-    _brand_str = _pmeta.get("brand",    sel_brands[0] if sel_brands else "—")
+    _cap_str  = _pmeta.get("capacity", "—")
+    _loc_str  = _pmeta.get("location", "—")
+    _brand_str = _pmeta.get("brand", sel_brands[0] if sel_brands else "—")
 
-    # ── Resolve plant_id ─────────────────────────────────────
-    _pid_cache    = st.session_state.get("_plant_id_cache")
-    _plant_recs   = st.session_state.get("_plant_records", {})
-    _chart_pid    = None
-    _chart_brand  = None
-
+    # ── Resolve plant_id + store raw plant records ────────────────
+    _pid_cache     = st.session_state.get("_plant_id_cache")
+    _plant_records = st.session_state.get("_plant_records", {})
+    _chart_pid     = None
+    _chart_brand   = None
     if _pid_cache is None:
-        _pid_cache  = {}
-        _plant_recs = {}
+        _pid_cache = {}
+        _plant_records = {}
         try:
             from utils.solis_api import get_plants as _gsp_k
             for _p in _gsp_k():
-                _pn  = _p.get("stationName", "")
-                _pid = _p.get("id") or _p.get("stationId") or _p.get("sn") or ""
-                _pid_cache[_pn]  = (str(_pid), "Solis")
-                _plant_recs[_pn] = _p
-        except Exception: pass
+                _pn = _p.get("stationName", "")
+                # Prefer 'id'; fall back to 'stationId' or 'sn' if id is empty/null
+                _pid = (_p.get("id") or _p.get("stationId") or
+                        _p.get("plantId") or _p.get("sn") or "")
+                _pid_cache[_pn]     = (str(_pid), "Solis")
+                _plant_records[_pn] = _p   # keep full record for unit-aware KPIs
+        except Exception:
+            pass
         try:
             from utils.growatt_api import _get_plants as _ggp_k
             for _p in _ggp_k():
                 _pn = _p.get("plantNameEncryption") or _p.get("plantName", "")
-                _pid_cache[_pn] = (str(_p.get("pId") or _p.get("plantId", "")), "Growatt")
-        except Exception: pass
+                _pid_cache[_pn] = (
+                    str(_p.get("pId") or _p.get("plantId", "")), "Growatt")
+        except Exception:
+            pass
         st.session_state["_plant_id_cache"] = _pid_cache
-        st.session_state["_plant_records"]   = _plant_recs
-
+        st.session_state["_plant_records"]   = _plant_records
     if active_plant != "All Plants" and active_plant in _pid_cache:
         _chart_pid, _chart_brand = _pid_cache[active_plant]
-    if active_plant != "All Plants" and not df.empty and "plant_id" in df.columns:
-        _df_pl = df[df["plant_name"] == active_plant]
-        if not _df_pl.empty:
-            _pid_df = str(_df_pl.iloc[0].get("plant_id") or "")
-            if _pid_df:
-                _chart_pid   = _pid_df
-                _chart_brand = str(_df_pl.iloc[0].get("brand") or _chart_brand or "Solis")
 
-    # ── KPIs ─────────────────────────────────────────────────
-    total_power = float(df["power_kw"].sum())  if not df.empty else 0.0
+    # Override: use plant_id directly from live df (most reliable — same data as KPIs)
+    if active_plant != "All Plants" and not df.empty and "plant_id" in df.columns:
+        _df_plant = df[df["plant_name"] == active_plant]
+        if not _df_plant.empty:
+            _pid_from_df = str(_df_plant.iloc[0].get("plant_id") or "")
+            if _pid_from_df:
+                _chart_pid   = _pid_from_df
+                _chart_brand = str(_df_plant.iloc[0].get("brand") or _chart_brand or "Solis")
+
+    # ── KPI calculations ──────────────────────────────────────
+    total_power = float(df["power_kw"].sum()) if not df.empty else 0.0
     daily_kwh   = float(df["today_kwh"].sum()) if not df.empty else 0.0
     total_mwh   = float(df["total_kwh"].sum()) if not df.empty else 0.0
-    n_on  = int((df["status"].str.lower() == "online").sum()) if not df.empty else 0
+    n_on  = int((df["status"].str.lower()=="online").sum()) if not df.empty else 0
     n_tot = len(df) if not df.empty else 0
 
     _now_dt      = datetime.now()
     _cur_mon_str = _now_dt.strftime("%Y-%m")
     _cur_yr_str  = str(_now_dt.year)
 
-    # Monthly yield
+    # ── Monthly yield ─────────────────────────────────────────────
+    # Solis: monthEnergy+monthEnergyStr from userStationList is the real-time
+    # running total (same number the Solis app KPI displays).
+    # stationDayEnergyList only contains completed days so it misses today.
     monthly_kwh = 0.0
     if _chart_brand == "Solis" and active_plant != "All Plants":
-        _prec = _plant_recs.get(active_plant, {})
+        _prec = _plant_records.get(active_plant, {})
         if _prec:
             try:
                 from utils.solis_api import _to_kwh as _s2kwh
-                monthly_kwh = _s2kwh(_prec.get("monthEnergy", 0), _prec.get("monthEnergyStr", "kWh"))
-            except Exception: pass
+                monthly_kwh = _s2kwh(
+                    _prec.get("monthEnergy", 0),
+                    _prec.get("monthEnergyStr", "kWh"))
+            except Exception:
+                pass
+
+    if monthly_kwh == 0 and active_plant == "All Plants":
+        # Portfolio total from fetch_summary (handles all-plant unit conversion)
+        try:
+            from utils.solis_api import fetch_summary as _fs
+            _summ = _fs()
+            if _summ.get("monthly_mwh", 0) > 0:
+                monthly_kwh = float(_summ["monthly_mwh"]) * 1000
+                if _summ.get("total_mwh", 0) > 0:
+                    total_mwh = float(_summ["total_mwh"])
+        except Exception:
+            pass
+
     if monthly_kwh == 0 and _chart_brand == "Growatt" and _chart_pid:
+        # Growatt: sum completed days from API
         try:
             from utils.growatt_api import get_plant_daily_history as _gpdh_k
             _api_mon = _gpdh_k(_chart_pid, _cur_mon_str)
             if _api_mon:
                 monthly_kwh = sum(float(r.get("energy_kwh") or 0) for r in _api_mon)
-        except Exception: pass
+        except Exception:
+            pass
+
     if monthly_kwh == 0:
-        # Fallback: DB
-        _mdb = _get_monthly_yield_db(active_plant, _cur_yr_str)
-        _cur_m = [r for r in _mdb if r["month"] == _cur_mon_str]
-        if _cur_m:
-            monthly_kwh = _cur_m[0]["energy_kwh"]
+        # DB fallback (sparse but better than nothing)
+        _hist_mon = get_history(hours=720)
+        if not _hist_mon.empty and "today_kwh" in _hist_mon.columns:
+            _hist_mon["fetched_at"] = pd.to_datetime(_hist_mon["fetched_at"])
+            _hist_mon["today_kwh"]  = pd.to_numeric(_hist_mon["today_kwh"], errors="coerce")
+            if active_plant != "All Plants":
+                _hist_mon = _hist_mon[_hist_mon["plant_name"] == active_plant]
+            elif all_sel_plants:
+                _hist_mon = _hist_mon[_hist_mon["plant_name"].isin(all_sel_plants)]
+            _m = _hist_mon[_hist_mon["fetched_at"].dt.month == _now_dt.month]
+            if not _m.empty:
+                monthly_kwh = float(
+                    _m.groupby([_m["fetched_at"].dt.date, "inverter_sn"])
+                    ["today_kwh"].max().sum())
+
     if monthly_kwh == 0:
         monthly_kwh = daily_kwh
     monthly_mwh = monthly_kwh / 1000
 
-    # Annual yield
+    # ── Annual yield ──────────────────────────────────────────────
+    # Solis: try yearEnergy+yearEnergyStr from userStationList first,
+    # then fall back to summing stationMonthEnergyList (per-month kWh).
     annual_kwh = 0.0
     if _chart_brand == "Solis" and active_plant != "All Plants":
-        _prec = _plant_recs.get(active_plant, {})
+        _prec = _plant_records.get(active_plant, {})
         if _prec and _prec.get("yearEnergy") is not None:
             try:
                 from utils.solis_api import _to_kwh as _s2kwh
-                annual_kwh = _s2kwh(_prec.get("yearEnergy", 0), _prec.get("yearEnergyStr", "kWh"))
-            except Exception: pass
+                annual_kwh = _s2kwh(
+                    _prec.get("yearEnergy", 0),
+                    _prec.get("yearEnergyStr", "kWh"))
+            except Exception:
+                pass
         if annual_kwh == 0 and _chart_pid:
             try:
                 from utils.solis_api import get_plant_monthly_history as _spmhy_k
                 _api_yr = _spmhy_k(_chart_pid, _cur_yr_str)
                 if _api_yr:
                     annual_kwh = sum(float(r.get("energy_kwh") or 0) for r in _api_yr)
-            except Exception: pass
+            except Exception:
+                pass
+
     if annual_kwh == 0 and _chart_brand == "Growatt" and _chart_pid:
         try:
             from utils.growatt_api import get_plant_monthly_history as _gpmhy_k
             _api_yr = _gpmhy_k(_chart_pid, _cur_yr_str)
             if _api_yr:
                 annual_kwh = sum(float(r.get("energy_kwh") or 0) for r in _api_yr)
-        except Exception: pass
+        except Exception:
+            pass
+
     if annual_kwh == 0:
-        _adb = _get_monthly_yield_db(active_plant, _cur_yr_str)
-        if _adb:
-            annual_kwh = sum(r["energy_kwh"] for r in _adb)
+        _hy_k = get_history(hours=8760)
+        if not _hy_k.empty and "today_kwh" in _hy_k.columns:
+            _hy_k["fetched_at"] = pd.to_datetime(_hy_k["fetched_at"])
+            _hy_k["today_kwh"]  = pd.to_numeric(_hy_k["today_kwh"], errors="coerce")
+            if active_plant != "All Plants":
+                _hy_k = _hy_k[_hy_k["plant_name"] == active_plant]
+            _hy_k = _hy_k[_hy_k["fetched_at"].dt.year == _now_dt.year]
+            if not _hy_k.empty:
+                annual_kwh = float(
+                    _hy_k.groupby(
+                        [_hy_k["fetched_at"].dt.date.rename("_d"), "inverter_sn"])
+                    ["today_kwh"].max().sum())
+
     if annual_kwh == 0:
         annual_kwh = monthly_kwh * 12
     annual_mwh = annual_kwh / 1000
 
+    # Environmental benefits (Indian grid: 0.82 kg CO₂/kWh, 0.34 kg coal/kWh)
     _tot_kwh_env = total_mwh * 1000
     _co2_t  = round(_tot_kwh_env * 0.82  / 1000, 2)
     _trees  = round(_co2_t * 1000 / 21.77, 1)
     _coal_t = round(_tot_kwh_env * 0.34  / 1000, 2)
 
     # ── Top bar ───────────────────────────────────────────────
-    _dot = ("🟢" if n_on == n_tot and n_tot > 0 else "🔴" if n_on == 0 else "🟡")
-    _plant_lbl = active_plant if active_plant != "All Plants" else "All Plants"
-
     _th1, _th2, _th3 = st.columns([4, 1, 1])
     with _th1:
+        _dot = ("🟢" if n_on == n_tot and n_tot > 0
+                else "🔴" if n_on == 0 else "🟡")
+        _plant_lbl = active_plant if active_plant != "All Plants" else f"All {', '.join(sel_brands)} Plants"
         st.markdown(f"""
 <div style="padding:2px 0 14px;">
   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -16007,9 +13663,9 @@ elif page == "Overview":
     {_dot}
   </div>
   <div style="font-size:11px;color:#94a3b8;margin-top:3px;">
-    Last update: {datetime.now().strftime('%d/%m/%Y %H:%M')}
-    {f" &nbsp;·&nbsp; Capacity: {_cap_str}" if _cap_str != "—" else ""}
-    {f" &nbsp;·&nbsp; 📍 {_loc_str}"        if _loc_str != "—" else ""}
+    Last Update: {datetime.now().strftime('%d/%m/%Y %H:%M:%S (UTC+05:30)')}
+    {f" &nbsp;·&nbsp; PV Capacity: {_cap_str}" if _cap_str != "—" else ""}
+    {f" &nbsp;·&nbsp; 📍 {_loc_str}" if _loc_str != "—" else ""}
   </div>
 </div>""", unsafe_allow_html=True)
     with _th2:
@@ -16017,16 +13673,22 @@ elif page == "Overview":
             st.session_state["_pending_page"] = "Plants"
             st.rerun()
     with _th3:
-        if st.button("📊 Reports →", use_container_width=True, type="primary"):
-            st.session_state["_pending_page"] = "Reports"
-            st.rerun()
+        if st.button("📥 Export Report", use_container_width=True,
+                     type="primary", key="dash_export_btn"):
+            st.session_state["_export_requested"] = True
+
+    # Placeholder so the download button can appear right here (below header)
+    # even though the Excel is built much later when all KPI vars are ready.
+    _export_dl_placeholder = st.empty()
 
     if df.empty:
-        st.warning("⚠️ No data. Check API credentials."); st.stop()
+        st.warning("⚠️ No data. Check credentials in config.py and click Refresh.")
+        st.stop()
 
-    # ── Alarm banner ──────────────────────────────────────────
+    # ── Alarm banner ─────────────────────────────────────────
     _crit_al = [a for a in alerts if any(k in str(a.get("issue","")).lower()
-                for k in ("fault","offline","error","fail"))]
+                                         for k in ("fault","offline","error","fail"))]
+    _warn_al = [a for a in alerts if a not in _crit_al]
     if not alerts and n_on == n_tot and n_tot > 0:
         _ab_bg  = "linear-gradient(90deg,#059669,#10b981)"
         _ab_txt = f"✅  All Systems Normal — {n_on}/{n_tot} inverters online · No active alarms"
@@ -16037,18 +13699,19 @@ elif page == "Overview":
                    + " | ".join(f"{a['plant_name']}: {a['issue']}" for a in (_crit_al or alerts)[:3]))
     else:
         _ab_bg  = "linear-gradient(90deg,#d97706,#f59e0b)"
-        _ab_txt = (f"⚠️  {len(alerts)} Warning(s) · {n_on}/{n_tot} online — "
-                   + " | ".join(f"{a['plant_name']}: {a['issue']}" for a in alerts[:3]))
-
+        _ab_txt = (f"⚠️  {len(_warn_al)} Warning(s) · {n_on}/{n_tot} online — "
+                   + " | ".join(f"{a['plant_name']}: {a['issue']}" for a in _warn_al[:3]))
     st.markdown(f"""
-<div style="background:{_ab_bg};border-radius:10px;padding:11px 20px;margin-bottom:14px;
-  font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+<div style="background:{_ab_bg};border-radius:10px;padding:11px 20px;
+  margin-bottom:14px;font-size:13px;font-weight:600;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
   {_ab_txt}
 </div>""", unsafe_allow_html=True)
 
-    # ── 3-column layout ───────────────────────────────────────
+    # ── 3-column layout: [gauge+KPIs | charts | right panel] ─
     _lc, _mc, _rc = st.columns([1.3, 2.5, 1.2])
 
+    # ── LEFT: Gauge + 4 KPI rows ──────────────────────────────
     with _lc:
         try:
             _cap_kw = float(
@@ -16056,37 +13719,62 @@ elif page == "Overview":
         except Exception:
             _cap_kw = 0.0
         _gmax = max(_cap_kw, total_power * 1.25, 10.0)
-        _gfig = go.Figure(go.Indicator(
-            mode="gauge+number", value=total_power,
-            number={"suffix": " kW", "font": {"size": 26, "color": "#f59e0b", "family": "Inter"}},
-            gauge={"axis": {"range": [0, _gmax], "nticks": 5},
-                   "bar": {"color": "#f59e0b", "thickness": 0.18},
-                   "bgcolor": "rgba(0,0,0,0)", "borderwidth": 0,
-                   "steps": [
-                       {"range": [0, _gmax*0.33], "color": "#f0fdf4"},
-                       {"range": [_gmax*0.33, _gmax*0.66], "color": "#fef9c3"},
-                       {"range": [_gmax*0.66, _gmax], "color": "#fff7ed"}],
-                   "threshold": {"line": {"color": "#ea580c", "width": 3},
-                                 "thickness": 0.78, "value": total_power}}))
-        _gfig.update_layout(height=210, margin=dict(l=16,r=16,t=20,b=0),
-                            paper_bgcolor="rgba(0,0,0,0)", font_family="Inter")
-        st.plotly_chart(_gfig, use_container_width=True, config={"displayModeBar": False})
 
+        _gfig = go.Figure(go.Indicator(
+            mode="gauge+number",
+            value=total_power,
+            number={"suffix": " kW",
+                    "font":   {"size": 26, "color": "#f59e0b",
+                               "family": "Plus Jakarta Sans"}},
+            gauge={
+                "axis": {"range": [0, _gmax], "tickcolor": "#cbd5e1",
+                         "tickfont": {"size": 9}, "nticks": 5},
+                "bar":  {"color": "#f59e0b", "thickness": 0.18},
+                "bgcolor": "rgba(0,0,0,0)",
+                "borderwidth": 0,
+                "steps": [
+                    {"range": [0,           _gmax*0.33], "color": "#f0fdf4"},
+                    {"range": [_gmax*0.33,  _gmax*0.66], "color": "#fef9c3"},
+                    {"range": [_gmax*0.66,  _gmax],      "color": "#fff7ed"},
+                ],
+                "threshold": {"line":  {"color": "#ea580c", "width": 3},
+                              "thickness": 0.78, "value": total_power},
+            }
+        ))
+        _gfig.update_layout(
+            height=210, margin=dict(l=16, r=16, t=20, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+            font_family="Inter",
+        )
+        if _cap_kw > 0:
+            _gfig.add_annotation(
+                text=f"PV Capacity: {_cap_str}",
+                x=0.5, y=-0.05, showarrow=False,
+                font=dict(size=10, color="#94a3b8", family="Plus Jakarta Sans"),
+                xanchor="center")
+        st.plotly_chart(_gfig, use_container_width=True,
+                        config={"displayModeBar": False})
+
+        # 4 KPI value rows
         for _kl, _kv, _ke, _kc, _kb in [
             ("Daily Yield",
              f"{daily_kwh/1000:.3f} MWh" if daily_kwh >= 1000 else f"{daily_kwh:.1f} kWh",
              earn(daily_kwh), "#f59e0b", "#fffbeb"),
-            ("Monthly Yield", f"{monthly_mwh:.3f} MWh", earn(monthly_kwh), "#ea580c", "#fff7ed"),
-            ("Annual Yield",  f"{annual_mwh:.3f} MWh",  earn(annual_mwh*1000), "#f59e0b", "#fffbeb"),
+            ("Monthly Yield", f"{monthly_mwh:.3f} MWh",
+             earn(monthly_kwh), "#ea580c", "#fff7ed"),
+            ("Annual Yield",  f"{annual_mwh:.3f} MWh",
+             earn(annual_mwh * 1000), "#f59e0b", "#fffbeb"),
             ("Total Yield",
              f"{total_mwh/1000:.3f} GWh" if total_mwh >= 1000 else f"{total_mwh:.3f} MWh",
-             earn(total_mwh*1000), "#3b82f6", "#eff6ff"),
+             earn(total_mwh * 1000), "#3b82f6", "#eff6ff"),
         ]:
             st.markdown(f"""
 <div style="background:{_kb};border-left:3px solid {_kc};border-radius:0 10px 10px 0;
-  padding:9px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;">
+  padding:9px 13px;margin-bottom:7px;display:flex;
+  justify-content:space-between;align-items:center;">
   <div>
-    <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;">{_kl}</div>
+    <div style="font-size:9px;color:#64748b;text-transform:uppercase;
+      letter-spacing:.5px;margin-bottom:2px;">{_kl}</div>
     <div style="font-size:17px;font-weight:800;color:{_kc};line-height:1.1;">{_kv}</div>
   </div>
   <div style="text-align:right;">
@@ -16095,48 +13783,100 @@ elif page == "Overview":
   </div>
 </div>""", unsafe_allow_html=True)
 
+    # ── CENTRE: Operating Data charts ─────────────────────────
     with _mc:
         st.markdown("""
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;">
-  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">Operating Data</div>
-""", unsafe_allow_html=True)
-        _tab_day, _tab_mon, _tab_yr, _tab_life = st.tabs(["Day","Month","Year","Lifetime"])
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+  padding:16px 18px;margin-bottom:0;">
+  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">
+    Operating Data
+  </div>""", unsafe_allow_html=True)
 
-        def _to_chart_df(time_pwr_dict, date_str):
-            rows = []
-            for t, p in sorted(time_pwr_dict.items()):
-                try:
-                    rows.append({"fetched_at": pd.to_datetime(f"{date_str} {t}"),
-                                 "power_kw": float(p or 0)})
-                except Exception: pass
-            return pd.DataFrame(rows) if rows else pd.DataFrame()
+        _tab_day, _tab_mon, _tab_yr, _tab_life = st.tabs(["Day", "Month", "Year", "Lifetime"])
+
+        # _chart_pid / _chart_brand already resolved above the KPI block
 
         with _tab_day:
-            _today   = datetime.now().date()
-            _sel_d   = st.date_input("Date", value=_today, max_value=_today, key="ov_day_date")
-            _ds      = _sel_d.strftime("%Y-%m-%d")
-            _dp      = pd.DataFrame()
-            _pname_q = active_plant if active_plant != "All Plants" else ""
+            # Date picker
+            _today = datetime.now().date()
+            _sel_date = st.date_input(
+                "Select Date", value=_today, max_value=_today,
+                key="chart_day_date"
+            )
+            _dp          = pd.DataFrame()
+            _day_src     = "none"
+            _day_str_api = _sel_date.strftime("%Y-%m-%d")
+            _pname_q     = active_plant if active_plant != "All Plants" else ""
 
-            _ss_day = st.session_state.get("_ss_intraday", {}).get(_ds, {})
-            _ss_pts = dict(_ss_day.get(_pname_q, {})) if _pname_q else {}
-            if not _pname_q:
-                for _pn_s, _ppts in _ss_day.items():
-                    for _t_s, _p_s in _ppts.items():
+            def _to_chart_df(time_pwr_dict, date_str):
+                """Convert {HH:MM: kw} dict → DataFrame with fetched_at + power_kw."""
+                rows = []
+                for t, p in sorted(time_pwr_dict.items()):
+                    try:
+                        rows.append({
+                            "fetched_at": pd.to_datetime(f"{date_str} {t}"),
+                            "power_kw":   float(p or 0),
+                        })
+                    except Exception:
+                        pass
+                return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+            # ── Source 1: session-state (populated on every refresh, instant) ─
+            _ss_day = st.session_state.get("_ss_intraday", {}).get(_day_str_api, {})
+            if _pname_q:
+                _ss_pts = dict(_ss_day.get(_pname_q, {}))
+            else:
+                _ss_pts = {}
+                for _pn_s, _ppts_s in _ss_day.items():
+                    for _t_s, _p_s in _ppts_s.items():
                         _ss_pts[_t_s] = _ss_pts.get(_t_s, 0.0) + _p_s
             if _ss_pts:
-                _dp = _to_chart_df(_ss_pts, _ds)
+                _dp      = _to_chart_df(_ss_pts, _day_str_api)
+                _day_src = "session"
 
+            # ── Source 2: intraday_power DB (populated by 1-min DB saves) ─────
             try:
                 from utils.database import get_intraday as _get_id
-                _id_df = _get_id(_pname_q, _ds) if _pname_q else pd.DataFrame()
+                if _pname_q:
+                    _id_df = _get_id(_pname_q, _day_str_api)
+                else:
+                    from utils.database import _conn as _dbc2
+                    _c2    = _dbc2()
+                    _id_df = pd.read_sql(
+                        "SELECT time_hm, power_kw FROM intraday_power "
+                        "WHERE date=%s ORDER BY time_hm",
+                        _c2, params=(_day_str_api,))
+                    _c2.close()
+                    if not _id_df.empty:
+                        _id_df = _id_df.groupby("time_hm")["power_kw"].sum().reset_index()
+
                 if not _id_df.empty:
+                    # Merge DB into session data — DB may have more points (older entries)
                     _db_pts = dict(zip(_id_df["time_hm"],
-                                       pd.to_numeric(_id_df["power_kw"], errors="coerce").fillna(0)))
-                    _merged = {**_db_pts, **_ss_pts}
+                                       pd.to_numeric(_id_df["power_kw"],
+                                                     errors="coerce").fillna(0)))
+                    _merged = {**_db_pts, **_ss_pts}  # session overrides DB for same time
                     if _merged:
-                        _dp = _to_chart_df(_merged, _ds)
-            except Exception: pass
+                        _dp      = _to_chart_df(_merged, _day_str_api)
+                        _day_src = "db" if not _ss_pts else "session+db"
+            except Exception:
+                pass
+
+            # ── Source 3: inverter_data fallback (same DB, broader table) ─────
+            if _dp.empty:
+                try:
+                    _hd = get_history(hours=168)
+                    if not _hd.empty:
+                        _hd["fetched_at"] = pd.to_datetime(_hd["fetched_at"])
+                        _hd["power_kw"]   = pd.to_numeric(_hd["power_kw"], errors="coerce")
+                        if active_plant != "All Plants":
+                            _hd = _hd[_hd["plant_name"] == active_plant]
+                        _hd = _hd[_hd["fetched_at"].dt.date == _sel_date]
+                        if not _hd.empty:
+                            _dp      = _hd.groupby("fetched_at")["power_kw"].sum().reset_index()
+                            _day_src = "db"
+                except Exception:
+                    pass
 
             _flh = round(daily_kwh / _cap_kw, 2) if _cap_kw > 0 else 0.0
             _ds1, _ds2, _ds3 = st.columns(3)
@@ -16146,221 +13886,416 @@ elif page == "Overview":
             _ds3.metric("Full Load Hours", f"{_flh:.2f} h" if _cap_kw > 0 else "—")
 
             if not _dp.empty:
+                # Fixed full-day range using pd.Timestamp so types match x data
                 import pandas as _pd2
-                _dr_s = _pd2.Timestamp(f"{_ds} 06:00:00")
-                _dr_e = _pd2.Timestamp(f"{_ds} 18:30:00")
-                _dp2  = _dp[(_dp["fetched_at"] >= _dr_s) & (_dp["fetched_at"] <= _dr_e)].copy()
-                if _dp2.empty: _dp2 = _dp
+                _day_range_start = _pd2.Timestamp(f"{_day_str_api} 06:00:00")
+                _day_range_end   = _pd2.Timestamp(f"{_day_str_api} 18:30:00")
+                # Clamp any out-of-range timestamps to keep the axis correct
+                _dp = _dp[(_dp["fetched_at"] >= _day_range_start) &
+                          (_dp["fetched_at"] <= _day_range_end)].copy()
+                if _dp.empty:
+                    # All points were outside 06:00–18:30; still show the chart
+                    _day_range_start = _pd2.Timestamp(f"{_day_str_api} 06:00:00")
+                    _day_range_end   = _pd2.Timestamp(f"{_day_str_api} 18:30:00")
+
                 _fd = go.Figure()
                 _fd.add_trace(go.Scatter(
-                    x=_dp2["fetched_at"], y=_dp2["power_kw"],
+                    x=_dp["fetched_at"], y=_dp["power_kw"],
                     fill="tozeroy", fillcolor="rgba(245,158,11,.15)",
-                    line=dict(color="#f59e0b", width=2.5), mode="lines+markers",
-                    marker=dict(size=5, color="#f59e0b"),
-                    hovertemplate="<b>%{x|%H:%M}</b><br>Power: <b>%{y:.3f} kW</b><extra></extra>"))
-                _fd.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    line=dict(color="#f59e0b", width=2.5),
+                    mode="lines+markers",
+                    marker=dict(size=5, color="#f59e0b",
+                                line=dict(width=1, color="#d97706")),
+                    name="Power",
+                    hovertemplate=(
+                        "<b>%{x|%H:%M}</b><br>"
+                        "Power: <b>%{y:.3f} kW</b>"
+                        "<extra></extra>"
+                    ),
+                ))
+                _fd.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font_family="Inter", font_color="#64748b",
-                    margin=dict(l=0,r=0,t=8,b=50), height=300, showlegend=False,
-                    xaxis=dict(showgrid=False, tickformat="%H:%M", range=[_dr_s, _dr_e],
-                               rangeslider=dict(visible=True, thickness=0.08)),
-                    yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="Power (kW)", zeroline=False))
-                st.plotly_chart(_fd, use_container_width=True, config={"displayModeBar": True})
+                    margin=dict(l=0, r=0, t=8, b=50), height=310,
+                    hovermode="closest", showlegend=False,
+                    xaxis=dict(
+                        showgrid=False, tickformat="%H:%M",
+                        title="Time", zeroline=False,
+                        range=[_day_range_start, _day_range_end],
+                        rangeslider=dict(visible=True, thickness=0.08),
+                        rangeselector=dict(
+                            buttons=[
+                                dict(count=4,  label="4h",       step="hour",
+                                     stepmode="backward"),
+                                dict(count=8,  label="8h",       step="hour",
+                                     stepmode="backward"),
+                                dict(step="all", label="Full Day"),
+                            ],
+                            bgcolor="#f8fafc", activecolor="#f59e0b",
+                            font=dict(size=10),
+                        ),
+                    ),
+                    yaxis=dict(showgrid=True, gridcolor="#f8fafc",
+                               title="Power (kW)", zeroline=False),
+                )
+                st.plotly_chart(_fd, use_container_width=True,
+                                config={"displayModeBar": True, "scrollZoom": True})
+                _nonzero_pts = int((_dp["power_kw"] > 0).sum())
+                _last_saved  = st.session_state.get("_last_db_save_hm", "—")
+                _db_err      = st.session_state.get("_db_save_err", "")
+                _src_lbl     = {
+                    "session":    "📡 Session",
+                    "db":         "💾 DB",
+                    "session+db": "📡 Session + 💾 DB",
+                }.get(_day_src, _day_src)
+                _cap = (f"Source: {_src_lbl} — {len(_dp)} pts "
+                        f"({_nonzero_pts} with power > 0)  |  Last DB save: {_last_saved}")
+                if _db_err:
+                    _cap += f"  |  ⚠️ DB error: {_db_err}"
+                st.caption(_cap)
             else:
-                st.info("No intraday data yet. Builds up automatically every minute.")
+                _db_err = st.session_state.get("_db_save_err", "")
+                st.info(
+                    f"No data yet for {_sel_date.strftime('%d %b %Y')}. "
+                    "Power readings are saved to DB every minute while the app is open — "
+                    "the chart builds up automatically throughout the day."
+                    + (f"\n\n⚠️ DB error: {_db_err}" if _db_err else "")
+                )
 
         with _tab_mon:
-            _now2    = datetime.now()
+            # Month + Year pickers — shows day-by-day breakdown within the month
+            _now = datetime.now()
             _mc1, _mc2 = st.columns(2)
-            _sel_mi  = _mc1.selectbox("Month", list(range(1,13)),
-                           format_func=lambda m: datetime(2000,m,1).strftime("%B"),
-                           index=_now2.month-1, key="ov_mon_month")
-            _sel_my  = _mc2.selectbox("Year", list(range(_now2.year-3, _now2.year+1)),
-                           index=3, key="ov_mon_year")
-            _sel_ms  = f"{_sel_my}-{_sel_mi:02d}"
-            _mon_rows = []
+            _sel_mon_idx = _mc1.selectbox(
+                "Month",
+                options=list(range(1, 13)),
+                format_func=lambda m: datetime(2000, m, 1).strftime("%B"),
+                index=_now.month - 1, key="chart_mon_month"
+            )
+            _sel_mon_yr = _mc2.selectbox(
+                "Year",
+                options=list(range(_now.year - 3, _now.year + 1)),
+                index=3, key="chart_mon_year"
+            )
+            _sel_mon_str = f"{_sel_mon_yr}-{_sel_mon_idx:02d}"
 
+            _mon_rows = []
+            _mon_src  = "api"
+
+            # Primary: API — per-day totals for the month
             if _chart_pid:
                 try:
-                    from utils.solis_api import get_plant_daily_history as _spdh
-                    from utils.growatt_api import get_plant_daily_history as _gpdh
-                    _mon_rows = _spdh(_chart_pid, _sel_ms) if _chart_brand == "Solis" \
-                                else _gpdh(_chart_pid, _sel_ms)
-                except Exception: pass
+                    if _chart_brand == "Solis":
+                        from utils.solis_api import get_plant_daily_history as _spdh
+                        _mon_rows = _spdh(_chart_pid, _sel_mon_str)
+                    else:
+                        from utils.growatt_api import get_plant_daily_history as _gpdh
+                        _mon_rows = _gpdh(_chart_pid, _sel_mon_str)
+                except Exception:
+                    pass
 
+            # Fallback: DB grouped by day
             if not _mon_rows:
-                _mon_rows = _get_daily_yield_db(active_plant, _sel_ms)
+                _mon_src = "db"
+                _hm = get_history(hours=24 * 31 * 3)
+                if not _hm.empty and "today_kwh" in _hm.columns:
+                    _hm["fetched_at"] = pd.to_datetime(_hm["fetched_at"])
+                    _hm["today_kwh"]  = pd.to_numeric(_hm["today_kwh"], errors="coerce")
+                    if active_plant != "All Plants":
+                        _hm = _hm[_hm["plant_name"] == active_plant]
+                    _hm = _hm[(_hm["fetched_at"].dt.year  == _sel_mon_yr) &
+                               (_hm["fetched_at"].dt.month == _sel_mon_idx)]
+                    if not _hm.empty:
+                        _dmdb = (_hm.groupby([_hm["fetched_at"].dt.date, "inverter_sn"])
+                                 ["today_kwh"].max().groupby(level=0).sum().reset_index())
+                        _dmdb.columns = ["date", "energy_kwh"]
+                        _dmdb["date"] = _dmdb["date"].astype(str)
+                        _mon_rows = _dmdb.to_dict("records")
 
             _ms1, _ms2, _ms3 = st.columns(3)
             _ms1.metric("Monthly Yield", f"{monthly_mwh:.3f} MWh")
             _ms2.metric("Monthly Earning", earn(monthly_kwh))
-            _ms3.metric("Days with Data", str(len(_mon_rows)))
+            _mon_days = len(_mon_rows) if _mon_rows else 0
+            _ms3.metric("Days with Data", str(_mon_days))
 
             if _mon_rows:
-                _dm = pd.DataFrame(_mon_rows)
-                _dx = "date" if "date" in _dm.columns else _dm.columns[0]
-                _dm[_dx] = pd.to_datetime(_dm[_dx], errors="coerce")
-                _dm = _dm.dropna(subset=[_dx]).sort_values(_dx)
-                _dm["_day"] = _dm[_dx].dt.day.apply(lambda d: f"{d:02d}")
+                _dm_df = pd.DataFrame(_mon_rows)
+                _dx = "date" if "date" in _dm_df.columns else _dm_df.columns[0]
+                _dm_df[_dx] = pd.to_datetime(_dm_df[_dx], errors="coerce")
+                _dm_df = _dm_df.dropna(subset=[_dx]).sort_values(_dx)
+                # X-axis: day numbers "01", "02" ... matching Solis app style
+                _dm_df["_day"] = _dm_df[_dx].dt.day.apply(lambda d: f"{d:02d}")
                 _fm = go.Figure()
-                _fm.add_trace(go.Bar(x=_dm["_day"], y=_dm["energy_kwh"],
-                    marker_color="rgba(234,88,12,.55)",
-                    hovertemplate="Day %{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
-                _fm.add_trace(go.Scatter(x=_dm["_day"], y=_dm["energy_kwh"],
+                _fm.add_trace(go.Bar(
+                    x=_dm_df["_day"], y=_dm_df["energy_kwh"],
+                    marker_color="rgba(234,88,12,.55)", name="Yield",
+                    marker_cornerradius=2,
+                    hovertemplate="Day %{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
+                ))
+                _fm.add_trace(go.Scatter(
+                    x=_dm_df["_day"], y=_dm_df["energy_kwh"],
                     line=dict(color="#ea580c", width=2), mode="lines+markers",
-                    marker=dict(size=4)))
-                _fm.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    marker=dict(size=4), name="Trend",
+                ))
+                _fm.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font_family="Inter", font_color="#64748b",
-                    margin=dict(l=0,r=0,t=8,b=0), height=260, bargap=0.2,
-                    hovermode="x unified", showlegend=False,
-                    xaxis=dict(showgrid=False, zeroline=False, type="category"),
-                    yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-                st.plotly_chart(_fm, use_container_width=True, config={"displayModeBar": False})
+                    margin=dict(l=0, r=0, t=8, b=0), height=270,
+                    bargap=0.2, hovermode="x unified", showlegend=False,
+                    xaxis=dict(showgrid=False, zeroline=False, type="category",
+                               title="Day of Month"),
+                    yaxis=dict(showgrid=True, gridcolor="#f8fafc",
+                               title="kWh", zeroline=False),
+                )
+                st.plotly_chart(_fm, use_container_width=True,
+                                config={"displayModeBar": False})
+                _mon_tot = float(_dm_df["energy_kwh"].sum())
+                st.caption(
+                    f"Source: {'API' if _mon_src == 'api' else 'Local DB'} — "
+                    f"{_sel_mon_str} total: {_mon_tot:.1f} kWh")
             else:
-                st.info(f"No data for {_sel_ms}.")
+                st.info(f"No data for {_sel_mon_str}. Check API credentials.")
 
         with _tab_yr:
-            _now_yr   = datetime.now().year
-            _sel_yr   = st.selectbox("Year", list(range(_now_yr-3, _now_yr+1)),
-                            index=3, key="ov_yr_year")
-            _yr_str   = str(_sel_yr)
-            _yr_rows  = []
+            # Year picker — shows month-by-month breakdown within the year
+            import calendar as _cal
+            _now_yr = datetime.now().year
+            _sel_yr = st.selectbox(
+                "Year",
+                options=list(range(_now_yr - 3, _now_yr + 1)),
+                index=3, key="chart_yr_year"
+            )
+            _yr_str  = str(_sel_yr)
+            _yr_rows = []
+            _yr_src  = "api"
 
+            # Primary: API — per-month totals for the year
             if _chart_pid:
                 try:
-                    from utils.solis_api import get_plant_monthly_history as _spmhy
-                    from utils.growatt_api import get_plant_monthly_history as _gpmhy
-                    _yr_rows = _spmhy(_chart_pid, _yr_str) if _chart_brand == "Solis" \
-                               else _gpmhy(_chart_pid, _yr_str)
-                except Exception: pass
+                    if _chart_brand == "Solis":
+                        from utils.solis_api import get_plant_monthly_history as _spmhy
+                        _yr_rows = _spmhy(_chart_pid, _yr_str)
+                    else:
+                        from utils.growatt_api import get_plant_monthly_history as _gpmhy
+                        _yr_rows = _gpmhy(_chart_pid, _yr_str)
+                except Exception:
+                    pass
 
+            # Fallback: DB grouped by month
             if not _yr_rows:
-                _yr_rows = _get_monthly_yield_db(active_plant, _yr_str)
-                if _yr_rows:
-                    _yr_rows = [{"month": r["month"], "energy_kwh": r["energy_kwh"]}
-                                for r in _yr_rows]
-
-            # Merge with manually entered data
-            _man_yr = _get_manual_yield(active_plant, "monthly")
-            _man_map = {r["period"]: r["energy_kwh"] for r in _man_yr
-                        if r["period"].startswith(_yr_str)}
-            if _man_map:
-                _existing = {r.get("month",""): True for r in _yr_rows}
-                for _mon_k, _mon_v in _man_map.items():
-                    if _mon_k not in _existing:
-                        _yr_rows.append({"month": _mon_k, "energy_kwh": _mon_v})
-                _yr_rows.sort(key=lambda r: r.get("month",""))
+                _yr_src = "db"
+                _hy = get_history(hours=8760 * 2)
+                if not _hy.empty and "today_kwh" in _hy.columns:
+                    _hy["fetched_at"] = pd.to_datetime(_hy["fetched_at"])
+                    _hy["today_kwh"]  = pd.to_numeric(_hy["today_kwh"], errors="coerce")
+                    if active_plant != "All Plants":
+                        _hy = _hy[_hy["plant_name"] == active_plant]
+                    _hy = _hy[_hy["fetched_at"].dt.year == _sel_yr]
+                    if not _hy.empty:
+                        _ym = (_hy.groupby([_hy["fetched_at"].dt.year.rename("_yr"),
+                                            _hy["fetched_at"].dt.month.rename("_mo"),
+                                            "inverter_sn"])["today_kwh"]
+                               .max().groupby(level=[0, 1]).sum().reset_index())
+                        _ym.columns = ["_yr", "_mo", "energy_kwh"]
+                        _ym["month"] = _ym.apply(
+                            lambda r: f"{int(r['_yr'])}-{int(r['_mo']):02d}", axis=1)
+                        _yr_rows = _ym[["month", "energy_kwh"]].to_dict("records")
 
             _ys1, _ys2, _ys3 = st.columns(3)
             _ys1.metric("Annual Yield", f"{annual_mwh:.3f} MWh")
-            _ys2.metric("Annual Earning", earn(annual_mwh*1000))
+            _ys2.metric("Annual Earning", earn(annual_mwh * 1000))
             _ys3.metric("Months with Data", str(len(_yr_rows)))
 
             if _yr_rows:
-                _yd = pd.DataFrame(_yr_rows)
-                _xc = "month" if "month" in _yd.columns else _yd.columns[0]
-                _yd = _yd.dropna(subset=[_xc]).sort_values(_xc)
-                _yd["energy_kwh"] = pd.to_numeric(_yd["energy_kwh"], errors="coerce").fillna(0)
-                _yd["_lbl"] = _yd[_xc].apply(
-                    lambda m: _calendar.month_abbr[int(str(m).split("-")[1])]
-                    if "-" in str(m) else str(m))
+                _yr_df = pd.DataFrame(_yr_rows)
+                _xc = "month" if "month" in _yr_df.columns else _yr_df.columns[0]
+                _yr_df = _yr_df.dropna(subset=[_xc]).sort_values(_xc)
+                _yr_df["energy_kwh"] = pd.to_numeric(_yr_df["energy_kwh"], errors="coerce").fillna(0)
+                # X-axis: month abbreviations — "2026-01" → "Jan"
+                def _mo_abbr(m):
+                    try: return _cal.month_abbr[int(str(m).split("-")[1])]
+                    except Exception: return str(m)
+                _yr_df["_label"] = _yr_df[_xc].apply(_mo_abbr)
                 _fy = go.Figure()
-                _fy.add_trace(go.Bar(x=_yd["_lbl"], y=_yd["energy_kwh"],
-                    marker_color="rgba(234,88,12,.55)",
-                    hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
-                _fy.add_trace(go.Scatter(x=_yd["_lbl"], y=_yd["energy_kwh"],
+                _fy.add_trace(go.Bar(
+                    x=_yr_df["_label"], y=_yr_df["energy_kwh"],
+                    marker_color="rgba(234,88,12,.55)", name="Yield",
+                    marker_cornerradius=2,
+                    hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
+                ))
+                _fy.add_trace(go.Scatter(
+                    x=_yr_df["_label"], y=_yr_df["energy_kwh"],
                     line=dict(color="#ea580c", width=2), mode="lines+markers",
-                    marker=dict(size=5)))
-                _fy.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    marker=dict(size=5), name="Trend",
+                ))
+                _fy.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font_family="Inter", font_color="#64748b",
-                    margin=dict(l=0,r=0,t=8,b=0), height=260, bargap=0.25,
-                    hovermode="x unified", showlegend=False,
+                    margin=dict(l=0, r=0, t=8, b=0), height=270,
+                    bargap=0.25, hovermode="x unified", showlegend=False,
                     xaxis=dict(showgrid=False, zeroline=False, type="category",
                                categoryorder="array",
-                               categoryarray=[_calendar.month_abbr[i] for i in range(1,13)]),
-                    yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-                st.plotly_chart(_fy, use_container_width=True, config={"displayModeBar": False})
+                               categoryarray=[_cal.month_abbr[i] for i in range(1, 13)]),
+                    yaxis=dict(showgrid=True, gridcolor="#f8fafc",
+                               title="kWh", zeroline=False),
+                )
+                st.plotly_chart(_fy, use_container_width=True,
+                                config={"displayModeBar": False})
+                _yr_tot = float(_yr_df["energy_kwh"].sum())
+                st.caption(
+                    f"Source: {'API' if _yr_src == 'api' else 'Local DB'} — "
+                    f"{_yr_str} total: {_yr_tot/1000:.3f} MWh")
             else:
-                st.info(f"No data for {_yr_str}.")
+                st.info(f"No data for {_yr_str}. Check API credentials.")
 
         with _tab_life:
-            _now_yr2  = datetime.now().year
-            _life_rows = []
+            # Lifetime view — year-by-year totals (all available years)
+            _now_yr2     = datetime.now().year
+            _life_rows   = []
+            _life_src    = "api"
+
+            # Primary: API — sum monthly values for each year
             if _chart_pid:
-                for _y in range(_now_yr2-4, _now_yr2+1):
+                for _y in range(_now_yr2 - 4, _now_yr2 + 1):
                     try:
-                        from utils.solis_api import get_plant_monthly_history as _spmhL
-                        from utils.growatt_api import get_plant_monthly_history as _gpmhL
-                        _mL = _spmhL(_chart_pid, str(_y)) if _chart_brand == "Solis" \
-                              else _gpmhL(_chart_pid, str(_y))
-                        _yt = sum(float(r.get("energy_kwh",0)) for r in (_mL or []))
-                        if _yt > 0:
-                            _life_rows.append({"year": str(_y), "energy_kwh": _yt})
-                    except Exception: pass
+                        if _chart_brand == "Solis":
+                            from utils.solis_api import get_plant_monthly_history as _spmhL
+                            _mL = _spmhL(_chart_pid, str(_y))
+                        else:
+                            from utils.growatt_api import get_plant_monthly_history as _gpmhL
+                            _mL = _gpmhL(_chart_pid, str(_y))
+                        _ytot = sum(float(r.get("energy_kwh", 0)) for r in (_mL or []))
+                        if _ytot > 0:
+                            _life_rows.append({"year": str(_y), "energy_kwh": _ytot})
+                    except Exception:
+                        pass
+
+            # Fallback: DB grouped by year
+            if not _life_rows:
+                _life_src = "db"
+                _hyL = get_history(hours=8760 * 5)
+                if not _hyL.empty and "today_kwh" in _hyL.columns:
+                    _hyL["fetched_at"] = pd.to_datetime(_hyL["fetched_at"])
+                    _hyL["today_kwh"]  = pd.to_numeric(_hyL["today_kwh"], errors="coerce")
+                    if active_plant != "All Plants":
+                        _hyL = _hyL[_hyL["plant_name"] == active_plant]
+                    if not _hyL.empty:
+                        _ydb = (_hyL.groupby([_hyL["fetched_at"].dt.year.rename("_yr"),
+                                              _hyL["fetched_at"].dt.month.rename("_mo"),
+                                              "inverter_sn"])["today_kwh"]
+                                .max().groupby(level=[0, 1]).sum()
+                                .groupby(level=0).sum().reset_index())
+                        _ydb.columns = ["year", "energy_kwh"]
+                        _ydb["year"] = _ydb["year"].astype(str)
+                        _life_rows = _ydb.to_dict("records")
 
             _tl1, _tl2, _tl3 = st.columns(3)
-            _gc = sum(r.get("energy_kwh",0) for r in _life_rows)
-            _tl1.metric("Total Yield",   f"{_gc/1000:.3f} MWh")
-            _tl2.metric("Total Earning", earn(_gc))
+            _grand_kwh = sum(r.get("energy_kwh", 0) for r in _life_rows)
+            _tl1.metric("Total Yield",   f"{_grand_kwh/1000:.3f} MWh")
+            _tl2.metric("Total Earning", earn(_grand_kwh))
             _tl3.metric("Years Active",  str(len(_life_rows)))
 
             if _life_rows:
-                _lf = pd.DataFrame(_life_rows).sort_values("year")
-                _lf["energy_kwh"] = pd.to_numeric(_lf["energy_kwh"], errors="coerce").fillna(0)
+                _lf_df = pd.DataFrame(_life_rows).sort_values("year")
+                _lf_df["energy_kwh"] = pd.to_numeric(_lf_df["energy_kwh"], errors="coerce").fillna(0)
                 _fl = go.Figure()
-                _fl.add_trace(go.Bar(x=_lf["year"], y=_lf["energy_kwh"],
-                    marker_color="rgba(234,88,12,.55)",
-                    text=_lf["energy_kwh"].apply(lambda v: f"{v/1000:.2f} MWh"),
-                    textposition="outside", textfont=dict(size=11, color="#78716c"),
-                    hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
-                _fl.add_trace(go.Scatter(x=_lf["year"], y=_lf["energy_kwh"],
-                    line=dict(color="#f59e0b", width=2), mode="lines+markers", marker=dict(size=6)))
-                _fl.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                _fl.add_trace(go.Bar(
+                    x=_lf_df["year"], y=_lf_df["energy_kwh"],
+                    marker_color="rgba(234,88,12,.55)", name="Yield",
+                    marker_cornerradius=3,
+                    hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>",
+                    text=_lf_df["energy_kwh"].apply(lambda v: f"{v/1000:.2f} MWh"),
+                    textposition="outside",
+                    textfont=dict(size=11, color="#78716c"),
+                ))
+                _fl.add_trace(go.Scatter(
+                    x=_lf_df["year"], y=_lf_df["energy_kwh"],
+                    line=dict(color="#f59e0b", width=2), mode="lines+markers",
+                    marker=dict(size=6), name="Trend",
+                ))
+                _fl.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
                     font_family="Inter", font_color="#64748b",
-                    margin=dict(l=0,r=0,t=30,b=0), height=270, bargap=0.35,
-                    hovermode="x unified", showlegend=False,
-                    xaxis=dict(showgrid=False, zeroline=False, type="category"),
-                    yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-                st.plotly_chart(_fl, use_container_width=True, config={"displayModeBar": False})
+                    margin=dict(l=0, r=0, t=30, b=0), height=280,
+                    bargap=0.35, hovermode="x unified", showlegend=False,
+                    xaxis=dict(showgrid=False, zeroline=False, type="category",
+                               tickfont=dict(size=13, color="#1c1917")),
+                    yaxis=dict(showgrid=True, gridcolor="#f8fafc",
+                               title="kWh", zeroline=False),
+                )
+                st.plotly_chart(_fl, use_container_width=True,
+                                config={"displayModeBar": False})
+                st.caption(
+                    f"Source: {'API' if _life_src == 'api' else 'Local DB'} — "
+                    f"lifetime: {_grand_kwh/1000:.3f} MWh across {len(_lf_df)} yr(s)")
             else:
-                st.info("No lifetime data. Verify API credentials.")
+                st.info("No lifetime data available. Verify API credentials.")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # ── RIGHT: Plant info + Environmental benefits + Inverters ─
     with _rc:
+        # Plant Information
         st.markdown(f"""
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;">
-  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">Plant Information</div>
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+  padding:16px;margin-bottom:10px;">
+  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">
+    Plant Information
+  </div>
   <table style="width:100%;font-size:12px;border-collapse:collapse;line-height:1.8;">
-    <tr><td style="color:#94a3b8;width:45%;">Status</td>
+    <tr>
+      <td style="color:#94a3b8;width:45%;">Status</td>
       <td style="font-weight:600;color:{'#10b981' if n_on > 0 else '#ef4444'};">
-        {'● Online' if n_on > 0 else '● Offline'} ({n_on}/{n_tot})</td></tr>
-    <tr><td style="color:#94a3b8;">Brand</td>
-      <td style="font-weight:600;color:#0f172a;">{_brand_str}</td></tr>
-    <tr><td style="color:#94a3b8;">PV Capacity</td>
-      <td style="font-weight:600;color:#0f172a;">{_cap_str}</td></tr>
-    <tr><td style="color:#94a3b8;">Location</td>
-      <td style="font-weight:600;color:#0f172a;">{_loc_str}</td></tr>
-    <tr><td style="color:#94a3b8;">Tariff</td>
-      <td style="font-weight:600;color:#0f172a;">&#8377;{RATE_PER_KWH}/kWh</td></tr>
+        {'● Online' if n_on > 0 else '● Offline'} ({n_on}/{n_tot})</td>
+    </tr>
+    <tr>
+      <td style="color:#94a3b8;">Plant</td>
+      <td style="font-weight:600;color:#0f172a;">{_plant_lbl}</td>
+    </tr>
+    <tr>
+      <td style="color:#94a3b8;">Brand</td>
+      <td style="font-weight:600;color:#0f172a;">{_brand_str}</td>
+    </tr>
+    <tr>
+      <td style="color:#94a3b8;">PV Capacity</td>
+      <td style="font-weight:600;color:#0f172a;">{_cap_str}</td>
+    </tr>
+    <tr>
+      <td style="color:#94a3b8;">Inverters</td>
+      <td style="font-weight:600;color:#0f172a;">{n_on} on / {n_tot} total</td>
+    </tr>
+    <tr>
+      <td style="color:#94a3b8;">Location</td>
+      <td style="font-weight:600;color:#0f172a;">{_loc_str}</td>
+    </tr>
+    <tr>
+      <td style="color:#94a3b8;">Tariff</td>
+      <td style="font-weight:600;color:#0f172a;">₹{RATE_PER_KWH}/kWh</td>
+    </tr>
   </table>
 </div>""", unsafe_allow_html=True)
 
+        # Environmental Benefits
         st.markdown(f"""
-<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;">
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+  padding:16px;margin-bottom:10px;">
   <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">
-    Environmental Benefits</div>
+    Environmental Benefits
+  </div>
   <div style="display:flex;flex-direction:column;gap:10px;">
     <div style="display:flex;align-items:center;gap:10px;">
       <div style="width:34px;height:34px;background:#f0fdf4;border-radius:8px;
-        display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">🌳</div>
+        display:flex;align-items:center;justify-content:center;
+        font-size:17px;flex-shrink:0;">🌳</div>
       <div>
         <div style="font-size:16px;font-weight:800;color:#10b981;">{_trees:,.1f}</div>
-        <div style="font-size:10px;color:#64748b;">Trees Equivalent</div>
+        <div style="font-size:10px;color:#64748b;">Equivalent Trees Planted</div>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
       <div style="width:34px;height:34px;background:#eff6ff;border-radius:8px;
-        display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">☁️</div>
+        display:flex;align-items:center;justify-content:center;
+        font-size:17px;flex-shrink:0;">☁️</div>
       <div>
         <div style="font-size:16px;font-weight:800;color:#3b82f6;">{_co2_t:,.2f} t</div>
         <div style="font-size:10px;color:#64748b;">CO₂ Reduction</div>
@@ -16368,446 +14303,776 @@ elif page == "Overview":
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
       <div style="width:34px;height:34px;background:#fffbeb;border-radius:8px;
-        display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;">⚡</div>
+        display:flex;align-items:center;justify-content:center;
+        font-size:17px;flex-shrink:0;">⚡</div>
       <div>
         <div style="font-size:16px;font-weight:800;color:#f59e0b;">{_coal_t:,.2f} t</div>
-        <div style="font-size:10px;color:#64748b;">Coal Saved</div>
+        <div style="font-size:10px;color:#64748b;">Standard Coal Saved</div>
       </div>
     </div>
   </div>
 </div>""", unsafe_allow_html=True)
 
+        # Inverter status list
         if not df.empty:
             st.markdown("""
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;">
-  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;">Inverters</div>
-""", unsafe_allow_html=True)
-            for _, _inv in df.head(12).iterrows():
-                _ist = str(_inv.get("status","")).lower()
-                _ic  = ("#10b981" if _ist=="online" else "#ef4444" if _ist=="offline" else "#f59e0b")
+  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;">
+    Inverters
+  </div>""", unsafe_allow_html=True)
+            for _, _inv in df.head(10).iterrows():
+                _ist  = str(_inv.get("status","")).lower()
+                _ic   = ("#10b981" if _ist == "online"
+                         else "#ef4444" if _ist == "offline" else "#f59e0b")
+                _ipwr = float(_inv.get("power_kw", 0) or 0)
+                _isn  = str(_inv.get("inverter_sn","—"))
+                _ipn  = str(_inv.get("plant_name","—"))
                 st.markdown(f"""
 <div style="display:flex;justify-content:space-between;align-items:center;
   padding:6px 0;border-bottom:1px solid #f8fafc;">
   <div>
-    <div style="font-size:11px;font-weight:600;color:#0f172a;">{_inv.get('inverter_sn','—')}</div>
-    <div style="font-size:10px;color:#94a3b8;">{_inv.get('plant_name','—')}</div>
+    <div style="font-size:11px;font-weight:600;color:#0f172a;">{_isn}</div>
+    <div style="font-size:10px;color:#94a3b8;">{_ipn}</div>
   </div>
   <div style="text-align:right;">
-    <div style="font-size:12px;font-weight:700;color:#ea580c;">{float(_inv.get('power_kw',0) or 0):.1f} kW</div>
-    <div style="font-size:10px;font-weight:600;color:{_ic};">● {str(_inv.get('status','—')).capitalize()}</div>
+    <div style="font-size:12px;font-weight:700;color:#ea580c;">{_ipwr:.1f} kW</div>
+    <div style="font-size:10px;font-weight:600;color:{_ic};">
+      {'● ' + str(_inv.get('status','—')).capitalize()}</div>
   </div>
 </div>""", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
+    # ── Excel Export ──────────────────────────────────────────
+    # Build the Excel and fill the placeholder that sits just below the header,
+    # so the user never needs to scroll down to find the download button.
+    if st.session_state.get("_export_requested", False):
+        import io as _io_exp
+        _xbuf = _io_exp.BytesIO()
+        try:
+            with pd.ExcelWriter(_xbuf, engine="openpyxl") as _xw:
+                pd.DataFrame({
+                    "Metric": ["Plant", "Date", "Daily Yield (kWh)", "Monthly Yield (MWh)",
+                               "Annual Yield (MWh)", "Total Yield (MWh)",
+                               "Live Power (kW)", "Total Savings (INR)",
+                               "CO2 Reduction (t)", "Trees Equivalent", "Coal Saved (t)"],
+                    "Value": [_plant_lbl, datetime.now().strftime("%Y-%m-%d"),
+                              round(daily_kwh, 2), round(monthly_mwh, 3),
+                              round(annual_mwh, 3), round(total_mwh, 3),
+                              round(total_power, 2),
+                              round(total_mwh * 1000 * RATE_PER_KWH, 2),
+                              _co2_t, _trees, _coal_t],
+                }).to_excel(_xw, sheet_name="KPI Summary", index=False)
+                df.to_excel(_xw, sheet_name="Inverter Data", index=False)
+                _hexp = get_history(hours=720)
+                if not _hexp.empty:
+                    if active_plant != "All Plants":
+                        _hexp = _hexp[_hexp["plant_name"] == active_plant]
+                    _hexp.to_excel(_xw, sheet_name="History (30d)", index=False)
+            _xbuf.seek(0)
+            _xl_bytes = _xbuf.read()
+            _xl_fname = (f"{_plant_lbl.replace(' ','_')}_report_"
+                         f"{datetime.now().strftime('%Y%m%d')}.xlsx")
+            st.session_state["_export_requested"] = False
+            # Render the download button in the placeholder right below the header
+            with _export_dl_placeholder.container():
+                st.success("✅ Report ready — click to download:")
+                st.download_button(
+                    "📥 Download Excel Report",
+                    data=_xl_bytes,
+                    file_name=_xl_fname,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="export_download_btn",
+                    use_container_width=True,
+                )
+        except Exception as _xe:
+            st.session_state["_export_requested"] = False
+            st.error(f"Export failed: {_xe}")
+
 
 # ══════════════════════════════════════════════════════════════
-#  PAGE 4 — REPORTS & ANALYTICS (route: ?page=reports)
+#  O&M
+# ══════════════════════════════════════════════════════════════
+elif page == "O&M":
+    sub = st.radio("", ["🔔  Alarm Information","⚡  Device Overview"],
+                   horizontal=True, label_visibility="collapsed")
+    sub = sub.split("  ",1)[1].strip()
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+
+    alarm_log = get_alert_log(200)
+    all_alarms = []
+    for a in alerts:
+        all_alarms.append({"device_type":"Inverter","level":"Critical","status":"Active",
+            "plant_name":a.get("plant_name","—"),"sn":a.get("inverter_sn","—"),
+            "content":a.get("issue","—"),"brand":a.get("brand","—"),
+            "time":datetime.now().strftime("%Y-%m-%d %H:%M")})
+    if not alarm_log.empty:
+        for _, r in alarm_log.iterrows():
+            all_alarms.append({"device_type":"Inverter","level":"Warning","status":"Resolved",
+                "plant_name":r.get("plant_name","—"),"sn":r.get("inverter_sn","—"),
+                "content":r.get("issue","—"),"brand":r.get("brand","—"),
+                "time":r.get("alerted_at","—")})
+
+    if sub == "Alarm Information":
+        st.markdown('<div class="page-hdr"><h1>Alarm Information</h1>'
+                    '<p>Fault detection and alert history</p></div>',
+                    unsafe_allow_html=True)
+
+        plant_opts = ["All"] + sorted(df["plant_name"].dropna().unique()) if not df.empty else ["All"]
+        sn_opts    = ["All"] + sorted(df["inverter_sn"].dropna().unique()) if not df.empty else ["All"]
+        brand_opts = ["All"] + sorted(df["brand"].dropna().unique())       if not df.empty else ["All"]
+
+        fc1,fc2,fc3,fc4,fc5 = st.columns(5)
+        with fc1: fp = st.selectbox("Plant Name",  plant_opts)
+        with fc2: fs = st.selectbox("S/N",         sn_opts)
+        with fc3: fb = st.selectbox("Brand",        brand_opts)
+        with fc4: fst= st.selectbox("Status",       ["All","Active","Resolved"])
+        with fc5: fl = st.selectbox("Level",        ["All","Critical","Warning"])
+
+        filt = all_alarms[:]
+        if fp !="All": filt=[a for a in filt if a["plant_name"]==fp]
+        if fs !="All": filt=[a for a in filt if a["sn"]        ==fs]
+        if fb !="All": filt=[a for a in filt if a["brand"]     ==fb]
+        if fst!="All": filt=[a for a in filt if a["status"]    ==fst]
+        if fl !="All": filt=[a for a in filt if a["level"]     ==fl]
+
+        m1,m2,m3 = st.columns(3)
+        m1.metric("Total", len(filt))
+        m2.metric("Active",   sum(1 for a in filt if a["status"]=="Active"))
+        m3.metric("Resolved", sum(1 for a in filt if a["status"]=="Resolved"))
+
+        if not filt:
+            st.success("✅ No alarms — all systems operating normally.")
+        else:
+            st.markdown('<div class="tbl">', unsafe_allow_html=True)
+            st.markdown('<div class="tbl-hdr tbl-alarm">'
+                        '<div>Device</div><div>Level</div><div>Status</div>'
+                        '<div>Plant</div><div>S/N</div><div>Issue</div><div>Time</div>'
+                        '</div>', unsafe_allow_html=True)
+            for a in filt:
+                st.markdown(
+                    f'<div class="tbl-row tbl-alarm">'
+                      f'<div>{a["device_type"]}</div>'
+                      f'<div>{badge(a["level"],"level")}</div>'
+                      f'<div>{badge(a["status"],"status_alarm")}</div>'
+                      f'<div>{chip(a["brand"])} {a["plant_name"]}</div>'
+                      f'<div style="font-size:11px;color:var(--text3);font-family:\'JetBrains Mono\',monospace;">{a["sn"]}</div>'
+                      f'<div>{a["content"]}</div>'
+                      f'<div style="font-size:11px;color:var(--text3);">{a["time"]}</div>'
+                    f'</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    else:
+        st.markdown('<div class="page-hdr"><h1>Device Overview</h1>'
+                    '<p>Live readings for every inverter</p></div>',
+                    unsafe_allow_html=True)
+        if df.empty:
+            st.warning("⚠️ No data."); st.stop()
+
+        fc1,fc2,fc3,fc4 = st.columns(4)
+        with fc1: bf = st.selectbox("Brand",  ["All"]+sorted(df["brand"].dropna().unique()),       key="do_b")
+        with fc2: pf = st.selectbox("Plant",  ["All"]+sorted(df["plant_name"].dropna().unique()),  key="do_p")
+        with fc3: sf = st.selectbox("S/N",    ["All"]+sorted(df["inverter_sn"].dropna().unique()), key="do_s")
+        with fc4: stf= st.selectbox("Status", ["All"]+sorted(df["status"].dropna().unique()),      key="do_st")
+
+        vw = df.copy()
+        if bf !="All": vw=vw[vw["brand"]       ==bf]
+        if pf !="All": vw=vw[vw["plant_name"]  ==pf]
+        if sf !="All": vw=vw[vw["inverter_sn"] ==sf]
+        if stf!="All": vw=vw[vw["status"]      ==stf]
+
+        st.markdown(
+            f'<div class="stat-row">'
+              f'<div class="stat-item"><div class="stat-val">{len(vw)}</div><div class="stat-lbl">Inverters</div></div>'
+              f'<div class="stat-item"><div class="stat-val">{f(vw["power_kw"].sum(),2)} kW</div><div class="stat-lbl">Total Power</div></div>'
+              f'<div class="stat-item"><div class="stat-val">{f(vw["today_kwh"].sum(),1)} kWh</div><div class="stat-lbl">Daily Yield</div></div>'
+              f'<div class="stat-item"><div class="stat-val">{int((vw["status"].str.lower()=="online").sum())}</div><div class="stat-lbl">Online</div></div>'
+            f'</div>', unsafe_allow_html=True)
+
+        alert_sns = {a.get("inverter_sn") for a in alerts}
+        for _, row in vw.iterrows():
+            sn    = str(row.get("inverter_sn","N/A"))
+            brand = str(row.get("brand",""))
+            st_   = str(row.get("status",""))
+            params = [
+                ("Power Now",   f(row.get("power_kw"),2),  "kW"),
+                ("Daily Yield", f(row.get("today_kwh"),1), "kWh"),
+                ("Total Yield", f(row.get("total_kwh"),3), "MWh"),
+                ("Temperature", f(row.get("temperature"),1),"°C"),
+                ("AC Voltage",  f(row.get("voltage"),1),   "V"),
+                ("AC Current",  f(row.get("current_a"),1), "A"),
+            ]
+            p_html = "".join(
+                f'<div><div class="param-label">{l}</div>'
+                f'<div class="param-val">{v}<span class="param-unit"> {u}</span></div></div>'
+                for l,v,u in params)
+            border = "border-left:3px solid var(--red);" if sn in alert_sns else ""
+            st.markdown(
+                f'<div class="inv-card" style="{border}">'
+                  f'<div class="inv-header">'
+                    f'<div><div class="inv-name">{row.get("plant_name","")}</div>'
+                    f'<div class="inv-meta">S/N: {sn} · {chip(brand)} · {row.get("last_update","—")}</div></div>'
+                    + badge(st_) +
+                  f'</div>'
+                  f'<div class="inv-params">{p_html}</div>'
+                f'</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════
+#  REPORT  — pulls historical data from Solis API directly
 # ══════════════════════════════════════════════════════════════
 elif page == "Report":
-    # ── Resolve plant ID for API calls ───────────────────────
-    _pid_cache2   = st.session_state.get("_plant_id_cache", {})
-    _plant_recs2  = st.session_state.get("_plant_records",  {})
-    _chart_pid2   = None
-    _chart_brand2 = None
-    if active_plant != "All Plants" and active_plant in _pid_cache2:
-        _chart_pid2, _chart_brand2 = _pid_cache2[active_plant]
-    if active_plant != "All Plants" and not df.empty and "plant_id" in df.columns:
-        _df_pl2 = df[df["plant_name"] == active_plant]
-        if not _df_pl2.empty:
-            _pid_df2 = str(_df_pl2.iloc[0].get("plant_id") or "")
-            if _pid_df2:
-                _chart_pid2   = _pid_df2
-                _chart_brand2 = str(_df_pl2.iloc[0].get("brand") or _chart_brand2 or "Solis")
+    st.markdown('<div class="page-hdr"><h1>Generation Report</h1>'
+                '<p>Historical yield data across all plants and inverters</p></div>',
+                unsafe_allow_html=True)
 
-    # ── Fault banner ──────────────────────────────────────────
-    _crit_rep = [a for a in alerts if any(k in str(a.get("issue","")).lower()
-                 for k in ("fault","offline","error","fail"))]
-    if _crit_rep:
-        _fault_msg = " | ".join(
-            f"{a.get('plant_name','')}: {a.get('issue','')}" for a in _crit_rep[:2])
-        st.markdown(f"""
-<div class="fault-banner">
-  <div class="fault-dot"></div>
-  <span class="fault-text">🚨 Active fault: {_fault_msg}</span>
-  <a href="?page=alarms" class="fault-link">View alarms →</a>
-</div>""", unsafe_allow_html=True)
+    # HTML fault banner
+    _fc = st.session_state.get("_fault_count", 0)
+    if _fc:
+        st.markdown(
+            f'<div style="background:#FCEBEB;border-left:4px solid #dc2626;border-radius:6px;'
+            f'padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;'
+            f'justify-content:space-between;">'
+            f'<span style="color:#dc2626;font-weight:600;">&#9888; {_fc} active fault'
+            f'{"s" if _fc != 1 else ""} detected</span>'
+            f'<a href="?page=Alarms" target="_self" style="color:#dc2626;font-weight:600;'
+            f'text-decoration:underline;">View alarms &#8594;</a>'
+            f'</div>', unsafe_allow_html=True)
 
-    # ── Toolbar ───────────────────────────────────────────────
-    _now_rep = datetime.now()
-    _rc1, _rc2, _rc3, _rc4, _rc5 = st.columns([3, 1.5, 1.2, 1, 1])
-    with _rc1:
-        _plant_opts2 = all_sel_plants if all_sel_plants else ["All Plants"]
-        _idx2 = _plant_opts2.index(active_plant) if active_plant in _plant_opts2 else 0
-        _sel_pl2 = st.selectbox("Project", _plant_opts2, index=_idx2, key="rep_plant_sel")
-        if _sel_pl2 != active_plant:
-            st.session_state["active_plant"] = _sel_pl2
+    from utils.solis_api import (get_plants as _get_solis_plants,
+                                  get_all_plants_daily, get_all_plants_monthly,
+                                  get_plant_daily_history   as solis_daily,
+                                  get_plant_monthly_history as solis_monthly)
+    from utils.growatt_api import (get_plant_daily_history   as growatt_daily,
+                                   get_plant_monthly_history as growatt_monthly,
+                                   _get_plants               as _get_growatt_plants)
+
+    @st.cache_data(ttl=300)
+    def _plants_cached():
+        plants = []
+        try:
+            for p in _get_solis_plants():
+                plants.append({"name": p.get("stationName"), "id": p.get("id"), "brand": "Solis"})
+        except Exception: pass
+        try:
+            for p in _get_growatt_plants():
+                pid   = str(p.get("pId") or p.get("plantId",""))
+                pname = p.get("plantNameEncryption") or p.get("plantName","")
+                plants.append({"name": pname, "id": pid, "brand": "Growatt"})
+        except Exception: pass
+        return plants
+
+    all_plants   = _plants_cached()
+    plant_id_map = {p["name"]: (p["id"], p["brand"]) for p in all_plants}
+    plant_names  = [p["name"] for p in all_plants if p["name"]]
+
+    def get_daily_history(plant_name, month_str):
+        info = plant_id_map.get(plant_name)
+        if not info: return []
+        pid, brand = info
+        if brand == "Growatt": return growatt_daily(pid, month_str)
+        return solis_daily(pid, month_str)
+
+    def get_monthly_history(plant_name, year_str):
+        info = plant_id_map.get(plant_name)
+        if not info: return []
+        pid, brand = info
+        if brand == "Growatt": return growatt_monthly(pid, year_str)
+        return solis_monthly(pid, year_str)
+
+    # 5-column toolbar: plant | view | date | CSV | Excel(primary)
+    _plant_opts = ["All Plants"] + plant_names
+    _plant_default = _plant_opts.index(active_plant) if active_plant in _plant_opts else 0
+    tb1, tb2, tb3, tb4, tb5 = st.columns([3, 1.5, 1.2, 1, 1])
+    with tb1:
+        sel_plant = st.selectbox("Plant", _plant_opts, index=_plant_default,
+                                 label_visibility="collapsed", key="rpt_plant")
+        if sel_plant != active_plant and sel_plant in plant_names:
+            st.session_state["active_plant"] = sel_plant
             st.rerun()
-    with _rc2:
-        _view_type = st.selectbox("View", ["Daily","Monthly","Annual"], key="rep_view")
-    with _rc3:
-        _rep_date = st.date_input("Period", value=_now_rep.date(), key="rep_date")
-    with _rc4:
-        _export_csv  = st.button("Export CSV",   key="rep_csv_btn")
-    with _rc5:
-        _export_excel = st.button("Export Excel", key="rep_xls_btn", type="primary")
+    with tb2:
+        rtype = st.selectbox("View", ["Daily", "Monthly", "Annual"],
+                             label_visibility="collapsed", key="rpt_view")
+    with tb3:
+        sel_date = st.date_input("Date", value=date.today(),
+                                 label_visibility="collapsed", key="rpt_date")
+    with tb4:
+        export_csv   = st.button("⬇ CSV",   use_container_width=True, key="rep_csv_btn")
+    with tb5:
+        export_excel = st.button("⬇ Excel", use_container_width=True,
+                                 type="primary", key="rep_xls_btn")
 
-    # ── KPI values for reports ────────────────────────────────
-    _r_daily_kwh   = float(df["today_kwh"].sum()) if not df.empty else 0.0
-    _r_total_mwh   = float(df["total_kwh"].sum()) if not df.empty else 0.0
-    _r_mon_str     = _rep_date.strftime("%Y-%m")
-    _r_yr_str      = str(_rep_date.year)
+    st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
 
-    _r_monthly_kwh = 0.0
-    if _chart_brand2 == "Solis" and active_plant != "All Plants":
-        _prec2 = _plant_recs2.get(active_plant, {})
-        if _prec2:
-            try:
-                from utils.solis_api import _to_kwh as _s2kwh2
-                _r_monthly_kwh = _s2kwh2(_prec2.get("monthEnergy",0),
-                                          _prec2.get("monthEnergyStr","kWh"))
-            except Exception: pass
-    if _r_monthly_kwh == 0 and _chart_brand2 == "Growatt" and _chart_pid2:
-        try:
-            from utils.growatt_api import get_plant_daily_history as _gpdh2
-            _m2 = _gpdh2(_chart_pid2, _r_mon_str)
-            if _m2: _r_monthly_kwh = sum(float(r.get("energy_kwh",0)) for r in _m2)
-        except Exception: pass
-    if _r_monthly_kwh == 0:
-        _mdb2 = _get_monthly_yield_db(active_plant, _r_yr_str)
-        _cur2 = [r for r in _mdb2 if r["month"] == _r_mon_str]
-        if _cur2: _r_monthly_kwh = _cur2[0]["energy_kwh"]
-
-    _r_annual_kwh = 0.0
-    if _chart_pid2:
-        try:
-            from utils.solis_api import get_plant_monthly_history as _spmhy2
-            from utils.growatt_api import get_plant_monthly_history as _gpmhy2
-            _yr_api2 = _spmhy2(_chart_pid2, _r_yr_str) if _chart_brand2 == "Solis" \
-                       else _gpmhy2(_chart_pid2, _r_yr_str)
-            if _yr_api2:
-                _r_annual_kwh = sum(float(r.get("energy_kwh",0)) for r in _yr_api2)
-        except Exception: pass
-    if _r_annual_kwh == 0:
-        _adb2 = _get_monthly_yield_db(active_plant, _r_yr_str)
-        if _adb2: _r_annual_kwh = sum(r["energy_kwh"] for r in _adb2)
-
-    # ── 5 KPI cards ───────────────────────────────────────────
-    st.markdown(f"""
-<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">
-  <div class="rep-kpi">
-    <div class="rep-kpi-lbl">Daily Yield</div>
-    <div class="rep-kpi-val">{_r_daily_kwh:,.0f}</div>
-    <div class="rep-kpi-unit">kWh today</div>
-  </div>
-  <div class="rep-kpi">
-    <div class="rep-kpi-lbl">Monthly Yield</div>
-    <div class="rep-kpi-val">{_r_monthly_kwh/1000:.3f}</div>
-    <div class="rep-kpi-unit">MWh — {_r_mon_str}</div>
-  </div>
-  <div class="rep-kpi">
-    <div class="rep-kpi-lbl">Annual Yield</div>
-    <div class="rep-kpi-val">{_r_annual_kwh/1000:.3f}</div>
-    <div class="rep-kpi-unit">MWh — {_r_yr_str}</div>
-  </div>
-  <div class="rep-kpi">
-    <div class="rep-kpi-lbl">Total Lifetime</div>
-    <div class="rep-kpi-val">{_r_total_mwh:.3f}</div>
-    <div class="rep-kpi-unit">MWh all-time</div>
-  </div>
-  <div class="rep-kpi primary">
-    <div class="rep-kpi-lbl">Total Savings</div>
-    <div class="rep-kpi-val">{earn(_r_total_mwh*1000)}</div>
-    <div class="rep-kpi-unit">lifetime</div>
-  </div>
-</div>""", unsafe_allow_html=True)
-
-    # ── Charts (based on view type) ───────────────────────────
-    from utils.solis_api import (get_plant_daily_history   as solis_daily2,
-                                  get_plant_monthly_history as solis_monthly2)
-    from utils.growatt_api import (get_plant_daily_history   as growatt_daily2,
-                                   get_plant_monthly_history as growatt_monthly2)
-
-    def _get_daily_hist(pid, brand, month_str):
-        try:
-            return solis_daily2(pid, month_str) if brand == "Solis" \
-                   else growatt_daily2(pid, month_str)
-        except Exception:
-            return []
-
-    def _get_monthly_hist(pid, brand, year_str):
-        try:
-            return solis_monthly2(pid, year_str) if brand == "Solis" \
-                   else growatt_monthly2(pid, year_str)
-        except Exception:
-            return []
-
-    if _view_type == "Daily":
-        # ── Intraday power chart (full day) ───────────────────
-        _ds3     = _rep_date.strftime("%Y-%m-%d")
-        _dp3     = pd.DataFrame()
-        _pq3     = active_plant if active_plant != "All Plants" else ""
-        _ss_d3   = st.session_state.get("_ss_intraday", {}).get(_ds3, {})
-        _ss_p3   = dict(_ss_d3.get(_pq3, {})) if _pq3 else {}
-        if not _pq3:
-            for _p3n, _p3pts in _ss_d3.items():
-                for _t3, _p3v in _p3pts.items():
-                    _ss_p3[_t3] = _ss_p3.get(_t3, 0.0) + _p3v
-        try:
-            from utils.database import get_intraday as _gi3
-            _id3 = _gi3(_pq3, _ds3) if _pq3 else pd.DataFrame()
-            if not _id3.empty:
-                _db3 = dict(zip(_id3["time_hm"],
-                                pd.to_numeric(_id3["power_kw"], errors="coerce").fillna(0)))
-                _ss_p3 = {**_db3, **_ss_p3}
-        except Exception: pass
-        if _ss_p3:
-            _dp3 = pd.DataFrame([{"fetched_at": pd.to_datetime(f"{_ds3} {t}"),
-                                   "power_kw": float(p)} for t, p in sorted(_ss_p3.items())])
-
-        sec(f"Power output — {_rep_date.strftime('%d %b %Y')} ({active_plant})")
-        if not _dp3.empty:
-            _fd3 = go.Figure()
-            _fd3.add_trace(go.Scatter(
-                x=_dp3["fetched_at"], y=_dp3["power_kw"],
-                fill="tozeroy", fillcolor="rgba(200,90,0,.12)",
-                line=dict(color="#C85A00", width=2.5), mode="lines+markers",
-                marker=dict(size=5, color="#C85A00"),
-                hovertemplate="<b>%{x|%H:%M}</b><br>Power: <b>%{y:.3f} kW</b><extra></extra>"))
-            _fd3.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=8,b=50), height=340, showlegend=False,
-                xaxis=dict(showgrid=False, tickformat="%H:%M",
-                           rangeslider=dict(visible=True, thickness=0.08)),
-                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="Power (kW)", zeroline=False))
-            st.plotly_chart(_fd3, use_container_width=True, config={"displayModeBar": True})
+    # 5 amber-bordered KPI cards
+    _kpi_plant = sel_plant if sel_plant != "All Plants" else None
+    _today_kwh_rpt = sum(
+        r.get("today_kwh", 0) or 0 for r in records
+        if (_kpi_plant is None or r.get("plant_name") == _kpi_plant))
+    _total_kwh_rpt = sum(
+        r.get("total_kwh", 0) or 0 for r in records
+        if (_kpi_plant is None or r.get("plant_name") == _kpi_plant))
+    try:
+        from utils.database import get_daily_yield_month as _gdy_m
+        _mo = sel_date.strftime("%Y-%m")
+        _month_kwh_rpt = 0.0
+        if _kpi_plant:
+            _r = _gdy_m(_kpi_plant, _mo)
+            _month_kwh_rpt = float(_r["energy_kwh"].sum()) if not _r.empty else 0.0
         else:
-            st.info(f"No intraday data for {_rep_date.strftime('%d %b %Y')}. "
-                    "Data builds up automatically every minute while the app is running.")
-
-        # Also show daily totals for the month
-        _mon_rows3 = _get_daily_hist(_chart_pid2, _chart_brand2, _r_mon_str) if _chart_pid2 else []
-        if not _mon_rows3:
-            _mon_rows3 = _get_daily_yield_db(active_plant, _r_mon_str)
-        if _mon_rows3:
-            sec(f"Daily totals — {_rep_date.strftime('%B %Y')}")
-            _dm3 = pd.DataFrame(_mon_rows3)
-            _dx3 = "date" if "date" in _dm3.columns else _dm3.columns[0]
-            _dm3[_dx3] = pd.to_datetime(_dm3[_dx3], errors="coerce")
-            _dm3 = _dm3.dropna(subset=[_dx3]).sort_values(_dx3)
-            _dm3["_day"] = _dm3[_dx3].dt.day.apply(lambda d: f"{d:02d}")
-            _fb3 = go.Figure()
-            _fb3.add_trace(go.Bar(x=_dm3["_day"], y=_dm3["energy_kwh"],
-                marker_color="rgba(200,90,0,.5)",
-                hovertemplate="Day %{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
-            _fb3.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=8,b=0), height=260, bargap=0.25,
-                hovermode="x unified", showlegend=False,
-                xaxis=dict(showgrid=False, zeroline=False, type="category", title="Day"),
-                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-            st.plotly_chart(_fb3, use_container_width=True, config={"displayModeBar": False})
-
-    elif _view_type == "Monthly":
-        # ── Monthly chart: daily bars for selected month ──────
-        _mon_rows4 = _get_daily_hist(_chart_pid2, _chart_brand2, _r_mon_str) if _chart_pid2 else []
-        if not _mon_rows4:
-            _mon_rows4 = _get_daily_yield_db(active_plant, _r_mon_str)
-        # Merge manually entered daily data
-        _man_d4 = _get_manual_yield(active_plant, "monthly")
-        _man_d4_map = {r["period"]: r["energy_kwh"] for r in _man_d4}
-        if _r_mon_str in _man_d4_map and not _mon_rows4:
-            _mon_rows4 = [{"date": f"{_r_mon_str}-01",
-                           "energy_kwh": _man_d4_map[_r_mon_str]}]
-
-        sec(f"Daily generation — {_rep_date.strftime('%B %Y')} ({active_plant})")
-        if _mon_rows4:
-            _dm4 = pd.DataFrame(_mon_rows4)
-            _dx4 = "date" if "date" in _dm4.columns else _dm4.columns[0]
-            _dm4[_dx4] = pd.to_datetime(_dm4[_dx4], errors="coerce")
-            _dm4 = _dm4.dropna(subset=[_dx4]).sort_values(_dx4)
-            _dm4["_day"] = _dm4[_dx4].dt.day.apply(lambda d: f"{d:02d}")
-            _fm4 = go.Figure()
-            _fm4.add_trace(go.Bar(x=_dm4["_day"], y=_dm4["energy_kwh"],
-                marker_color="rgba(200,90,0,.5)",
-                hovertemplate="Day %{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
-            _fm4.add_trace(go.Scatter(x=_dm4["_day"], y=_dm4["energy_kwh"],
-                line=dict(color="#C85A00", width=2), mode="lines+markers",
-                marker=dict(size=4)))
-            _fm4.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=8,b=0), height=320, bargap=0.2,
-                hovermode="x unified", showlegend=False,
-                xaxis=dict(showgrid=False, zeroline=False, type="category", title="Day of Month"),
-                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-            st.plotly_chart(_fm4, use_container_width=True, config={"displayModeBar": False})
-            _mtot4 = float(_dm4["energy_kwh"].sum())
-            _mc41, _mc42, _mc43 = st.columns(3)
-            _mc41.metric("Month Total", f"{_mtot4:.1f} kWh")
-            _mc42.metric("Month Total (MWh)", f"{_mtot4/1000:.3f} MWh")
-            _mc43.metric("Est. Earning", earn(_mtot4))
+            for _pn in plant_names:
+                _r = _gdy_m(_pn, _mo)
+                if not _r.empty:
+                    _month_kwh_rpt += float(_r["energy_kwh"].sum())
+    except Exception:
+        _month_kwh_rpt = 0.0
+    try:
+        from utils.database import get_yearly_yield as _gyy, get_all_yearly_yield as _gayy
+        _yr_str_rpt = str(sel_date.year)
+        if _kpi_plant:
+            _yr_df = _gyy(_kpi_plant)
+            _annual_kwh_rpt = float(_yr_df[_yr_df["year"] == _yr_str_rpt]["energy_kwh"].sum()) if not _yr_df.empty else 0.0
         else:
-            st.info(f"No daily data for {_r_mon_str}. "
-                    "You can add historical data in Settings → Manual Data Entry.")
+            _yr_df = _gayy()
+            _annual_kwh_rpt = float(_yr_df[_yr_df["year"] == _yr_str_rpt]["energy_kwh"].sum()) if not _yr_df.empty else 0.0
+    except Exception:
+        _annual_kwh_rpt = 0.0
 
-        # ── Year-over-year comparison ─────────────────────────
-        sec("Annual comparison (kWh per year)")
-        _prev_yr = _rep_date.year - 1
-        _yoy_data = {}
-        for _yr_c in [_prev_yr, _rep_date.year]:
-            _yr_c_rows = _get_monthly_hist(_chart_pid2, _chart_brand2, str(_yr_c)) \
-                         if _chart_pid2 else []
-            if not _yr_c_rows:
-                _yr_c_rows = _get_monthly_yield_db(active_plant, str(_yr_c))
-            if _yr_c_rows:
-                _yoy_data[str(_yr_c)] = sum(float(r.get("energy_kwh",0)) for r in _yr_c_rows)
+    def _kpi_card(label, value, unit, border_color="#F5A623"):
+        return (
+            f'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;'
+            f'border-top:3px solid {border_color};padding:16px;text-align:center;flex:1;">'
+            f'<div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;'
+            f'letter-spacing:.06em;margin-bottom:6px;">{label}</div>'
+            f'<div style="font-size:22px;font-weight:700;color:#0f172a;">{value}'
+            f'<span style="font-size:12px;color:#64748b;margin-left:4px;">{unit}</span></div>'
+            f'</div>'
+        )
 
-        if _yoy_data:
-            _yy_fig = go.Figure()
-            _yy_colors = ["#F5A623","#C85A00","#1A6FA8"]
-            for _i_yy, (_yr_yy, _kwh_yy) in enumerate(_yoy_data.items()):
-                _yy_fig.add_trace(go.Bar(
-                    x=[_yr_yy], y=[_kwh_yy],
-                    marker_color=_yy_colors[_i_yy % len(_yy_colors)],
-                    name=_yr_yy,
-                    text=[f"{_kwh_yy/1000:.2f} MWh"],
-                    textposition="outside"))
-            _yy_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=8,b=0), height=280, bargap=0.4,
-                showlegend=True,
-                xaxis=dict(showgrid=False, zeroline=False, type="category"),
-                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-            st.plotly_chart(_yy_fig, use_container_width=True, config={"displayModeBar": False})
+    st.markdown(
+        '<div style="display:flex;gap:12px;margin-bottom:16px;">'
+        + _kpi_card("Daily Yield",     f"{_today_kwh_rpt:.1f}",       "kWh")
+        + _kpi_card("Monthly Yield",   f"{_month_kwh_rpt:.1f}",       "kWh")
+        + _kpi_card("Annual Yield",    f"{_annual_kwh_rpt/1000:.2f}", "MWh")
+        + _kpi_card("Total Lifetime",  f"{_total_kwh_rpt/1000:.2f}", "MWh")
+        + _kpi_card("Total Savings",   earn(_today_kwh_rpt),          "",   "#C85A00")
+        + '</div>',
+        unsafe_allow_html=True)
 
-    else:  # Annual
-        # ── Annual chart: monthly bars for selected year ──────
-        _yr_rows4 = _get_monthly_hist(_chart_pid2, _chart_brand2, _r_yr_str) \
-                    if _chart_pid2 else []
-        if not _yr_rows4:
-            _yr_rows4 = _get_monthly_yield_db(active_plant, _r_yr_str)
-        # Merge manually entered monthly data
-        _man_a4 = _get_manual_yield(active_plant, "monthly")
-        _man_a4_map = {r["period"]: r["energy_kwh"] for r in _man_a4
-                       if r["period"].startswith(_r_yr_str)}
-        if _man_a4_map:
-            _existing4 = {r.get("month",""): True for r in _yr_rows4}
-            for _mon_k4, _mon_v4 in _man_a4_map.items():
-                if _mon_k4 not in _existing4:
-                    _yr_rows4.append({"month": _mon_k4, "energy_kwh": _mon_v4})
-            _yr_rows4.sort(key=lambda r: r.get("month",""))
+    def line_chart(fig, h=360):
+        fig = chart_style(fig, h)
+        fig.update_traces(selector=dict(type="scatter"), line=dict(width=2.5))
+        fig.update_layout(hovermode="x unified")
+        return fig
 
-        sec(f"Monthly generation — {_r_yr_str} ({active_plant})")
-        if _yr_rows4:
-            _yd4 = pd.DataFrame(_yr_rows4)
-            _xc4 = "month" if "month" in _yd4.columns else _yd4.columns[0]
-            _yd4 = _yd4.dropna(subset=[_xc4]).sort_values(_xc4)
-            _yd4["energy_kwh"] = pd.to_numeric(_yd4["energy_kwh"], errors="coerce").fillna(0)
-            _yd4["_lbl"] = _yd4[_xc4].apply(
-                lambda m: _calendar.month_abbr[int(str(m).split("-")[1])]
-                if "-" in str(m) else str(m))
-            _fy4 = go.Figure()
-            _fy4.add_trace(go.Bar(x=_yd4["_lbl"], y=_yd4["energy_kwh"],
-                marker_color="rgba(200,90,0,.5)",
-                hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
-            _fy4.add_trace(go.Scatter(x=_yd4["_lbl"], y=_yd4["energy_kwh"],
-                line=dict(color="#C85A00", width=2), mode="lines+markers",
-                marker=dict(size=5)))
-            _fy4.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=8,b=0), height=320, bargap=0.25,
-                hovermode="x unified", showlegend=False,
-                xaxis=dict(showgrid=False, zeroline=False, type="category",
-                           categoryorder="array",
-                           categoryarray=[_calendar.month_abbr[i] for i in range(1,13)]),
-                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-            st.plotly_chart(_fy4, use_container_width=True, config={"displayModeBar": False})
-            _ytot4 = float(_yd4["energy_kwh"].sum())
-            _yc1, _yc2, _yc3 = st.columns(3)
-            _yc1.metric("Year Total", f"{_ytot4:.1f} kWh")
-            _yc2.metric("Year Total (MWh)", f"{_ytot4/1000:.3f} MWh")
-            _yc3.metric("Est. Annual Earning", earn(_ytot4))
+    def _to_csv(df_exp):
+        return df_exp.to_csv(index=False).encode("utf-8")
+
+    def _to_excel(kpi_df, inv_df):
+        import io
+        buf = io.BytesIO()
+        with pd.ExcelWriter(buf, engine="openpyxl") as w:
+            kpi_df.to_excel(w, index=False, sheet_name="KPI Summary")
+            inv_df.to_excel(w, index=False, sheet_name="Inverter Data")
+        return buf.getvalue()
+
+    _export_df = pd.DataFrame()
+    _kpi_summary = pd.DataFrame([
+        {"Metric": "Daily Yield (kWh)",     "Value": round(_today_kwh_rpt, 2)},
+        {"Metric": "Monthly Yield (kWh)",   "Value": round(_month_kwh_rpt, 2)},
+        {"Metric": "Annual Yield (MWh)",    "Value": round(_annual_kwh_rpt / 1000, 3)},
+        {"Metric": "Total Lifetime (MWh)", "Value": round(_total_kwh_rpt / 1000, 3)},
+        {"Metric": "Total Savings (INR)",  "Value": earn(_today_kwh_rpt)},
+    ])
+
+    # ── DAILY ─────────────────────────────────────────────────────────────────
+    if rtype == "Daily":
+        sel_brand_for_report = "Solis"
+        if sel_plant != "All Plants":
+            info = plant_id_map.get(sel_plant)
+            if info: sel_brand_for_report = info[1]
+
+        if sel_brand_for_report == "Growatt" and sel_plant != "All Plants":
+            month_str_d = sel_date.strftime("%Y-%m")
+            with st.spinner("Fetching daily data from Growatt…"):
+                rows = get_daily_history(sel_plant, month_str_d)
+
+            if not rows:
+                st.info(f"No data returned from Growatt for {sel_date.strftime('%B %Y')}.")
+            else:
+                day_rows = [r for r in rows if r.get("date","").startswith(str(sel_date))]
+                if not day_rows:
+                    day_rows = rows
+                    st.info(f"Showing full month data — no hourly breakdown available for {sel_date}.")
+
+                daily_df = pd.DataFrame(day_rows)
+                daily_df["date"] = pd.to_datetime(daily_df["date"], errors="coerce")
+                daily_df = daily_df.dropna(subset=["date"]).sort_values("date")
+                _export_df = daily_df.copy()
+
+                sec(f"Daily Generation — {sel_plant} ({sel_date.strftime('%B %Y')})")
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=daily_df["date"], y=daily_df["energy_kwh"],
+                    name="Yield (kWh)", marker_color="rgba(16,185,129,.25)",
+                    marker_line_width=0,
+                ))
+                fig.add_trace(go.Scatter(
+                    x=daily_df["date"], y=daily_df["energy_kwh"],
+                    name="Yield", mode="lines+markers",
+                    line=dict(color="#10b981", width=2.5),
+                    marker=dict(size=6, color="#10b981"),
+                ))
+                fig.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font_family="Inter", font_color="#64748b",
+                    margin=dict(l=0,r=0,t=16,b=0), height=360,
+                    hovermode="x unified", bargap=0.25,
+                    legend=dict(bgcolor="rgba(0,0,0,0)"),
+                    yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
+                )
+                fig.update_xaxes(showgrid=False, zeroline=False, tickformat="%d %b")
+                st.plotly_chart(fig, use_container_width=True)
+
+                tot = daily_df["energy_kwh"].sum()
+                c1,c2 = st.columns(2)
+                c1.metric("Month Total", f"{tot:.1f} kWh")
+                c2.metric("Estimated Earning", earn(tot))
+
         else:
-            st.info(f"No monthly data for {_r_yr_str}. "
-                    "Add historical data in Settings → Manual Data Entry.")
+            hist_df = get_history(hours=24*365*2)
+            if hist_df.empty:
+                st.info("📭 No intraday data yet — the app collects readings every 5 min. "
+                        "Come back after the app has been running for a while.")
+            else:
+                hist_df["fetched_at"] = pd.to_datetime(hist_df["fetched_at"])
+                hist_df["power_kw"]   = pd.to_numeric(hist_df["power_kw"],  errors="coerce")
+                hist_df["today_kwh"]  = pd.to_numeric(hist_df["today_kwh"], errors="coerce")
+                if sel_plant != "All Plants":
+                    hist_df = hist_df[hist_df["plant_name"] == sel_plant]
 
-        # ── All years comparison ──────────────────────────────
-        sec("Year-over-year comparison")
-        _lyrs = []
-        if _chart_pid2:
-            for _yr_i in range(_rep_date.year - 4, _rep_date.year + 1):
-                _mr = _get_monthly_hist(_chart_pid2, _chart_brand2, str(_yr_i)) if _chart_pid2 else []
-                _yt = sum(float(r.get("energy_kwh",0)) for r in (_mr or []))
-                if _yt > 0:
-                    _lyrs.append({"year": str(_yr_i), "energy_kwh": _yt})
-        if not _lyrs:
-            for _yr_i in range(_rep_date.year - 4, _rep_date.year + 1):
-                _mdb_i = _get_monthly_yield_db(active_plant, str(_yr_i))
-                _yt_i  = sum(r["energy_kwh"] for r in _mdb_i)
-                if _yt_i > 0:
-                    _lyrs.append({"year": str(_yr_i), "energy_kwh": _yt_i})
-        if _lyrs:
-            _lf4 = pd.DataFrame(_lyrs).sort_values("year")
-            _lf4_fig = go.Figure()
-            _lf4_fig.add_trace(go.Bar(x=_lf4["year"], y=_lf4["energy_kwh"],
-                marker_color="rgba(245,166,35,.6)",
-                text=_lf4["energy_kwh"].apply(lambda v: f"{v/1000:.2f} MWh"),
-                textposition="outside", textfont=dict(size=11, color="#78716c"),
-                hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
-            _lf4_fig.update_layout(plot_bgcolor="#fff", paper_bgcolor="#fff",
+                day = hist_df[hist_df["fetched_at"].dt.date == sel_date].sort_values("fetched_at")
+                if day.empty:
+                    st.info(f"No intraday data for {sel_date}. "
+                            f"Try today's date — data builds up every 5 minutes the app is running.")
+                else:
+                    _export_df = day.copy()
+                    sec("Power Output Throughout the Day (kW)")
+                    fig = px.line(day, x="fetched_at", y="power_kw", color="inverter_sn",
+                                  color_discrete_sequence=PALETTE,
+                                  labels={"fetched_at":"Time","power_kw":"Power (kW)",
+                                          "inverter_sn":"Inverter"})
+                    st.plotly_chart(line_chart(fig, 360), use_container_width=True)
+
+                    sec("Daily Yield per Inverter")
+                    sm = (day.groupby(["plant_name","inverter_sn","brand"])
+                          .agg(Peak_kW=("power_kw","max"), Daily_kWh=("today_kwh","max"))
+                          .reset_index()
+                          .rename(columns={"plant_name":"Plant","inverter_sn":"S/N","brand":"Brand"}))
+                    fig2 = go.Figure()
+                    fig2.add_trace(go.Bar(
+                        x=sm["S/N"], y=sm["Daily_kWh"],
+                        name="Daily Yield (kWh)", marker_color="rgba(16,185,129,.3)",
+                        marker_line_width=0,
+                    ))
+                    fig2.update_layout(
+                        plot_bgcolor="#fff", paper_bgcolor="#fff",
+                        font_family="Inter", font_color="#64748b",
+                        margin=dict(l=0,r=0,t=16,b=0), height=280,
+                        bargap=0.3, showlegend=False,
+                        yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
+                    )
+                    fig2.update_xaxes(showgrid=False, zeroline=False)
+                    st.plotly_chart(fig2, use_container_width=True)
+
+    # ── MONTHLY ───────────────────────────────────────────────────────────────
+    elif rtype == "Monthly":
+        month_str = sel_date.strftime("%Y-%m")
+
+        with st.spinner(f"Fetching daily data for {sel_date.strftime('%B %Y')}…"):
+            if sel_plant == "All Plants":
+                api_df = get_all_plants_daily(month_str)
+                if not api_df.empty:
+                    daily = (api_df.groupby("date")["energy_kwh"]
+                             .sum().reset_index())
+                    daily.columns = ["Date","Daily Yield (kWh)"]
+                    income_df = api_df.groupby("date")["income"].sum().reset_index()
+                    income_df.columns = ["Date","Income (INR)"]
+                    daily = daily.merge(income_df, on="Date", how="left")
+                else:
+                    daily = pd.DataFrame()
+                api_df_py = get_all_plants_daily(f"{sel_date.year-1}-{sel_date.month:02d}")
+                if not api_df_py.empty:
+                    daily_py = api_df_py.groupby("date")["energy_kwh"].sum().reset_index()
+                    daily_py.columns = ["Date","Daily Yield (kWh)"]
+                else:
+                    daily_py = pd.DataFrame()
+            else:
+                rows = get_daily_history(sel_plant, month_str)
+                if rows:
+                    daily = pd.DataFrame(rows).rename(columns={
+                        "date":"Date","energy_kwh":"Daily Yield (kWh)","income":"Income (INR)"})
+                    daily["Date"] = pd.to_datetime(daily["Date"], errors="coerce")
+                else:
+                    daily = pd.DataFrame()
+                rows_py = get_daily_history(sel_plant, f"{sel_date.year-1}-{sel_date.month:02d}")
+                if rows_py:
+                    daily_py = pd.DataFrame(rows_py).rename(columns={
+                        "date":"Date","energy_kwh":"Daily Yield (kWh)"})
+                    daily_py["Date"] = pd.to_datetime(daily_py["Date"], errors="coerce")
+                else:
+                    daily_py = pd.DataFrame()
+
+        if daily.empty or "Daily Yield (kWh)" not in daily.columns:
+            st.info(f"No data from Solis API for {sel_date.strftime('%B %Y')}.")
+        else:
+            daily = daily.dropna(subset=["Date"]).sort_values("Date")
+            _export_df = daily.copy()
+
+            sec(f"Daily Generation — {sel_date.strftime('%B %Y')}")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=daily["Date"], y=daily["Daily Yield (kWh)"],
+                name="Yield (kWh)", marker_color="rgba(234,88,12,.25)",
+                marker_line_width=0,
+            ))
+            fig.add_trace(go.Scatter(
+                x=daily["Date"], y=daily["Daily Yield (kWh)"],
+                name="Trend", mode="lines+markers",
+                line=dict(color="#ea580c", width=2.5),
+                marker=dict(size=5, color="#ea580c"),
+            ))
+            if "Income (INR)" in daily.columns:
+                fig.add_trace(go.Scatter(
+                    x=daily["Date"], y=daily["Income (INR)"],
+                    name="Revenue (INR)", mode="lines+markers",
+                    line=dict(color="#f59e0b", width=2, dash="dot"),
+                    marker=dict(size=5, color="#f59e0b"),
+                    yaxis="y2",
+                ))
+            fig.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
                 font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=30,b=0), height=280, bargap=0.4,
-                showlegend=False,
-                xaxis=dict(showgrid=False, zeroline=False, type="category"),
-                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
-            st.plotly_chart(_lf4_fig, use_container_width=True, config={"displayModeBar": False})
+                margin=dict(l=0,r=60,t=16,b=0), height=380,
+                hovermode="x unified", bargap=0.25,
+                legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
+                            yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+                yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9",
+                           zeroline=False, tickfont_size=11),
+                yaxis2=dict(title="INR", overlaying="y", side="right",
+                            showgrid=False, zeroline=False, tickfont_size=11),
+            )
+            fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11,
+                             tickformat="%d", dtick="D1")
+            st.plotly_chart(fig, use_container_width=True)
 
-    # ── Export handlers ───────────────────────────────────────
-    if _export_csv or _export_excel:
-        _exp_df = df.copy() if not df.empty else pd.DataFrame()
-        _kpi_df = pd.DataFrame({
-            "Metric": ["Plant","Date","Daily Yield (kWh)","Monthly Yield (kWh)",
-                       "Annual Yield (kWh)","Total Yield (MWh)","Total Savings (INR)"],
-            "Value":  [active_plant, _rep_date.strftime("%Y-%m-%d"),
-                       round(_r_daily_kwh,2), round(_r_monthly_kwh,2),
-                       round(_r_annual_kwh,2), round(_r_total_mwh,3),
-                       round(_r_total_mwh*1000*RATE_PER_KWH,2)]})
+            # YoY comparison
+            if not daily_py.empty and "Daily Yield (kWh)" in daily_py.columns:
+                daily_py = daily_py.dropna(subset=["Date"]).sort_values("Date")
+                sec(f"Year-on-Year — {sel_date.strftime('%B')} {sel_date.year} vs {sel_date.year-1}")
+                fig_yoy = go.Figure()
+                fig_yoy.add_trace(go.Bar(
+                    x=daily["Date"].dt.day, y=daily["Daily Yield (kWh)"],
+                    name=str(sel_date.year), marker_color="rgba(234,88,12,.5)",
+                    marker_line_width=0,
+                ))
+                fig_yoy.add_trace(go.Bar(
+                    x=daily_py["Date"].dt.day, y=daily_py["Daily Yield (kWh)"],
+                    name=str(sel_date.year-1), marker_color="rgba(100,116,139,.4)",
+                    marker_line_width=0,
+                ))
+                fig_yoy.update_layout(
+                    plot_bgcolor="#fff", paper_bgcolor="#fff",
+                    font_family="Inter", font_color="#64748b",
+                    margin=dict(l=0,r=0,t=16,b=0), height=300,
+                    hovermode="x unified", bargap=0.2, barmode="group",
+                    legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
+                                yanchor="bottom", y=-0.28, xanchor="center", x=0.5),
+                    yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
+                )
+                fig_yoy.update_xaxes(showgrid=False, title="Day of month")
+                st.plotly_chart(fig_yoy, use_container_width=True)
 
-        if _export_csv:
-            _csv_buf = _io.StringIO()
-            _kpi_df.to_csv(_csv_buf, index=False)
-            st.download_button("📥 Download CSV", data=_csv_buf.getvalue(),
-                file_name=f"{active_plant.replace(' ','_')}_{_rep_date}.csv",
-                mime="text/csv", key="rep_csv_dl")
+            tot = daily["Daily Yield (kWh)"].sum()
+            m1,m2,m3 = st.columns(3)
+            m1.metric("Month Total", f"{tot:.1f} kWh")
+            m2.metric("Month Total (MWh)", f"{tot/1000:.3f} MWh")
+            m3.metric("Estimated Earning", earn(tot))
 
-        if _export_excel:
-            _xl_buf = _io.BytesIO()
-            try:
-                with pd.ExcelWriter(_xl_buf, engine="openpyxl") as _xw:
-                    _kpi_df.to_excel(_xw, sheet_name="KPI Summary", index=False)
-                    if not _exp_df.empty:
-                        _exp_df.to_excel(_xw, sheet_name="Inverter Data", index=False)
-                _xl_buf.seek(0)
-                st.download_button("📥 Download Excel",
-                    data=_xl_buf.read(),
-                    file_name=f"{active_plant.replace(' ','_')}_{_rep_date}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="rep_xl_dl")
-            except Exception as _xe:
-                st.error(f"Excel export failed: {_xe}")
+    # ── ANNUAL ────────────────────────────────────────────────────────────────
+    elif rtype == "Annual":
+        year_str = str(sel_date.year)
+
+        with st.spinner(f"Fetching monthly data for {year_str}…"):
+            if sel_plant == "All Plants":
+                api_df = get_all_plants_monthly(year_str)
+                if not api_df.empty:
+                    monthly = (api_df.groupby("month")["energy_kwh"]
+                               .sum().reset_index())
+                    monthly.columns = ["Month","kWh"]
+                else:
+                    monthly = pd.DataFrame()
+            else:
+                rows = get_monthly_history(sel_plant, year_str)
+                if rows:
+                    monthly = pd.DataFrame(rows).rename(columns={"month":"Month","energy_kwh":"kWh"})
+                else:
+                    monthly = pd.DataFrame()
+
+        if monthly.empty or "kWh" not in monthly.columns:
+            st.info(f"No data from Solis API for {year_str}.")
+        else:
+            monthly = monthly[monthly["kWh"] > 0]
+            _export_df = monthly.copy()
+
+            sec(f"Monthly Generation — {year_str}")
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=monthly["Month"], y=monthly["kWh"],
+                name="Yield (kWh)", marker_color="rgba(245,158,11,.3)",
+                marker_line_width=0,
+            ))
+            fig.add_trace(go.Scatter(
+                x=monthly["Month"], y=monthly["kWh"],
+                name="Trend", mode="lines+markers",
+                line=dict(color="#f59e0b", width=2.5),
+                marker=dict(size=7, color="#f59e0b"),
+            ))
+            fig.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                font_family="Inter", font_color="#64748b",
+                margin=dict(l=0,r=0,t=16,b=0), height=360,
+                hovermode="x unified", bargap=0.3,
+                legend=dict(bgcolor="rgba(0,0,0,0)"),
+                yaxis=dict(showgrid=True, gridcolor="#f1f5f9",
+                           zeroline=False, tickfont_size=11),
+            )
+            fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # 5-year multi-year comparison
+            sec("5-Year Generation Comparison")
+            _cur_year = sel_date.year
+            _years_to_show = [str(_cur_year - i) for i in range(4, -1, -1)]
+            _multiyear_data = []
+            for _yr in _years_to_show:
+                if sel_plant == "All Plants":
+                    _mdf = get_all_plants_monthly(_yr)
+                    _kwh = float(_mdf["energy_kwh"].sum()) if not _mdf.empty else 0.0
+                else:
+                    _mrows = get_monthly_history(sel_plant, _yr)
+                    _kwh = sum(r.get("energy_kwh", 0) or 0 for r in _mrows)
+                _multiyear_data.append({"Year": _yr, "kWh": _kwh})
+            _my_df = pd.DataFrame(_multiyear_data)
+            fig_my = go.Figure()
+            fig_my.add_trace(go.Bar(
+                x=_my_df["Year"], y=_my_df["kWh"],
+                marker_color=[PALETTE[i % len(PALETTE)] for i in range(len(_my_df))],
+                marker_line_width=0, name="Annual Yield",
+            ))
+            fig_my.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                font_family="Inter", font_color="#64748b",
+                margin=dict(l=0,r=0,t=16,b=0), height=300,
+                showlegend=False, bargap=0.35,
+                yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
+            )
+            fig_my.update_xaxes(showgrid=False, zeroline=False)
+            st.plotly_chart(fig_my, use_container_width=True)
+
+            tot_yr = monthly["kWh"].sum()
+            m1,m2,m3 = st.columns(3)
+            m1.metric("Year Total", f"{tot_yr:.1f} kWh")
+            m2.metric("Year Total (MWh)", f"{tot_yr/1000:.3f} MWh")
+            m3.metric("Est. Annual Earning", earn(tot_yr))
+
+    # ── CSV / Excel export ────────────────────────────────────────────────────
+    _inv_export = df.copy() if not df.empty else pd.DataFrame()
+    if _kpi_plant and not _inv_export.empty:
+        _inv_export = _inv_export[_inv_export["plant_name"] == _kpi_plant]
+
+    if export_csv and not _export_df.empty:
+        st.download_button(
+            "Download CSV", _to_csv(_export_df),
+            file_name=f"solar_report_{rtype.lower()}_{sel_date}.csv",
+            mime="text/csv", key="dl_csv")
+    if export_excel:
+        _xl_inv = _inv_export if not _inv_export.empty else pd.DataFrame(columns=["No inverter data"])
+        st.download_button(
+            "Download Excel", _to_excel(_kpi_summary, _xl_inv),
+            file_name=f"solar_report_{rtype.lower()}_{sel_date}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="dl_excel")
 
 
 # ══════════════════════════════════════════════════════════════
-#  PAGE 5 — ALARMS (route: ?page=alarms)
+#  SERVICE
+# ══════════════════════════════════════════════════════════════
+elif page == "Service":
+    st.markdown('<div class="page-hdr"><h1>Plant Management</h1>'
+                '<p>All registered plants and operational details</p></div>',
+                unsafe_allow_html=True)
+    if df.empty:
+        st.warning("⚠️ No data."); st.stop()
+
+    fc1,fc2 = st.columns(2)
+    with fc1: pf2 = st.selectbox("Plant", ["All"]+sorted(df["plant_name"].dropna().unique()), key="pm_p")
+    with fc2: bf2 = st.selectbox("Brand", ["All"]+sorted(df["brand"].dropna().unique()),      key="pm_b")
+
+    ps = (df.groupby(["plant_name","brand"])
+          .agg(power_kw=("power_kw","sum"), today_kwh=("today_kwh","sum"),
+               total_kwh=("total_kwh","sum"), inv_count=("inverter_sn","count"))
+          .reset_index())
+    if pf2!="All": ps=ps[ps["plant_name"]==pf2]
+    if bf2!="All": ps=ps[ps["brand"]==bf2]
+
+    st.markdown(
+        f'<div class="stat-row">'
+          f'<div class="stat-item"><div class="stat-val">{len(ps)}</div><div class="stat-lbl">Plants</div></div>'
+          f'<div class="stat-item"><div class="stat-val">{f(ps["power_kw"].sum(),2)} kW</div><div class="stat-lbl">Total Power</div></div>'
+          f'<div class="stat-item"><div class="stat-val">{f(ps["today_kwh"].sum(),1)} kWh</div><div class="stat-lbl">Daily Yield</div></div>'
+          f'<div class="stat-item"><div class="stat-val">{f(ps["total_kwh"].sum(),1)} MWh</div><div class="stat-lbl">Total Yield</div></div>'
+        f'</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="tbl">', unsafe_allow_html=True)
+    st.markdown('<div class="tbl-hdr tbl-plant">'
+                '<div>Plant Name</div><div>Brand</div><div>Organisation</div>'
+                '<div>Inverters</div><div>Power (kW)</div>'
+                '<div>Daily Yield</div><div>Total Yield</div><div>Status</div>'
+                '</div>', unsafe_allow_html=True)
+    for _, row in ps.iterrows():
+        pr   = df[df["plant_name"]==row["plant_name"]]
+        on   = int((pr["status"].str.lower()=="online").sum())
+        tot  = int(row["inv_count"])
+        pst  = "Online" if on==tot and tot>0 else ("Offline" if on==0 else "Warning")
+        dy   = float(row["today_kwh"] or 0)
+        dy_s = f"{dy/1000:.3f} MWh" if dy>=1000 else f"{dy:.1f} kWh"
+        ty   = float(row["total_kwh"] or 0)
+        ty_s = f"{ty/1000:.3f} GWh" if ty>=1000 else f"{ty:.3f} MWh"
+        st.markdown(
+            f'<div class="tbl-row tbl-plant">'
+              f'<div class="cell-link">{row["plant_name"]}</div>'
+              f'<div>{chip(row["brand"])}</div>'
+              f'<div>Fractal Energy</div>'
+              f'<div>{on}/{tot}</div>'
+              f'<div><b>{f(row["power_kw"],2)}</b> kW</div>'
+              f'<div>{dy_s}</div><div>{ty_s}</div>'
+              f'<div>{badge(pst)}</div>'
+            f'</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════
+#  ALARMS
 # ══════════════════════════════════════════════════════════════
 elif page == "Alarms":
+    # Build unified alarm list: live critical alerts + resolved history
     _alarm_log = get_alert_log(200)
     _all_alarms = []
     for _a in alerts:
         _all_alarms.append({
             "severity": "critical",
             "title":    _a.get("issue", "Inverter fault"),
-            "meta":     f'{_a.get("plant_name","—")} · S/N: {_a.get("inverter_sn","—")} · '
-                        f'{_a.get("brand","—")} · {datetime.now().strftime("%H:%M")}',
+            "meta":     f'{_a.get("plant_name","—")} · S/N: {_a.get("inverter_sn","—")} · {_a.get("brand","—")} · {datetime.now().strftime("%H:%M")}',
             "status":   "Active",
             "plant":    _a.get("plant_name",""),
         })
@@ -16816,159 +15081,131 @@ elif page == "Alarms":
             _all_alarms.append({
                 "severity": "warning",
                 "title":    _lr.get("issue", "Past alert"),
-                "meta":     f'{_lr.get("plant_name","—")} · S/N: {_lr.get("inverter_sn","—")} · '
-                            f'{_lr.get("brand","—")} · {_lr.get("alerted_at","—")}',
+                "meta":     f'{_lr.get("plant_name","—")} · S/N: {_lr.get("inverter_sn","—")} · {_lr.get("brand","—")} · {_lr.get("alerted_at","—")}',
                 "status":   "Resolved",
                 "plant":    _lr.get("plant_name",""),
             })
 
-    _crit_n2 = sum(1 for a in _all_alarms if a["severity"] == "critical")
-    _warn_n2 = sum(1 for a in _all_alarms if a["severity"] == "warning")
+    st.markdown("""<style>
+    .alm-card{border:1px solid #e8e8e8;border-radius:8px;padding:11px 13px;margin-bottom:8px;
+      display:flex;align-items:flex-start;gap:11px;background:#fff;}
+    .alm-card.critical{border-left:3px solid #E24B4A;}
+    .alm-card.warning {border-left:3px solid #EF9F27;}
+    .alm-icon{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;
+      justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;}
+    .alm-icon.critical{background:#FCEBEB;color:#A32D2D;}
+    .alm-icon.warning {background:#FAEEDA;color:#854F0B;}
+    .alm-content{flex:1;min-width:0;}
+    .alm-title{font-size:12px;font-weight:600;color:#1a1a1a;}
+    .alm-meta{font-size:11px;color:#999;margin-top:3px;}
+    .alm-empty{font-size:12px;color:#aaa;text-align:center;padding:32px 0;}
+    .alm-note{font-size:11px;color:#888;background:#f9f9f9;border-radius:6px;
+      padding:8px 12px;margin-top:12px;border-left:3px solid #F5A623;}
+    .alm-badge{display:inline-block;padding:2px 8px;border-radius:10px;
+      font-size:10px;font-weight:600;white-space:nowrap;}
+    .alm-badge.critical{background:#FCEBEB;color:#A32D2D;}
+    .alm-badge.warning {background:#FAEEDA;color:#854F0B;}
+    .alm-badge.resolved{background:#e6f9ef;color:#166634;}
+    </style>""", unsafe_allow_html=True)
 
+    _crit_n = sum(1 for a in _all_alarms if a["severity"] == "critical")
+    _warn_n = sum(1 for a in _all_alarms if a["severity"] == "warning")
+    _icon_map  = {"critical": "!", "warning": "~", "info": "i"}
+    _label_map = {"critical": "Critical", "warning": "Warning", "info": "Info"}
+
+    # ── Filters row ───────────────────────────────────────────
     _fc1, _fc2, _fc3 = st.columns([3, 1, 2])
     with _fc1:
-        _sev_f = st.radio("", [f"All ({len(_all_alarms)})",
-                               f"Critical ({_crit_n2})", f"Warning ({_warn_n2})"],
-                          horizontal=True, label_visibility="collapsed", key="alm_sev")
-        _sev_k = ("all"      if _sev_f.startswith("All") else
-                  "critical" if _sev_f.startswith("Critical") else "warning")
+        _sev_filter = st.radio(
+            "",
+            [f"All ({len(_all_alarms)})", f"Critical ({_crit_n})", f"Warning ({_warn_n})"],
+            horizontal=True, label_visibility="collapsed", key="alm_sev")
+        _sev_key = "all" if _sev_filter.startswith("All") else \
+                   "critical" if _sev_filter.startswith("Critical") else "warning"
     with _fc2:
-        _show_res = st.checkbox("Show Resolved", value=True, key="alm_resolved")
+        _show_resolved = st.checkbox("Show Resolved", value=True, key="alm_resolved")
     with _fc3:
-        _plant_opts3 = ["All plants"] + sorted({a["plant"] for a in _all_alarms if a["plant"]})
-        _sel_plant3  = st.selectbox("Plant", _plant_opts3,
-                                    label_visibility="collapsed", key="alm_plant")
+        _plant_opts = ["All plants"] + sorted({a["plant"] for a in _all_alarms if a["plant"]})
+        _sel_plant_alm = st.selectbox("Plant", _plant_opts,
+                                      label_visibility="collapsed", key="alm_plant")
 
-    _filtered3 = _all_alarms[:]
-    if _sev_k != "all":
-        _filtered3 = [a for a in _filtered3 if a["severity"] == _sev_k]
-    if not _show_res:
-        _filtered3 = [a for a in _filtered3 if a["status"] == "Active"]
-    if _sel_plant3 != "All plants":
-        _filtered3 = [a for a in _filtered3 if a["plant"] == _sel_plant3]
+    # ── Apply filters ─────────────────────────────────────────
+    _filtered = _all_alarms[:]
+    if _sev_key != "all":
+        _filtered = [a for a in _filtered if a["severity"] == _sev_key]
+    if not _show_resolved:
+        _filtered = [a for a in _filtered if a["status"] == "Active"]
+    if _sel_plant_alm != "All plants":
+        _filtered = [a for a in _filtered if a["plant"] == _sel_plant_alm]
 
-    _icon_m  = {"critical": "!", "warning": "~", "info": "i"}
-    _label_m = {"critical": "Critical", "warning": "Warning", "info": "Info"}
-
-    if not _filtered3:
-        st.markdown('<div style="font-size:14px;color:#aaa;text-align:center;padding:40px 0;">'
-                    '✅ No alarms match the selected filters.</div>', unsafe_allow_html=True)
+    # ── Alarm cards ───────────────────────────────────────────
+    if not _filtered:
+        st.markdown('<div class="alm-empty">✅ No alarms match the selected filters.</div>',
+                    unsafe_allow_html=True)
     else:
-        _cards = ""
-        for _alarm3 in _filtered3:
-            _s3     = _alarm3["severity"]
-            _ico3   = _icon_m.get(_s3, "i")
-            _lbl3   = _label_m.get(_s3, _s3.title())
-            _scls3  = "resolved" if _alarm3["status"] == "Resolved" else _s3
-            _blbl3  = "Resolved" if _alarm3["status"] == "Resolved" else _lbl3
-            _b3bg   = ({"critical":"#FCEBEB;color:#A32D2D",
-                        "warning": "#FAEEDA;color:#854F0B",
-                        "resolved":"#e6f9ef;color:#166634"}.get(_scls3, "#f0f0f0;color:#555"))
-            _cards += (
-                f'<div class="alarm-card {_s3}">'
-                  f'<div class="alarm-icon {_s3}">{_ico3}</div>'
-                  f'<div style="flex:1;min-width:0;">'
-                    f'<div class="alarm-title">{_alarm3["title"]}</div>'
-                    f'<div class="alarm-meta">{_alarm3["meta"]}</div>'
+        _cards_html = ""
+        for _alarm in _filtered:
+            _sev  = _alarm["severity"]
+            _icon = _icon_map.get(_sev, "i")
+            _lbl  = _label_map.get(_sev, _sev.title())
+            _stat_cls = "resolved" if _alarm["status"] == "Resolved" else _sev
+            _badge_lbl = "Resolved" if _alarm["status"] == "Resolved" else _lbl
+            _cards_html += (
+                f'<div class="alm-card {_sev}">'
+                  f'<div class="alm-icon {_sev}">{_icon}</div>'
+                  f'<div class="alm-content">'
+                    f'<div class="alm-title">{_alarm["title"]}</div>'
+                    f'<div class="alm-meta">{_alarm["meta"]}</div>'
                   f'</div>'
-                  f'<span style="background:{_b3bg};padding:3px 9px;border-radius:6px;'
-                  f'font-size:11px;font-weight:700;white-space:nowrap;">{_blbl3}</span>'
-                f'</div>')
-        st.markdown(_cards, unsafe_allow_html=True)
+                  f'<span class="alm-badge {_stat_cls}">{_badge_lbl}</span>'
+                f'</div>'
+            )
+        st.markdown(_cards_html, unsafe_allow_html=True)
 
-    st.markdown("""
-<div style="font-size:11px;color:#888;background:#f9f9f9;border-radius:6px;
-  padding:8px 12px;margin-top:12px;border-left:3px solid #F5A623;">
-  Alarms are auto-pulled from each inverter brand's API.
-  Email and SMS notifications are configurable per plant in Settings.
-</div>""", unsafe_allow_html=True)
+    st.markdown(
+        '<div class="alm-note">Alarms are auto-pulled from each inverter brand\'s API. '
+        'Email and SMS notifications are configurable per project in Settings.</div>',
+        unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════
-#  PAGE 6 — SETTINGS (route: ?page=settings)
+#  SETTINGS
 # ══════════════════════════════════════════════════════════════
 elif page == "Settings":
-    from config import (SOLIS_API_KEY, GROWATT_USERNAME, RATE_PER_KWH)
+    st.markdown('<div class="page-hdr"><h1>Settings</h1>'
+                '<p>Credentials, alerts and app configuration</p></div>',
+                unsafe_allow_html=True)
 
-    _stab1, _stab2, _stab3 = st.tabs(
-        ["API & Credentials", "Manual Data Entry", "Account"])
+    from config import (SOLIS_API_KEY, GROWATT_USERNAME, SUNGROW_APP_KEY,
+                        EMAIL_USER, TO_EMAILS, RATE_PER_KWH)
 
+    _stab1, _stab2, _stab3 = st.tabs(["API & Credentials", "Manual Data Entry", "Account"])
+
+    # ── Tab 1: API & Credentials ──────────────────────────────
     with _stab1:
-        st.markdown("#### API Credentials")
-        for _brand_s, _ok_s, _hint_s in [
+        st.markdown("#### 🔑 API Credentials")
+        for brand,ok,hint in [
             ("Solis",   bool(SOLIS_API_KEY),
              SOLIS_API_KEY[:10]+"…" if SOLIS_API_KEY else "Not configured"),
             ("Growatt", bool(GROWATT_USERNAME),
-             GROWATT_USERNAME or "Set GROWATT_USERNAME in config.py"),
+             GROWATT_USERNAME or "Set GROWATT_USERNAME in Streamlit secrets"),
+            ("Sungrow", bool(SUNGROW_APP_KEY),
+             SUNGROW_APP_KEY[:10]+"…" if SUNGROW_APP_KEY else "Set SUNGROW_APP_KEY in Streamlit secrets"),
         ]:
-            _c1s, _c2s, _c3s = st.columns([1,1,4])
-            _c1s.markdown(f"**{_brand_s}**")
-            _c2s.markdown("✅ OK" if _ok_s else "⚠️ Not set")
-            _c3s.markdown(f"`{_hint_s}`")
-        st.divider()
-        st.markdown(f"#### Tariff Rate\nCurrent: **₹{RATE_PER_KWH}/kWh** — "
-                    f"edit `RATE_PER_KWH` in config.py")
-        st.divider()
-        st.markdown("#### Database Tables (Neon PostgreSQL)")
-        st.info("Auto-created tables: `inverter_data`, `intraday_power`, "
-                "`daily_yield`, `monthly_yield`, `manual_yield`\n\n"
-                "Data is stored on every auto-refresh (every 60 seconds).")
-
-    with _stab2:
-        st.markdown("#### Manual Historical Data Entry")
-        st.info("Use this to back-fill past monthly data that the app wasn't running for. "
-                "This data will be used in Reports charts and merged with API data.")
-
-        _plant_list_s = all_sel_plants if all_sel_plants else ["All Plants"]
-        _md1, _md2, _md3 = st.columns([2,1,1])
-        with _md1:
-            _man_plant = st.selectbox("Plant", _plant_list_s, key="man_plant")
-        with _md2:
-            _man_type  = st.selectbox("Type", ["Monthly (YYYY-MM)", "Annual (YYYY)"],
-                                      key="man_type")
-        with _md3:
-            _man_period_type = "monthly" if "Monthly" in _man_type else "annual"
-
-        _man_period = st.text_input(
-            "Period",
-            placeholder="2024-03 for monthly  or  2023 for annual",
-            key="man_period")
-        _man_kwh  = st.number_input("Energy (kWh)", min_value=0.0, step=100.0, key="man_kwh")
-        _man_note = st.text_input("Notes (optional)", placeholder="Source: inverter display",
-                                  key="man_note")
-
-        if st.button("Save Entry", key="man_save_btn"):
-            if _man_plant and _man_period and _man_kwh > 0:
-                _ok_s2 = _save_manual_yield(_man_plant, _man_period,
-                                             _man_period_type, _man_kwh, _man_note)
-                if _ok_s2:
-                    st.success(f"✅ Saved: {_man_plant} · {_man_period} · {_man_kwh:,.1f} kWh")
-                    # Also sync to monthly_yield if monthly
-                    if _man_period_type == "monthly":
-                        _save_monthly_yield(_man_plant, _man_period, _man_kwh, source="manual")
-                else:
-                    st.error("Failed to save. Check DB connection.")
-            else:
-                st.warning("Please fill in all fields.")
+            c1,c2,c3 = st.columns([1,1,4])
+            c1.markdown(f"**{brand}**")
+            c2.markdown("✅ OK" if ok else "⚠️ Not set")
+            c3.markdown(f"`{hint}`")
 
         st.divider()
-        st.markdown("#### Existing Manual Entries")
-        _sel_view_plant = st.selectbox("View entries for:", _plant_list_s, key="man_view_plant")
-        _man_entries = _get_manual_yield(_sel_view_plant, "monthly") + \
-                       _get_manual_yield(_sel_view_plant, "annual")
-        if _man_entries:
-            _me_df = pd.DataFrame(_man_entries).rename(columns={
-                "period":     "Period",
-                "energy_kwh": "Energy (kWh)",
-                "notes":      "Notes"})
-            st.dataframe(_me_df, use_container_width=True, hide_index=True)
-        else:
-            st.caption("No manual entries yet for this plant.")
-
-    with _stab3:
-        st.markdown(f"#### Logged in as\n`{st.session_state.user}`")
+        st.markdown("#### 📧 Email Alerts")
+        st.markdown(f"**Sender:** `{EMAIL_USER}`")
+        st.markdown(f"**Recipients:** `{', '.join(TO_EMAILS) if TO_EMAILS else '—'}`")
         st.divider()
-        st.markdown("#### Project Structure")
+        st.markdown("#### 💰 Tariff Rate")
+        st.info(f"Current rate: **₹{RATE_PER_KWH}/kWh** — set `RATE_PER_KWH` in Streamlit secrets")
+        st.divider()
+        st.markdown("#### 🗂 Project Structure")
         st.code("""
 solar_dashboard/
 ├── app.py              ← streamlit run app.py
@@ -16976,10 +15213,67 @@ solar_dashboard/
 ├── requirements.txt
 └── utils/
     ├── solis_api.py    ├── growatt_api.py
-    ├── aggregator.py   ├── database.py
-    └── alerts.py
+    ├── sungrow_api.py  ├── aggregator.py
+    ├── database.py     └── alerts.py
         """, language="")
-        if st.button("Sign Out", key="signout_btn"):
-            for _k in list(st.session_state.keys()):
-                del st.session_state[_k]
+
+    # ── Tab 2: Manual Data Entry ──────────────────────────────
+    with _stab2:
+        st.info(
+            "Back-fill historical yield data for a plant. "
+            "This data is stored separately from live API data and appears in the Reports page."
+        )
+        _plant_opts = all_sel_plants if all_sel_plants else ["All Plants"]
+        _mc1, _mc2, _mc3 = st.columns([2, 1, 1])
+        with _mc1:
+            _man_plant = st.selectbox("Plant", _plant_opts, key="man_plant")
+        with _mc2:
+            _man_type  = st.selectbox("Type", ["Daily", "Monthly", "Annual"], key="man_type")
+        with _mc3:
+            _period_hint = {
+                "Daily":   "e.g. 2026-05-10",
+                "Monthly": "e.g. 2026-05",
+                "Annual":  "e.g. 2026",
+            }[_man_type]
+            _man_period = st.text_input("Period", placeholder=_period_hint, key="man_period")
+
+        _man_kwh   = st.number_input("Energy (kWh)", min_value=0.0, step=0.1, key="man_kwh")
+        _man_notes = st.text_input("Notes (optional)", key="man_notes")
+
+        if st.button("💾 Save Entry", type="primary", key="man_save"):
+            if not _man_period.strip():
+                st.error("Period is required.")
+            elif _man_kwh <= 0:
+                st.error("Energy must be greater than 0.")
+            else:
+                _pt_map = {"Daily": "day", "Monthly": "month", "Annual": "year"}
+                _pt     = _pt_map[_man_type]
+                try:
+                    _save_manual_yield(_man_plant, _man_period.strip(), _pt, _man_kwh, _man_notes)
+                    if _man_type == "Monthly":
+                        _save_monthly_yield(_man_plant, _man_period.strip(), _man_kwh, source="manual")
+                    st.success(f"✅ Saved {_man_kwh:.1f} kWh for **{_man_plant}** ({_man_period.strip()})")
+                except Exception as _me:
+                    st.error(f"Save failed: {_me}")
+
+        st.divider()
+        st.markdown("**Existing manual entries**")
+        _man_df = _get_manual_yield(_man_plant if _man_plant != "All Plants" else None)
+        if _man_df.empty:
+            st.caption("No manual entries yet.")
+        else:
+            st.dataframe(_man_df, use_container_width=True, hide_index=True)
+
+    # ── Tab 3: Account ────────────────────────────────────────
+    with _stab3:
+        st.markdown("#### 👤 Logged in as")
+        st.info(f"`{st.session_state.user}`")
+        st.divider()
+        if st.button("🚪 Sign Out", type="secondary", key="sign_out_btn"):
+            for _k in ["logged_in", "plant_selected", "sel_brands", "sel_plants",
+                       "plant_meta", "active_plant", "_ss_intraday",
+                       "_last_intraday_save", "_last_monthly_save"]:
+                st.session_state.pop(_k, None)
+            st.cache_data.clear()
             st.rerun()
+
