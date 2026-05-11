@@ -14744,304 +14744,271 @@ elif page == "Report":
 
     # ── DAILY ─────────────────────────────────────────────────────────────────
     if rtype == "Daily":
-        sel_brand_for_report = "Solis"
-        if sel_plant != "All Plants":
-            info = plant_id_map.get(sel_plant)
-            if info: sel_brand_for_report = info[1]
-
-        if sel_brand_for_report == "Growatt" and sel_plant != "All Plants":
-            month_str_d = sel_date.strftime("%Y-%m")
-            with st.spinner("Fetching daily data from Growatt…"):
-                rows = get_daily_history(sel_plant, month_str_d)
-
-            if not rows:
-                st.info(f"No data returned from Growatt for {sel_date.strftime('%B %Y')}.")
+        _ds = sel_date.strftime("%Y-%m-%d")
+        _plant_filter = sel_plant if sel_plant != "All Plants" else None
+        try:
+            from utils.database import _conn as _rc
+            _rconn = _rc()
+            if _plant_filter:
+                _intra_df = pd.read_sql(
+                    "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
+                    "WHERE plant_name=%s AND date=%s GROUP BY time_hm ORDER BY time_hm",
+                    _rconn, params=(_plant_filter, _ds))
             else:
-                day_rows = [r for r in rows if r.get("date","").startswith(str(sel_date))]
-                if not day_rows:
-                    day_rows = rows
-                    st.info(f"Showing full month data — no hourly breakdown available for {sel_date}.")
+                _intra_df = pd.read_sql(
+                    "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
+                    "WHERE date=%s GROUP BY time_hm ORDER BY time_hm",
+                    _rconn, params=(_ds,))
+            _rconn.close()
+        except Exception as _re:
+            print(f"[reports daily] {_re}")
+            _intra_df = pd.DataFrame()
 
-                daily_df = pd.DataFrame(day_rows)
-                daily_df["date"] = pd.to_datetime(daily_df["date"], errors="coerce")
-                daily_df = daily_df.dropna(subset=["date"]).sort_values("date")
-                _export_df = daily_df.copy()
-
-                sec(f"Daily Generation — {sel_plant} ({sel_date.strftime('%B %Y')})")
-                fig = go.Figure()
-                fig.add_trace(go.Bar(
-                    x=daily_df["date"], y=daily_df["energy_kwh"],
-                    name="Yield (kWh)", marker_color="rgba(16,185,129,.25)",
-                    marker_line_width=0,
-                ))
-                fig.add_trace(go.Scatter(
-                    x=daily_df["date"], y=daily_df["energy_kwh"],
-                    name="Yield", mode="lines+markers",
-                    line=dict(color="#10b981", width=2.5),
-                    marker=dict(size=6, color="#10b981"),
-                ))
-                fig.update_layout(
-                    plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font_family="Inter", font_color="#64748b",
-                    margin=dict(l=0,r=0,t=16,b=0), height=360,
-                    hovermode="x unified", bargap=0.25,
-                    legend=dict(bgcolor="rgba(0,0,0,0)"),
-                    yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
-                )
-                fig.update_xaxes(showgrid=False, zeroline=False, tickformat="%d %b")
-                st.plotly_chart(fig, use_container_width=True)
-
-                tot = daily_df["energy_kwh"].sum()
-                c1,c2 = st.columns(2)
-                c1.metric("Month Total", f"{tot:.1f} kWh")
-                c2.metric("Estimated Earning", earn(tot))
-
+        sec(f"Power output — {sel_date.strftime('%d %b %Y')}")
+        if not _intra_df.empty:
+            _intra_df["datetime"] = pd.to_datetime(_ds + " " + _intra_df["time_hm"])
+            _fig_d = go.Figure()
+            _fig_d.add_trace(go.Scatter(
+                x=_intra_df["datetime"], y=_intra_df["power_kw"],
+                fill="tozeroy", fillcolor="rgba(200,90,0,.12)",
+                line=dict(color="#C85A00", width=2.5), mode="lines+markers",
+                marker=dict(size=4, color="#C85A00"),
+                hovertemplate="<b>%{x|%H:%M}</b><br>Power: <b>%{y:.2f} kW</b><extra></extra>"))
+            _fig_d.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                font_family="Inter", font_color="#64748b",
+                margin=dict(l=0,r=0,t=8,b=50), height=360, showlegend=False,
+                xaxis=dict(showgrid=False, tickformat="%H:%M", title="Time",
+                           rangeslider=dict(visible=True, thickness=0.06)),
+                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="Power (kW)", zeroline=False))
+            st.plotly_chart(_fig_d, use_container_width=True, config={"displayModeBar": True})
+            st.caption(f"{len(_intra_df)} readings · peak {_intra_df['power_kw'].max():.2f} kW")
         else:
-            hist_df = get_history(hours=24*365*2)
-            if hist_df.empty:
-                st.info("📭 No intraday data yet — the app collects readings every 5 min. "
-                        "Come back after the app has been running for a while.")
+            st.info(f"No intraday data for {sel_date.strftime('%d %b %Y')}. The app must be running during the day to collect readings.")
+
+        sec(f"Daily totals — {sel_date.strftime('%B %Y')}")
+        _mon_str_d = sel_date.strftime("%Y-%m")
+        try:
+            from utils.database import _conn as _rc2
+            _rconn2 = _rc2()
+            if _plant_filter:
+                _daily_month_df = pd.read_sql(
+                    "SELECT date, SUM(energy_kwh) as energy_kwh FROM daily_yield "
+                    "WHERE plant_name=%s AND date LIKE %s GROUP BY date ORDER BY date",
+                    _rconn2, params=(_plant_filter, f"{_mon_str_d}%"))
             else:
-                hist_df["fetched_at"] = pd.to_datetime(hist_df["fetched_at"])
-                hist_df["power_kw"]   = pd.to_numeric(hist_df["power_kw"],  errors="coerce")
-                hist_df["today_kwh"]  = pd.to_numeric(hist_df["today_kwh"], errors="coerce")
-                if sel_plant != "All Plants":
-                    hist_df = hist_df[hist_df["plant_name"] == sel_plant]
+                _daily_month_df = pd.read_sql(
+                    "SELECT date, SUM(energy_kwh) as energy_kwh FROM daily_yield "
+                    "WHERE date LIKE %s GROUP BY date ORDER BY date",
+                    _rconn2, params=(f"{_mon_str_d}%",))
+            _rconn2.close()
+        except Exception as _re2:
+            print(f"[reports daily_month] {_re2}")
+            _daily_month_df = pd.DataFrame()
 
-                day = hist_df[hist_df["fetched_at"].dt.date == sel_date].sort_values("fetched_at")
-                if day.empty:
-                    st.info(f"No intraday data for {sel_date}. "
-                            f"Try today's date — data builds up every 5 minutes the app is running.")
-                else:
-                    _export_df = day.copy()
-                    sec("Power Output Throughout the Day (kW)")
-                    fig = px.line(day, x="fetched_at", y="power_kw", color="inverter_sn",
-                                  color_discrete_sequence=PALETTE,
-                                  labels={"fetched_at":"Time","power_kw":"Power (kW)",
-                                          "inverter_sn":"Inverter"})
-                    st.plotly_chart(line_chart(fig, 360), use_container_width=True)
-
-                    sec("Daily Yield per Inverter")
-                    sm = (day.groupby(["plant_name","inverter_sn","brand"])
-                          .agg(Peak_kW=("power_kw","max"), Daily_kWh=("today_kwh","max"))
-                          .reset_index()
-                          .rename(columns={"plant_name":"Plant","inverter_sn":"S/N","brand":"Brand"}))
-                    fig2 = go.Figure()
-                    fig2.add_trace(go.Bar(
-                        x=sm["S/N"], y=sm["Daily_kWh"],
-                        name="Daily Yield (kWh)", marker_color="rgba(16,185,129,.3)",
-                        marker_line_width=0,
-                    ))
-                    fig2.update_layout(
-                        plot_bgcolor="#fff", paper_bgcolor="#fff",
-                        font_family="Inter", font_color="#64748b",
-                        margin=dict(l=0,r=0,t=16,b=0), height=280,
-                        bargap=0.3, showlegend=False,
-                        yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
-                    )
-                    fig2.update_xaxes(showgrid=False, zeroline=False)
-                    st.plotly_chart(fig2, use_container_width=True)
+        if not _daily_month_df.empty:
+            _daily_month_df["date"] = pd.to_datetime(_daily_month_df["date"])
+            _daily_month_df["day"] = _daily_month_df["date"].dt.day.apply(lambda d: f"{d:02d}")
+            _fig_dm = go.Figure()
+            _fig_dm.add_trace(go.Bar(
+                x=_daily_month_df["day"], y=_daily_month_df["energy_kwh"],
+                marker_color="rgba(200,90,0,.55)",
+                hovertemplate="Day %{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
+            _fig_dm.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                font_family="Inter", font_color="#64748b",
+                margin=dict(l=0,r=0,t=8,b=0), height=260, bargap=0.25, showlegend=False,
+                xaxis=dict(showgrid=False, zeroline=False, type="category", title="Day of month"),
+                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
+            st.plotly_chart(_fig_dm, use_container_width=True, config={"displayModeBar": False})
+            _dm_tot = float(_daily_month_df["energy_kwh"].sum())
+            _dmc1, _dmc2, _dmc3 = st.columns(3)
+            _dmc1.metric("Month Total", f"{_dm_tot:.1f} kWh")
+            _dmc2.metric("Month Total (MWh)", f"{_dm_tot/1000:.3f} MWh")
+            _dmc3.metric("Est. Earning", earn(_dm_tot))
+        else:
+            st.info(f"No daily totals yet for {sel_date.strftime('%B %Y')}.")
 
     # ── MONTHLY ───────────────────────────────────────────────────────────────
     elif rtype == "Monthly":
-        month_str = sel_date.strftime("%Y-%m")
-
-        with st.spinner(f"Fetching daily data for {sel_date.strftime('%B %Y')}…"):
-            if sel_plant == "All Plants":
-                api_df = get_all_plants_daily(month_str)
-                if not api_df.empty:
-                    daily = (api_df.groupby("date")["energy_kwh"]
-                             .sum().reset_index())
-                    daily.columns = ["Date","Daily Yield (kWh)"]
-                    income_df = api_df.groupby("date")["income"].sum().reset_index()
-                    income_df.columns = ["Date","Income (INR)"]
-                    daily = daily.merge(income_df, on="Date", how="left")
-                else:
-                    daily = pd.DataFrame()
-                api_df_py = get_all_plants_daily(f"{sel_date.year-1}-{sel_date.month:02d}")
-                if not api_df_py.empty:
-                    daily_py = api_df_py.groupby("date")["energy_kwh"].sum().reset_index()
-                    daily_py.columns = ["Date","Daily Yield (kWh)"]
-                else:
-                    daily_py = pd.DataFrame()
+        _mon_str_m = sel_date.strftime("%Y-%m")
+        _plant_filter = sel_plant if sel_plant != "All Plants" else None
+        try:
+            from utils.database import _conn as _rc3
+            _rconn3 = _rc3()
+            if _plant_filter:
+                _daily_df = pd.read_sql(
+                    "SELECT date, SUM(energy_kwh) as energy_kwh FROM daily_yield "
+                    "WHERE plant_name=%s AND date LIKE %s GROUP BY date ORDER BY date",
+                    _rconn3, params=(_plant_filter, f"{_mon_str_m}%"))
             else:
-                rows = get_daily_history(sel_plant, month_str)
-                if rows:
-                    daily = pd.DataFrame(rows).rename(columns={
-                        "date":"Date","energy_kwh":"Daily Yield (kWh)","income":"Income (INR)"})
-                    daily["Date"] = pd.to_datetime(daily["Date"], errors="coerce")
-                else:
-                    daily = pd.DataFrame()
-                rows_py = get_daily_history(sel_plant, f"{sel_date.year-1}-{sel_date.month:02d}")
-                if rows_py:
-                    daily_py = pd.DataFrame(rows_py).rename(columns={
-                        "date":"Date","energy_kwh":"Daily Yield (kWh)"})
-                    daily_py["Date"] = pd.to_datetime(daily_py["Date"], errors="coerce")
-                else:
-                    daily_py = pd.DataFrame()
+                _daily_df = pd.read_sql(
+                    "SELECT date, SUM(energy_kwh) as energy_kwh FROM daily_yield "
+                    "WHERE date LIKE %s GROUP BY date ORDER BY date",
+                    _rconn3, params=(f"{_mon_str_m}%",))
+            _rconn3.close()
+        except Exception as _re3:
+            print(f"[reports monthly] {_re3}")
+            _daily_df = pd.DataFrame()
 
-        if daily.empty or "Daily Yield (kWh)" not in daily.columns:
-            st.info(f"No data from Solis API for {sel_date.strftime('%B %Y')}.")
-        else:
-            daily = daily.dropna(subset=["Date"]).sort_values("Date")
-            _export_df = daily.copy()
-
-            sec(f"Daily Generation — {sel_date.strftime('%B %Y')}")
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=daily["Date"], y=daily["Daily Yield (kWh)"],
-                name="Yield (kWh)", marker_color="rgba(234,88,12,.25)",
-                marker_line_width=0,
-            ))
-            fig.add_trace(go.Scatter(
-                x=daily["Date"], y=daily["Daily Yield (kWh)"],
-                name="Trend", mode="lines+markers",
-                line=dict(color="#ea580c", width=2.5),
-                marker=dict(size=5, color="#ea580c"),
-            ))
-            if "Income (INR)" in daily.columns:
-                fig.add_trace(go.Scatter(
-                    x=daily["Date"], y=daily["Income (INR)"],
-                    name="Revenue (INR)", mode="lines+markers",
-                    line=dict(color="#f59e0b", width=2, dash="dot"),
-                    marker=dict(size=5, color="#f59e0b"),
-                    yaxis="y2",
-                ))
-            fig.update_layout(
+        sec(f"Daily generation — {sel_date.strftime('%B %Y')}")
+        if not _daily_df.empty:
+            _daily_df["date"] = pd.to_datetime(_daily_df["date"])
+            _daily_df["day"] = _daily_df["date"].dt.day.apply(lambda d: f"{d:02d}")
+            _fig_m = go.Figure()
+            _fig_m.add_trace(go.Bar(
+                x=_daily_df["day"], y=_daily_df["energy_kwh"],
+                marker_color="rgba(200,90,0,.55)",
+                hovertemplate="Day %{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
+            _fig_m.add_trace(go.Scatter(
+                x=_daily_df["day"], y=_daily_df["energy_kwh"],
+                line=dict(color="#C85A00", width=2), mode="lines+markers",
+                marker=dict(size=4)))
+            _fig_m.update_layout(
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=60,t=16,b=0), height=380,
-                hovermode="x unified", bargap=0.25,
-                legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
-                            yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
-                yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9",
-                           zeroline=False, tickfont_size=11),
-                yaxis2=dict(title="INR", overlaying="y", side="right",
-                            showgrid=False, zeroline=False, tickfont_size=11),
-            )
-            fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11,
-                             tickformat="%d", dtick="D1")
-            st.plotly_chart(fig, use_container_width=True)
+                margin=dict(l=0,r=0,t=8,b=0), height=340, bargap=0.2,
+                hovermode="x unified", showlegend=False,
+                xaxis=dict(showgrid=False, zeroline=False, type="category", title="Day"),
+                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
+            st.plotly_chart(_fig_m, use_container_width=True, config={"displayModeBar": False})
+            _m_tot = float(_daily_df["energy_kwh"].sum())
+            _mc1, _mc2, _mc3 = st.columns(3)
+            _mc1.metric("Month Total", f"{_m_tot:.1f} kWh")
+            _mc2.metric("Month MWh", f"{_m_tot/1000:.3f} MWh")
+            _mc3.metric("Est. Earning", earn(_m_tot))
+        else:
+            st.info(f"No data for {sel_date.strftime('%B %Y')}. Data saves automatically each refresh.")
 
-            # YoY comparison
-            if not daily_py.empty and "Daily Yield (kWh)" in daily_py.columns:
-                daily_py = daily_py.dropna(subset=["Date"]).sort_values("Date")
-                sec(f"Year-on-Year — {sel_date.strftime('%B')} {sel_date.year} vs {sel_date.year-1}")
-                fig_yoy = go.Figure()
-                fig_yoy.add_trace(go.Bar(
-                    x=daily["Date"].dt.day, y=daily["Daily Yield (kWh)"],
-                    name=str(sel_date.year), marker_color="rgba(234,88,12,.5)",
-                    marker_line_width=0,
-                ))
-                fig_yoy.add_trace(go.Bar(
-                    x=daily_py["Date"].dt.day, y=daily_py["Daily Yield (kWh)"],
-                    name=str(sel_date.year-1), marker_color="rgba(100,116,139,.4)",
-                    marker_line_width=0,
-                ))
-                fig_yoy.update_layout(
-                    plot_bgcolor="#fff", paper_bgcolor="#fff",
-                    font_family="Inter", font_color="#64748b",
-                    margin=dict(l=0,r=0,t=16,b=0), height=300,
-                    hovermode="x unified", bargap=0.2, barmode="group",
-                    legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h",
-                                yanchor="bottom", y=-0.28, xanchor="center", x=0.5),
-                    yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
-                )
-                fig_yoy.update_xaxes(showgrid=False, title="Day of month")
-                st.plotly_chart(fig_yoy, use_container_width=True)
+        sec(f"Previous month comparison")
+        _prev_mon = (sel_date.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+        try:
+            from utils.database import _conn as _rc3b
+            _rconn3b = _rc3b()
+            if _plant_filter:
+                _prev_df = pd.read_sql(
+                    "SELECT date, SUM(energy_kwh) as energy_kwh FROM daily_yield "
+                    "WHERE plant_name=%s AND date LIKE %s GROUP BY date ORDER BY date",
+                    _rconn3b, params=(_plant_filter, f"{_prev_mon}%"))
+            else:
+                _prev_df = pd.read_sql(
+                    "SELECT date, SUM(energy_kwh) as energy_kwh FROM daily_yield "
+                    "WHERE date LIKE %s GROUP BY date ORDER BY date",
+                    _rconn3b, params=(f"{_prev_mon}%",))
+            _rconn3b.close()
+        except Exception:
+            _prev_df = pd.DataFrame()
 
-            tot = daily["Daily Yield (kWh)"].sum()
-            m1,m2,m3 = st.columns(3)
-            m1.metric("Month Total", f"{tot:.1f} kWh")
-            m2.metric("Month Total (MWh)", f"{tot/1000:.3f} MWh")
-            m3.metric("Estimated Earning", earn(tot))
+        if not _prev_df.empty and not _daily_df.empty:
+            _prev_df["date"] = pd.to_datetime(_prev_df["date"])
+            _prev_df["day"] = _prev_df["date"].dt.day.apply(lambda d: f"{d:02d}")
+            _fig_cmp = go.Figure()
+            _fig_cmp.add_trace(go.Bar(
+                x=_daily_df["day"], y=_daily_df["energy_kwh"],
+                name=sel_date.strftime("%b %Y"), marker_color="rgba(200,90,0,.6)"))
+            _fig_cmp.add_trace(go.Bar(
+                x=_prev_df["day"], y=_prev_df["energy_kwh"],
+                name=_prev_mon, marker_color="rgba(245,166,35,.5)"))
+            _fig_cmp.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                font_family="Inter", font_color="#64748b",
+                margin=dict(l=0,r=0,t=8,b=0), height=260,
+                barmode="group", bargap=0.2, hovermode="x unified",
+                xaxis=dict(showgrid=False, zeroline=False, type="category"),
+                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
+            st.plotly_chart(_fig_cmp, use_container_width=True, config={"displayModeBar": False})
 
     # ── ANNUAL ────────────────────────────────────────────────────────────────
     elif rtype == "Annual":
-        year_str = str(sel_date.year)
-
-        with st.spinner(f"Fetching monthly data for {year_str}…"):
-            if sel_plant == "All Plants":
-                api_df = get_all_plants_monthly(year_str)
-                if not api_df.empty:
-                    monthly = (api_df.groupby("month")["energy_kwh"]
-                               .sum().reset_index())
-                    monthly.columns = ["Month","kWh"]
-                else:
-                    monthly = pd.DataFrame()
+        _yr_str_a = str(sel_date.year)
+        _plant_filter = sel_plant if sel_plant != "All Plants" else None
+        try:
+            from utils.database import _conn as _rc4
+            _rconn4 = _rc4()
+            if _plant_filter:
+                _monthly_df = pd.read_sql(
+                    "SELECT month, SUM(energy_kwh) as energy_kwh FROM report_monthly_yield "
+                    "WHERE plant_name=%s AND month LIKE %s GROUP BY month ORDER BY month",
+                    _rconn4, params=(_plant_filter, f"{_yr_str_a}%"))
             else:
-                rows = get_monthly_history(sel_plant, year_str)
-                if rows:
-                    monthly = pd.DataFrame(rows).rename(columns={"month":"Month","energy_kwh":"kWh"})
-                else:
-                    monthly = pd.DataFrame()
+                _monthly_df = pd.read_sql(
+                    "SELECT month, SUM(energy_kwh) as energy_kwh FROM report_monthly_yield "
+                    "WHERE month LIKE %s GROUP BY month ORDER BY month",
+                    _rconn4, params=(f"{_yr_str_a}%",))
+            _rconn4.close()
+        except Exception as _re4:
+            print(f"[reports annual] {_re4}")
+            _monthly_df = pd.DataFrame()
 
-        if monthly.empty or "kWh" not in monthly.columns:
-            st.info(f"No data from Solis API for {year_str}.")
+        import calendar as _cal_r
+        sec(f"Monthly generation — {_yr_str_a}")
+        if not _monthly_df.empty:
+            _monthly_df["label"] = _monthly_df["month"].apply(
+                lambda m: _cal_r.month_abbr[int(m.split("-")[1])] if "-" in str(m) else str(m))
+            _fig_a = go.Figure()
+            _fig_a.add_trace(go.Bar(
+                x=_monthly_df["label"], y=_monthly_df["energy_kwh"],
+                marker_color="rgba(200,90,0,.55)",
+                hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
+            _fig_a.add_trace(go.Scatter(
+                x=_monthly_df["label"], y=_monthly_df["energy_kwh"],
+                line=dict(color="#C85A00", width=2), mode="lines+markers",
+                marker=dict(size=5)))
+            _fig_a.update_layout(
+                plot_bgcolor="#fff", paper_bgcolor="#fff",
+                font_family="Inter", font_color="#64748b",
+                margin=dict(l=0,r=0,t=8,b=0), height=340, bargap=0.25,
+                hovermode="x unified", showlegend=False,
+                xaxis=dict(showgrid=False, zeroline=False, type="category",
+                           categoryorder="array",
+                           categoryarray=[_cal_r.month_abbr[i] for i in range(1,13)]),
+                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
+            st.plotly_chart(_fig_a, use_container_width=True, config={"displayModeBar": False})
+            _a_tot = float(_monthly_df["energy_kwh"].sum())
+            _ac1, _ac2, _ac3 = st.columns(3)
+            _ac1.metric("Year Total", f"{_a_tot:.1f} kWh")
+            _ac2.metric("Year Total MWh", f"{_a_tot/1000:.3f} MWh")
+            _ac3.metric("Est. Annual Earning", earn(_a_tot))
         else:
-            monthly = monthly[monthly["kWh"] > 0]
-            _export_df = monthly.copy()
+            st.info(f"No monthly data for {_yr_str_a} yet. Data builds up in report_monthly_yield each hour.")
 
-            sec(f"Monthly Generation — {year_str}")
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=monthly["Month"], y=monthly["kWh"],
-                name="Yield (kWh)", marker_color="rgba(245,158,11,.3)",
-                marker_line_width=0,
-            ))
-            fig.add_trace(go.Scatter(
-                x=monthly["Month"], y=monthly["kWh"],
-                name="Trend", mode="lines+markers",
-                line=dict(color="#f59e0b", width=2.5),
-                marker=dict(size=7, color="#f59e0b"),
-            ))
-            fig.update_layout(
+        sec("Year-over-year comparison")
+        try:
+            from utils.database import _conn as _rc5
+            _rconn5 = _rc5()
+            if _plant_filter:
+                _yearly_df = pd.read_sql(
+                    "SELECT year, SUM(energy_kwh) as energy_kwh FROM yearly_yield "
+                    "WHERE plant_name=%s GROUP BY year ORDER BY year",
+                    _rconn5, params=(_plant_filter,))
+            else:
+                _yearly_df = pd.read_sql(
+                    "SELECT year, SUM(energy_kwh) as energy_kwh FROM yearly_yield "
+                    "GROUP BY year ORDER BY year",
+                    _rconn5)
+            _rconn5.close()
+        except Exception as _re5:
+            print(f"[reports yearly] {_re5}")
+            _yearly_df = pd.DataFrame()
+
+        if not _yearly_df.empty:
+            _fig_yoy = go.Figure()
+            _fig_yoy.add_trace(go.Bar(
+                x=_yearly_df["year"], y=_yearly_df["energy_kwh"],
+                marker_color=["#C85A00" if str(y)==_yr_str_a else "#F5A623"
+                              for y in _yearly_df["year"]],
+                text=_yearly_df["energy_kwh"].apply(lambda v: f"{v/1000:.2f} MWh"),
+                textposition="outside",
+                hovertemplate="%{x}<br><b>%{y:.1f} kWh</b><extra></extra>"))
+            _fig_yoy.update_layout(
                 plot_bgcolor="#fff", paper_bgcolor="#fff",
                 font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=16,b=0), height=360,
-                hovermode="x unified", bargap=0.3,
-                legend=dict(bgcolor="rgba(0,0,0,0)"),
-                yaxis=dict(showgrid=True, gridcolor="#f1f5f9",
-                           zeroline=False, tickfont_size=11),
-            )
-            fig.update_xaxes(showgrid=False, zeroline=False, tickfont_size=11)
-            st.plotly_chart(fig, use_container_width=True)
-
-            # 5-year multi-year comparison
-            sec("5-Year Generation Comparison")
-            _cur_year = sel_date.year
-            _years_to_show = [str(_cur_year - i) for i in range(4, -1, -1)]
-            _multiyear_data = []
-            for _yr in _years_to_show:
-                if sel_plant == "All Plants":
-                    _mdf = get_all_plants_monthly(_yr)
-                    _kwh = float(_mdf["energy_kwh"].sum()) if not _mdf.empty else 0.0
-                else:
-                    _mrows = get_monthly_history(sel_plant, _yr)
-                    _kwh = sum(r.get("energy_kwh", 0) or 0 for r in _mrows)
-                _multiyear_data.append({"Year": _yr, "kWh": _kwh})
-            _my_df = pd.DataFrame(_multiyear_data)
-            fig_my = go.Figure()
-            fig_my.add_trace(go.Bar(
-                x=_my_df["Year"], y=_my_df["kWh"],
-                marker_color=[PALETTE[i % len(PALETTE)] for i in range(len(_my_df))],
-                marker_line_width=0, name="Annual Yield",
-            ))
-            fig_my.update_layout(
-                plot_bgcolor="#fff", paper_bgcolor="#fff",
-                font_family="Inter", font_color="#64748b",
-                margin=dict(l=0,r=0,t=16,b=0), height=300,
-                showlegend=False, bargap=0.35,
-                yaxis=dict(title="kWh", showgrid=True, gridcolor="#f1f5f9", zeroline=False),
-            )
-            fig_my.update_xaxes(showgrid=False, zeroline=False)
-            st.plotly_chart(fig_my, use_container_width=True)
-
-            tot_yr = monthly["kWh"].sum()
-            m1,m2,m3 = st.columns(3)
-            m1.metric("Year Total", f"{tot_yr:.1f} kWh")
-            m2.metric("Year Total (MWh)", f"{tot_yr/1000:.3f} MWh")
-            m3.metric("Est. Annual Earning", earn(tot_yr))
+                margin=dict(l=0,r=0,t=30,b=0), height=280, bargap=0.4, showlegend=False,
+                xaxis=dict(showgrid=False, zeroline=False, type="category"),
+                yaxis=dict(showgrid=True, gridcolor="#f8fafc", title="kWh", zeroline=False))
+            st.plotly_chart(_fig_yoy, use_container_width=True, config={"displayModeBar": False})
+        else:
+            st.info("No yearly totals yet. yearly_yield table builds up over time.")
 
     # ── CSV / Excel export ────────────────────────────────────────────────────
     _inv_export = df.copy() if not df.empty else pd.DataFrame()
