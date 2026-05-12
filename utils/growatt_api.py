@@ -2042,51 +2042,61 @@ def _get_plants():
 
 
 def _get_inverters(plant_id):
-    """
-    Fetch per-inverter device list for a plant.
-    Tries multiple endpoints in order; returns the first non-empty list found.
-    Each item in the returned list should have: sn/deviceSn, status, pac,
-    eToday, eTotal, ipmTemperature, vac1, iac1, lastUpdateTime.
-    """
     global _session
     if _session is None:
         return []
 
     endpoints = [
-        # Confirmed working in earlier versions — panel endpoint returns sn + live readings
+        # OSS portal confirmed endpoint — device list by plant
+        ("/deviceManage/device/list",
+         {"plantId": plant_id, "pageNum": 1, "pageSize": 100, "deviceType": ""}),
+        ("/deviceManage/plantManage/inverterList",
+         {"plantId": plant_id, "pageNum": 1, "pageSize": 100}),
         ("/panel/getDevicesByPlantList",
          {"plantId": plant_id, "currPage": 1}),
-        # OSS management endpoints
         ("/deviceManage/plantManage/getDeviceList",
-         {"plantId": plant_id, "pageNum": 1, "pageSize": 50}),
+         {"plantId": plant_id, "pageNum": 1, "pageSize": 100}),
         ("/deviceManage/deviceList/list",
-         {"plantId": plant_id, "pageNum": 1, "pageSize": 50}),
-        ("/deviceManage/plantManage/detail",
+         {"plantId": plant_id, "pageNum": 1, "pageSize": 100}),
+        ("/newTlx/getTlxListByPlant",
+         {"plantId": plant_id, "pageNum": 1, "pageSize": 100}),
+        ("/inverter/list",
          {"plantId": plant_id}),
     ]
 
     for ep, data in endpoints:
         try:
             r = _session.post(f"{BASE}{ep}", data=data, timeout=15)
-            if not r.text.strip() or r.text.strip().startswith('<'):
+            if not r.ok or not r.text.strip() or r.text.strip().startswith('<'):
                 continue
             resp = r.json()
-            invs = (
-                resp.get("obj", {}).get("datas")    or
-                resp.get("obj", {}).get("data")     or
-                resp.get("obj", {}).get("invList")  or
-                resp.get("data", {}).get("list")    or
-                resp.get("data", {}).get("records") or
-                resp.get("datas")                   or
-                resp.get("invList")                 or []
-            )
-            if invs:
-                print(f"✅ Growatt inverters from {ep}: {len(invs)}")
+
+            # Try every possible key path the response might use
+            invs = None
+            obj  = resp.get("obj") or resp.get("data") or resp
+            if isinstance(obj, list):
+                invs = obj
+            elif isinstance(obj, dict):
+                invs = (obj.get("datas") or obj.get("data") or obj.get("invList") or
+                        obj.get("list") or obj.get("records") or obj.get("pageList") or
+                        obj.get("deviceList") or [])
+
+            # Also check top-level keys
+            if not invs:
+                invs = (resp.get("datas") or resp.get("invList") or
+                        resp.get("list") or resp.get("records") or [])
+
+            if invs and isinstance(invs, list) and len(invs) > 0:
+                print(f"✅ Growatt inverters from {ep}: {len(invs)} for plant {plant_id}")
                 return invs
-            print(f"  Growatt {ep}: got response but no device list — keys: {list(resp.keys())[:6]}")
+
+            print(f"  Growatt {ep}: response ok but no device list — top keys: {list(resp.keys())[:8]}")
         except Exception as e:
             print(f"  Growatt {ep} error: {e}")
 
+    # Last resort: try to get device readings from the chart endpoint
+    # The chart endpoint works with plant-level data and confirms devices exist
+    print(f"⚠️ Growatt: all inverter endpoints failed for plant {plant_id}")
     return []
 
 
@@ -2147,6 +2157,16 @@ def fetch_all():
                         "last_update": inv.get("lastUpdateTime") or inv.get("dataLogUpdateTime"),
                     })
             else:
+                # Diagnostic: print raw response from primary endpoint to reveal correct key path
+                try:
+                    _diag_r = _session.post(f"{BASE}/deviceManage/device/list",
+                                            data={"plantId": pid, "pageNum": 1, "pageSize": 100},
+                                            timeout=15)
+                    print(f"[Growatt diag plant {pid}] status={_diag_r.status_code} "
+                          f"response_preview={_diag_r.text[:300]}")
+                except Exception as _diag_e:
+                    print(f"[Growatt diag] {_diag_e}")
+
                 # All device-list endpoints returned nothing — use plant summary as single record.
                 # inverter_sn is set to pid so the record is still identifiable.
                 print(f"⚠️ Growatt: no inverter data for {pname} ({pid}) — using plant summary")
