@@ -13219,7 +13219,11 @@ if active_plant and active_plant != "All Plants":
 else:
     records_view = records
 
-alerts = check_alerts(records, st.session_state)
+try:
+    alerts = check_alerts(records, st.session_state)
+except Exception as _alert_err:
+    print(f"[check_alerts] {_alert_err}")
+    alerts = []
 st.session_state["_fault_count"] = len(alerts)
 
 if alerts:
@@ -13307,7 +13311,6 @@ if page == "Plants":
 </div>""", unsafe_allow_html=True)
 
     if not records:
-        st.cache_data.clear()
         if st.session_state.get("_plant_load_failed"):
             st.error("Plant list could not be loaded from the API. Live inverter data may still appear if credentials are correct.")
         st.button("🔄 Retry", on_click=st.cache_data.clear)
@@ -13635,19 +13638,22 @@ elif page == "Overview":
 
     if monthly_kwh == 0:
         # DB fallback (sparse but better than nothing)
-        _hist_mon = get_history(hours=720)
-        if not _hist_mon.empty and "today_kwh" in _hist_mon.columns:
-            _hist_mon["fetched_at"] = pd.to_datetime(_hist_mon["fetched_at"])
-            _hist_mon["today_kwh"]  = pd.to_numeric(_hist_mon["today_kwh"], errors="coerce")
-            if active_plant != "All Plants":
-                _hist_mon = _hist_mon[_hist_mon["plant_name"] == active_plant]
-            elif all_sel_plants:
-                _hist_mon = _hist_mon[_hist_mon["plant_name"].isin(all_sel_plants)]
-            _m = _hist_mon[_hist_mon["fetched_at"].dt.month == _now_dt.month]
-            if not _m.empty:
-                monthly_kwh = float(
-                    _m.groupby([_m["fetched_at"].dt.date, "inverter_sn"])
-                    ["today_kwh"].max().sum())
+        try:
+            _hist_mon = get_history(hours=720)
+            if not _hist_mon.empty and "today_kwh" in _hist_mon.columns:
+                _hist_mon["fetched_at"] = pd.to_datetime(_hist_mon["fetched_at"])
+                _hist_mon["today_kwh"]  = pd.to_numeric(_hist_mon["today_kwh"], errors="coerce")
+                if active_plant != "All Plants":
+                    _hist_mon = _hist_mon[_hist_mon["plant_name"] == active_plant]
+                elif all_sel_plants:
+                    _hist_mon = _hist_mon[_hist_mon["plant_name"].isin(all_sel_plants)]
+                _m = _hist_mon[_hist_mon["fetched_at"].dt.month == _now_dt.month]
+                if not _m.empty:
+                    monthly_kwh = float(
+                        _m.groupby([_m["fetched_at"].dt.date, "inverter_sn"])
+                        ["today_kwh"].max().sum())
+        except Exception:
+            pass
 
     if monthly_kwh == 0:
         monthly_kwh = daily_kwh
