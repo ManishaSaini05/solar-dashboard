@@ -27,10 +27,10 @@ jobs:
 
       - name: Run data collector
         env:
-          NEON_DATABASE_URL:    ${{ secrets.NEON_DATABASE_URL }}
-          SOLIS_API_KEY:        ${{ secrets.SOLIS_API_KEY }}
-          SOLIS_API_SECRET:     ${{ secrets.SOLIS_API_SECRET }}
-          SOLIS_BASE_URL:       ${{ secrets.SOLIS_BASE_URL }}
+          NEON_DATABASE_URL:    ${{ secrets.NEON }}
+          SOLIS_API_KEY:        ${{ secrets.SOLIS_API }}
+          SOLIS_API_SECRET:     ${{ secrets.SOLIS_SECRET }}
+          SOLIS_BASE_URL:       ${{ secrets.SOLIS_URL }}
           GROWATT_USERNAME:     ${{ secrets.GROWATT_USERNAME }}
           GROWATT_PASSWORD:     ${{ secrets.GROWATT_PASSWORD }}
           RATE_PER_KWH:         ${{ secrets.RATE_PER_KWH }}
