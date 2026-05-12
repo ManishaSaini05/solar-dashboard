@@ -13920,6 +13920,35 @@ elif page == "Overview":
                 _dp      = _to_chart_df(_merged_pts, _day_str_api)
                 _day_src = "db+session" if _db_pts else "session"
 
+            # ── API: fill sparse/empty days from Solis or Growatt historical data ─
+            # Both solis_api.get_plant_intraday_power and growatt_api.get_plant_intraday_power
+            # return: [{"time": datetime, "power_kw": float}]
+            _today_date = datetime.now().date()
+            if len(_merged_pts) < 10 and _sel_date != _today_date and _chart_pid:
+                try:
+                    _api_day_rows = []
+                    _ds_api = _sel_date.strftime("%Y-%m-%d")
+                    if _chart_brand == "Solis":
+                        from utils.solis_api import get_plant_intraday_power as _sdp_ov
+                        _api_day_rows = _sdp_ov(_chart_pid, _ds_api)
+                    elif _chart_brand == "Growatt":
+                        from utils.growatt_api import get_plant_intraday_power as _gdp_ov
+                        _api_day_rows = _gdp_ov(_chart_pid, _ds_api)
+                    if _api_day_rows:
+                        # "time" is a datetime object; convert to HH:MM to match _merged_pts keys
+                        _api_pts = {
+                            row["time"].strftime("%H:%M"): float(row["power_kw"] or 0)
+                            for row in _api_day_rows
+                            if "time" in row and hasattr(row["time"], "strftime")
+                        }
+                        # DB+session overrides API for the same slot (more recent wins)
+                        _merged_pts = {**_api_pts, **_merged_pts}
+                        if _merged_pts:
+                            _dp      = _to_chart_df(_merged_pts, _day_str_api)
+                            _day_src = "api"
+                except Exception as _api_ov_err:
+                    print(f"[overview day API] {_api_ov_err}")
+
             # ── Source 3: inverter_data fallback (same DB, broader table) ─────
             if _dp.empty:
                 try:
