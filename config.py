@@ -1,11 +1,17 @@
+import os
 import streamlit as st
 
 
 def _s(key, default=""):
+    # 1. Try Streamlit secrets (works inside Streamlit Cloud and local with secrets.toml)
     try:
-        return st.secrets[key]
+        val = st.secrets[key]
+        if val:
+            return val
     except Exception:
-        return default
+        pass
+    # 2. Fall back to environment variables (works in GitHub Actions / collector.py)
+    return os.environ.get(key, default)
 
 
 # ── Solis ────────────────────────────────────────────────────
