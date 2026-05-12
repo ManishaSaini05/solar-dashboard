@@ -13924,7 +13924,7 @@ elif page == "Overview":
             # Both solis_api.get_plant_intraday_power and growatt_api.get_plant_intraday_power
             # return: [{"time": datetime, "power_kw": float}]
             _today_date = datetime.now().date()
-            if len(_merged_pts) < 10 and _sel_date != _today_date and _chart_pid:
+            if _chart_pid and (len(_merged_pts) < 20 or _sel_date == _today_date):
                 try:
                     _api_day_rows = []
                     _ds_api = _sel_date.strftime("%Y-%m-%d")
@@ -13946,6 +13946,24 @@ elif page == "Overview":
                         if _merged_pts:
                             _dp      = _to_chart_df(_merged_pts, _day_str_api)
                             _day_src = "api"
+                        # Cache API data to DB so future loads skip the API call
+                        if _api_day_rows and _pname_q and _should_save:
+                            try:
+                                from utils.database import _conn as _api_save_conn
+                                _asc = _api_save_conn()
+                                _ascur = _asc.cursor()
+                                for _t_key, _p_val in _api_pts.items():
+                                    _ascur.execute("""
+                                        INSERT INTO intraday_power (plant_name, date, time_hm, power_kw)
+                                        VALUES (%s, %s, %s, %s)
+                                        ON CONFLICT (plant_name, date, time_hm)
+                                        DO UPDATE SET power_kw = EXCLUDED.power_kw
+                                    """, (_pname_q, _day_str_api, _t_key, _p_val))
+                                _asc.commit()
+                                _ascur.close()
+                                _asc.close()
+                            except Exception as _api_save_err:
+                                print(f"[api intraday save] {_api_save_err}")
                 except Exception as _api_ov_err:
                     print(f"[overview day API] {_api_ov_err}")
 
