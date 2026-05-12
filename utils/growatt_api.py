@@ -2043,17 +2043,20 @@ def _get_plants():
 
 def _get_inverters(plant_id):
     """
-    Fetch inverter-level data for a plant.
-    OSS Growatt uses /deviceManage/plantManage/list for plant data
-    which already includes per-plant totals.
-    We get device list from the confirmed deviceList endpoint.
+    Fetch per-inverter device list for a plant.
+    Tries multiple endpoints in order; returns the first non-empty list found.
+    Each item in the returned list should have: sn/deviceSn, status, pac,
+    eToday, eTotal, ipmTemperature, vac1, iac1, lastUpdateTime.
     """
     global _session
     if _session is None:
         return []
 
-    # Confirmed from browser: device list is in the plant detail page
     endpoints = [
+        # Confirmed working in earlier versions — panel endpoint returns sn + live readings
+        ("/panel/getDevicesByPlantList",
+         {"plantId": plant_id, "currPage": 1}),
+        # OSS management endpoints
         ("/deviceManage/plantManage/getDeviceList",
          {"plantId": plant_id, "pageNum": 1, "pageSize": 50}),
         ("/deviceManage/deviceList/list",
@@ -2065,31 +2068,35 @@ def _get_inverters(plant_id):
     for ep, data in endpoints:
         try:
             r = _session.post(f"{BASE}{ep}", data=data, timeout=15)
-            if not r.text.strip():
-                continue
-            # Check it's actually JSON (not HTML redirect)
-            if r.text.strip().startswith('<'):
+            if not r.text.strip() or r.text.strip().startswith('<'):
                 continue
             resp = r.json()
             invs = (
-                resp.get("obj", {}).get("datas") or
-                resp.get("obj", {}).get("data")  or
-                resp.get("data", {}).get("list") or
-                resp.get("datas") or []
+                resp.get("obj", {}).get("datas")    or
+                resp.get("obj", {}).get("data")     or
+                resp.get("obj", {}).get("invList")  or
+                resp.get("data", {}).get("list")    or
+                resp.get("data", {}).get("records") or
+                resp.get("datas")                   or
+                resp.get("invList")                 or []
             )
             if invs:
                 print(f"✅ Growatt inverters from {ep}: {len(invs)}")
                 return invs
+            print(f"  Growatt {ep}: got response but no device list — keys: {list(resp.keys())[:6]}")
         except Exception as e:
-            pass   # silently try next endpoint
+            print(f"  Growatt {ep} error: {e}")
 
-    return []  # Plant-level fallback used in fetch_all()
+    return []
 
 
 def fetch_all():
     """
-    Fetch all Growatt plants and inverters.
-    Falls back to plant-level data if inverter endpoint unavailable.
+    Fetch all Growatt plants, then all inverters per plant.
+    Returns one record per inverter with plant_name, inverter_sn, power_kw,
+    today_kwh, total_kwh, status, temperature, voltage, current_a, last_update.
+    Falls back to a single plant-level record only when _get_inverters() returns
+    nothing from all endpoints.
     """
     global _logged_in
 
@@ -2100,6 +2107,7 @@ def fetch_all():
         return []
 
     results = []
+    STATUS  = {1: "Online", 0: "Offline", -1: "Fault", 3: "Abnormal", 2: "Warning"}
 
     try:
         plants = _get_plants()
@@ -2109,40 +2117,42 @@ def fetch_all():
             pid   = str(p.get("pId") or p.get("plantId") or p.get("id", ""))
             pname = p.get("plantNameEncryption") or p.get("plantName") or "Unknown"
 
-            # Try to get per-inverter data
+            # Get all devices (inverters) for this plant
             invs = _get_inverters(pid)
 
             if invs:
+                # One record per inverter — preserves individual SN and readings
                 for inv in invs:
-                    sc = inv.get("status", -99)
-                    try: sc = int(sc)
-                    except: sc = -99
+                    sn = (inv.get("sn") or inv.get("deviceSn") or
+                          inv.get("serialNum") or inv.get("serialNumber") or "")
+                    sc = -99
+                    try: sc = int(inv.get("status", -99))
+                    except: pass
 
-                    pac_w    = _sf(inv.get("pac") or 0)
+                    pac_w    = _sf(inv.get("pac") or inv.get("activePower") or 0)
                     power_kw = round(pac_w / 1000.0, 3) if pac_w else None
 
                     results.append({
                         "brand":       "Growatt",
                         "plant_name":  pname,
                         "plant_id":    pid,
-                        "inverter_sn": inv.get("sn") or inv.get("deviceSn", pid),
+                        "inverter_sn": sn or pid,
                         "power_kw":    power_kw,
-                        "today_kwh":   _sf(inv.get("eToday") or inv.get("todayEnergy")),
-                        "total_kwh":   (_sf(inv.get("eTotal") or inv.get("totalEnergy")) or 0) / 1000,
-                        "status":      {1:"Online", 0:"Offline", -1:"Fault",
-                                        3:"Abnormal", 2:"Warning"}.get(sc, "Unknown"),
+                        "today_kwh":   _sf(inv.get("eToday")   or inv.get("todayEnergy")),
+                        "total_kwh":   (_sf(inv.get("eTotal")   or inv.get("totalEnergy")) or 0) / 1000,
+                        "status":      STATUS.get(sc, "Unknown"),
                         "temperature": _sf(inv.get("ipmTemperature") or inv.get("temperature")),
-                        "voltage":     _sf(inv.get("vac1") or inv.get("vacr")),
-                        "current_a":   _sf(inv.get("iac1") or inv.get("iacr")),
+                        "voltage":     _sf(inv.get("vac1")  or inv.get("vacr")),
+                        "current_a":   _sf(inv.get("iac1")  or inv.get("iacr")),
                         "last_update": inv.get("lastUpdateTime") or inv.get("dataLogUpdateTime"),
                     })
             else:
-                # Fallback: use plant-level data as a single record
+                # All device-list endpoints returned nothing — use plant summary as single record.
+                # inverter_sn is set to pid so the record is still identifiable.
+                print(f"⚠️ Growatt: no inverter data for {pname} ({pid}) — using plant summary")
                 status_map = {"1":"Online","3":"Abnormal","0":"Offline","-1":"Fault","2":"Warning"}
-                # Use actual currentPower (kW) not nominalPower (rated capacity)
-                _cur_kw = _sf(p.get("currentPower") or p.get("pac"))
+                _cur_kw  = _sf(p.get("currentPower") or p.get("pac"))
                 power_kw = round(float(_cur_kw), 3) if _cur_kw is not None else None
-
                 results.append({
                     "brand":       "Growatt",
                     "plant_name":  pname,
