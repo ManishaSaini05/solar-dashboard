@@ -13885,24 +13885,54 @@ elif page == "Overview":
             # ── Source 1: DB is the primary source ───────────────────────────
             _db_pts = {}
             try:
-                from utils.database import get_intraday as _get_id
+                from utils.database import _conn as _dbc_primary
+                _c_primary = _dbc_primary()
+                _cur_primary = _c_primary.cursor()
+
+                # Check what's actually in the table for this date (diagnostic)
+                _cur_primary.execute(
+                    "SELECT COUNT(*) FROM intraday_power WHERE date = %s",
+                    (_day_str_api,))
+                _total_rows = _cur_primary.fetchone()[0]
+                print(f"[intraday DB] date={_day_str_api} plant={_pname_q} total_rows_for_date={_total_rows}")
+
                 if _pname_q:
-                    _id_df_primary = _get_id(_pname_q, _day_str_api)
-                else:
-                    from utils.database import _conn as _dbc_primary
-                    _c_primary = _dbc_primary()
+                    _cur_primary.execute(
+                        "SELECT COUNT(*) FROM intraday_power WHERE date = %s AND plant_name = %s",
+                        (_day_str_api, _pname_q))
+                    _plant_rows = _cur_primary.fetchone()[0]
+                    print(f"[intraday DB] rows for plant '{_pname_q}': {_plant_rows}")
+
                     _id_df_primary = pd.read_sql(
-                        "SELECT time_hm, SUM(power_kw) as power_kw FROM intraday_power "
-                        "WHERE date=%s GROUP BY time_hm ORDER BY time_hm",
+                        "SELECT time_hm, SUM(power_kw) as power_kw "
+                        "FROM intraday_power "
+                        "WHERE plant_name = %s AND date = %s "
+                        "GROUP BY time_hm ORDER BY time_hm",
+                        _c_primary, params=(_pname_q, _day_str_api))
+                else:
+                    _id_df_primary = pd.read_sql(
+                        "SELECT time_hm, SUM(power_kw) as power_kw "
+                        "FROM intraday_power "
+                        "WHERE date = %s "
+                        "GROUP BY time_hm ORDER BY time_hm",
                         _c_primary, params=(_day_str_api,))
-                    _c_primary.close()
+
+                _cur_primary.close()
+                _c_primary.close()
+
+                print(f"[intraday DB] query returned {len(_id_df_primary)} rows")
+
                 if not _id_df_primary.empty:
                     _db_pts = dict(zip(
                         _id_df_primary["time_hm"],
                         pd.to_numeric(_id_df_primary["power_kw"], errors="coerce").fillna(0)
                     ))
+                    print(f"[intraday DB] first 3 points: {list(_db_pts.items())[:3]}")
+
             except Exception as _db_primary_err:
-                print(f"[intraday primary read] {_db_primary_err}")
+                import traceback
+                traceback.print_exc()
+                print(f"[intraday primary read ERROR] {_db_primary_err}")
 
             # ── Source 2: overlay session state (more recent points in current session) ─
             _ss_day = st.session_state.get("_ss_intraday", {}).get(_day_str_api, {})
@@ -13924,7 +13954,7 @@ elif page == "Overview":
             # Both solis_api.get_plant_intraday_power and growatt_api.get_plant_intraday_power
             # return: [{"time": datetime, "power_kw": float}]
             _today_date = datetime.now().date()
-            if _chart_pid and (len(_merged_pts) < 20 or _sel_date == _today_date):
+            if _chart_pid and len(_merged_pts) < 20:
                 try:
                     _api_day_rows = []
                     _ds_api = _sel_date.strftime("%Y-%m-%d")
