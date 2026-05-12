@@ -1187,29 +1187,138 @@ def fetch_day_chart_debug(sn, date_str):
 
 def get_plant_intraday_power(plant_id, date_str):
     """
-    5-minute power curve for all inverters in a plant on a given day.
-    date_str: "2026-05-03"
-    Returns list of dicts: [{time: datetime, power_kw: float}]
+    5-minute power curve for a Solis plant on a given day.
+    Uses the confirmed working endpoint: /v1/api/stationDayEnergyChart
+    which returns titlePowerList — an array of kW values at 5-min intervals.
+
+    date_str: "2026-05-12"
+    Returns list of dicts: [{"time": datetime, "power_kw": float}, ...]
     """
     from datetime import datetime as _dt
+
+    # The web app uses v3.soliscloud.com/api/chart/station/day/v2 with WEB auth.
+    # The equivalent v1 API endpoint is stationDayEnergyChart with HMAC auth.
+    # We try multiple endpoint/body variants in order.
+
+    date_nodash = date_str.replace("-", "")
+    result = []
+
+    # ── Attempt 1: stationDayEnergyChart (station-level, returns array) ──────
+    bodies_to_try = [
+        # v1 standard body
+        {"id": plant_id, "time": date_nodash, "timeZone": 8},
+        {"id": plant_id, "time": date_nodash, "timeZone": 5},
+        {"id": plant_id, "time": date_str,    "timeZone": 8},
+        {"id": plant_id, "time": date_str,    "timeZone": 5},
+        # With money/version (matching web app payload style)
+        {"id": plant_id, "time": date_str, "timeZone": 5.5,
+         "money": "INR", "version": 1, "language": "2"},
+    ]
+
+    for ep in ["/v1/api/stationDayEnergyChart",
+               "/v1/api/stationDayPowerChart",
+               "/v1/api/powerDayChart"]:
+        for body in bodies_to_try:
+            d = _post(ep, body)
+            if not d:
+                continue
+            code = str(d.get("code", "")).strip()
+            if code not in ("0", ""):
+                print(f"[solis intraday] {ep} code={code} msg={d.get('msg')}")
+                continue
+
+            data_obj = d.get("data") or {}
+
+            # Response format A: data.titlePowerList = [kW, kW, ...]
+            # 288 values for 24 hours at 5-min intervals (or 144 at 10-min)
+            power_list = (data_obj.get("titlePowerList") or
+                          data_obj.get("powerList") or
+                          data_obj.get("pacList") or
+                          data_obj.get("wattList") or [])
+
+            if power_list and isinstance(power_list, list) and len(power_list) > 10:
+                # Generate timestamps based on list length
+                # 288 points = 5-min intervals, 144 = 10-min, 96 = 15-min, 48 = 30-min
+                n = len(power_list)
+                interval_minutes = max(1, round(1440 / n))  # 1440 min in a day
+                for i, pwr in enumerate(power_list):
+                    total_min = i * interval_minutes
+                    h = total_min // 60
+                    m = total_min % 60
+                    try:
+                        dt = _dt.strptime(f"{date_str} {h:02d}:{m:02d}", "%Y-%m-%d %H:%M")
+                        result.append({"time": dt, "power_kw": float(pwr or 0)})
+                    except Exception:
+                        continue
+                if result:
+                    print(f"[solis intraday] {ep} → {len(result)} points "
+                          f"({interval_minutes}-min intervals)")
+                    return result
+
+            # Response format B: data is a list of {time, pac/power}
+            if isinstance(data_obj, list) and data_obj:
+                for item in data_obj:
+                    if not isinstance(item, dict):
+                        continue
+                    t_raw = item.get("time") or item.get("dataTimestamp") or ""
+                    pwr   = float(item.get("pac") or item.get("power") or
+                                  item.get("watt") or 0)
+                    try:
+                        t_str = str(t_raw).strip()
+                        if ":" in t_str and len(t_str) <= 5:
+                            dt = _dt.strptime(f"{date_str} {t_str}", "%Y-%m-%d %H:%M")
+                        else:
+                            dt = _dt.strptime(f"{date_str} {t_str}", "%Y-%m-%d %H:%M:%S")
+                        result.append({"time": dt, "power_kw": pwr})
+                    except Exception:
+                        continue
+                if result:
+                    print(f"[solis intraday] {ep} list format → {len(result)} points")
+                    return result
+
+            # Response format C: parallel arrays {time:[...], pac:[...]}
+            t_arr = data_obj.get("time") or []
+            p_arr = (data_obj.get("pac") or data_obj.get("power") or
+                     data_obj.get("watt") or [])
+            if t_arr and p_arr:
+                for t_raw, pwr in zip(t_arr, p_arr):
+                    try:
+                        t_str = str(t_raw).strip()
+                        if ":" in t_str and len(t_str) <= 5:
+                            dt = _dt.strptime(f"{date_str} {t_str}", "%Y-%m-%d %H:%M")
+                        else:
+                            dt = _dt.strptime(f"{date_str} {t_str}", "%Y-%m-%d %H:%M:%S")
+                        result.append({"time": dt, "power_kw": float(pwr or 0)})
+                    except Exception:
+                        continue
+                if result:
+                    print(f"[solis intraday] {ep} array format → {len(result)} points")
+                    return result
+
+    # ── Attempt 2: per-inverter chart (original approach as fallback) ─────────
+    print(f"[solis intraday] Station endpoints returned nothing — trying per-inverter")
     inverters = get_inverters(plant_id)
     if not inverters:
+        print(f"[solis intraday] No inverters found for plant {plant_id}")
         return []
 
-    power_by_key = {}
+    power_by_slot = {}
     for inv in inverters:
         sn = inv.get("inverterSn", "")
         if not sn:
             continue
-        for r in _fetch_inverter_day_chart(sn, date_str):
-            t_raw = r.get("time") or r.get("dataTimestamp") or r.get("ts") or ""
-            pwr   = float(r.get("power") or r.get("pac") or r.get("activePower") or 0)
-            key   = str(t_raw)
-            if key:
-                power_by_key[key] = power_by_key.get(key, 0.0) + pwr
+        rows, raw = _fetch_inverter_day_chart(sn, date_str)
+        if rows:
+            for r in rows:
+                t_key = str(r.get("time", "")).strip()
+                pwr   = float(r.get("power_kw") or 0)
+                if t_key:
+                    power_by_slot[t_key] = power_by_slot.get(t_key, 0.0) + pwr
+        else:
+            print(f"[solis intraday] inverter {sn} chart empty, raw code="
+                  f"{(raw or {}).get('code')} msg={(raw or {}).get('msg')}")
 
-    result = []
-    for t_raw, pwr in sorted(power_by_key.items()):
+    for t_raw, pwr in sorted(power_by_slot.items()):
         try:
             t_str = str(t_raw).strip()
             if ":" in t_str and len(t_str) <= 5:
@@ -1221,6 +1330,12 @@ def get_plant_intraday_power(plant_id, date_str):
             result.append({"time": dt, "power_kw": pwr})
         except Exception:
             continue
+
+    if result:
+        print(f"[solis intraday] per-inverter fallback → {len(result)} points")
+    else:
+        print(f"[solis intraday] ALL methods failed for plant={plant_id} date={date_str}")
+
     return result
 
 
@@ -1237,3 +1352,29 @@ def get_all_plants_monthly(year_str):
             r["plant_name"] = pname
             rows.append(r)
     return pd.DataFrame(rows) if rows else pd.DataFrame()
+
+
+def debug_day_endpoints(plant_id, date_str):
+    """Call from terminal to find working endpoint: python -c "from utils.solis_api import debug_day_endpoints; debug_day_endpoints('PLANT_ID', '2026-05-12')" """
+    date_nodash = date_str.replace("-", "")
+    endpoints = [
+        "/v1/api/stationDayEnergyChart",
+        "/v1/api/stationDayPowerChart",
+        "/v1/api/powerDayChart",
+        "/v1/api/inverterDayEnergyList",
+    ]
+    bodies = [
+        {"id": plant_id, "time": date_nodash, "timeZone": 8},
+        {"id": plant_id, "time": date_str,    "timeZone": 5.5},
+        {"id": plant_id, "time": date_str, "timeZone": 5.5, "money": "INR", "version": 1},
+    ]
+    for ep in endpoints:
+        for body in bodies[:1]:  # just try first body per endpoint
+            d = _post(ep, body)
+            code = str((d or {}).get("code", "N/A"))
+            msg  = (d or {}).get("msg", "no response")
+            data = (d or {}).get("data")
+            data_type = type(data).__name__ if data else "None"
+            data_keys = list(data.keys())[:8] if isinstance(data, dict) else (
+                f"list[{len(data)}]" if isinstance(data, list) else "—")
+            print(f"{ep}: code={code} msg={msg} data_type={data_type} keys={data_keys}")
