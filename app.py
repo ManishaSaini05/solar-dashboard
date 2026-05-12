@@ -14084,20 +14084,19 @@ elif page == "Overview":
             # Fallback: DB grouped by day
             if not _mon_rows:
                 _mon_src = "db"
-                _hm = get_history(hours=24 * 31 * 3)
-                if not _hm.empty and "today_kwh" in _hm.columns:
-                    _hm["fetched_at"] = pd.to_datetime(_hm["fetched_at"])
-                    _hm["today_kwh"]  = pd.to_numeric(_hm["today_kwh"], errors="coerce")
-                    if active_plant != "All Plants":
-                        _hm = _hm[_hm["plant_name"] == active_plant]
-                    _hm = _hm[(_hm["fetched_at"].dt.year  == _sel_mon_yr) &
-                               (_hm["fetched_at"].dt.month == _sel_mon_idx)]
-                    if not _hm.empty:
-                        _dmdb = (_hm.groupby([_hm["fetched_at"].dt.date, "inverter_sn"])
-                                 ["today_kwh"].max().groupby(level=0).sum().reset_index())
-                        _dmdb.columns = ["date", "energy_kwh"]
-                        _dmdb["date"] = _dmdb["date"].astype(str)
-                        _mon_rows = _dmdb.to_dict("records")
+                try:
+                    from utils.database import _conn as _mon_conn
+                    _mc = _mon_conn()
+                    _mon_db = pd.read_sql(
+                        "SELECT date::text as date, SUM(energy_kwh) as energy_kwh "
+                        "FROM daily_yield WHERE plant_name=%s AND date::text LIKE %s "
+                        "GROUP BY date ORDER BY date",
+                        _mc, params=(active_plant, f"{_sel_mon_str}%"))
+                    _mc.close()
+                    if not _mon_db.empty:
+                        _mon_rows = _mon_db.to_dict("records")
+                except Exception as _mon_db_err:
+                    print(f"[mon fallback db] {_mon_db_err}")
 
             _ms1, _ms2, _ms3 = st.columns(3)
             _ms1.metric("Monthly Yield", f"{monthly_mwh:.3f} MWh")
@@ -14171,22 +14170,19 @@ elif page == "Overview":
             # Fallback: DB grouped by month
             if not _yr_rows:
                 _yr_src = "db"
-                _hy = get_history(hours=8760 * 2)
-                if not _hy.empty and "today_kwh" in _hy.columns:
-                    _hy["fetched_at"] = pd.to_datetime(_hy["fetched_at"])
-                    _hy["today_kwh"]  = pd.to_numeric(_hy["today_kwh"], errors="coerce")
-                    if active_plant != "All Plants":
-                        _hy = _hy[_hy["plant_name"] == active_plant]
-                    _hy = _hy[_hy["fetched_at"].dt.year == _sel_yr]
-                    if not _hy.empty:
-                        _ym = (_hy.groupby([_hy["fetched_at"].dt.year.rename("_yr"),
-                                            _hy["fetched_at"].dt.month.rename("_mo"),
-                                            "inverter_sn"])["today_kwh"]
-                               .max().groupby(level=[0, 1]).sum().reset_index())
-                        _ym.columns = ["_yr", "_mo", "energy_kwh"]
-                        _ym["month"] = _ym.apply(
-                            lambda r: f"{int(r['_yr'])}-{int(r['_mo']):02d}", axis=1)
-                        _yr_rows = _ym[["month", "energy_kwh"]].to_dict("records")
+                try:
+                    from utils.database import _conn as _yr_conn
+                    _yc = _yr_conn()
+                    _yr_db = pd.read_sql(
+                        "SELECT month, SUM(energy_kwh) as energy_kwh "
+                        "FROM report_monthly_yield WHERE plant_name=%s AND month LIKE %s "
+                        "GROUP BY month ORDER BY month",
+                        _yc, params=(active_plant, f"{_yr_str}%"))
+                    _yc.close()
+                    if not _yr_db.empty:
+                        _yr_rows = _yr_db.to_dict("records")
+                except Exception as _yr_db_err:
+                    print(f"[yr fallback db] {_yr_db_err}")
 
             _ys1, _ys2, _ys3 = st.columns(3)
             _ys1.metric("Annual Yield", f"{annual_mwh:.3f} MWh")
