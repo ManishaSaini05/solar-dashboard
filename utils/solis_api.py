@@ -1378,3 +1378,108 @@ def debug_day_endpoints(plant_id, date_str):
             data_keys = list(data.keys())[:8] if isinstance(data, dict) else (
                 f"list[{len(data)}]" if isinstance(data, list) else "—")
             print(f"{ep}: code={code} msg={msg} data_type={data_type} keys={data_keys}")
+
+def test_day_chart_raw(date_str="2026-05-12"):
+    """
+    Standalone test — prints the complete raw response from
+    inverterPowerOneDayChart so we can see exactly what the API returns.
+    Run with: python -c "from utils.solis_api import test_day_chart_raw; test_day_chart_raw()"
+    """
+    import json
+
+    plants = get_plants()
+    if not plants:
+        print("ERROR: get_plants() returned nothing — check SOLIS_API_KEY and SOLIS_API_SECRET")
+        return
+
+    print(f"Found {len(plants)} plants")
+
+    for plant in plants[:2]:  # test first 2 plants only
+        pid   = plant.get("id", "")
+        pname = plant.get("stationName", "")
+        print(f"\n{'='*60}")
+        print(f"Plant: {pname} | ID: {pid}")
+        print(f"{'='*60}")
+
+        invs = get_inverters(pid)
+        print(f"Inverters: {len(invs)}")
+
+        if not invs:
+            print("No inverters — skipping")
+            continue
+
+        for inv in invs[:2]:  # test first 2 inverters
+            sn = inv.get("inverterSn", "")
+            print(f"\n  Inverter SN: {sn}")
+
+            date_nodash = date_str.replace("-", "")
+
+            # Try every combination of date format and timezone
+            combos = [
+                {"sn": sn, "time": date_nodash, "timeZone": 8},
+                {"sn": sn, "time": date_nodash, "timeZone": 5},
+                {"sn": sn, "time": date_nodash, "timeZone": 5.5},
+                {"sn": sn, "time": date_str,    "timeZone": 8},
+                {"sn": sn, "time": date_str,    "timeZone": 5.5},
+            ]
+
+            for body in combos:
+                import requests, hashlib, base64, hmac
+                from datetime import datetime, timezone as tz
+
+                path = "/v1/api/inverterPowerOneDayChart"
+                bj   = json.dumps(body, separators=(",", ":"))
+                md5  = base64.b64encode(hashlib.md5(bj.encode()).digest()).decode()
+                date_hdr = datetime.now(tz.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+                sts  = f"POST\n{md5}\napplication/json\n{date_hdr}\n{path}"
+                sign = base64.b64encode(
+                    hmac.new(SOLIS_API_SECRET.encode(), sts.encode(), hashlib.sha1).digest()
+                ).decode()
+                headers = {
+                    "Content-MD5": md5,
+                    "Content-Type": "application/json",
+                    "Date": date_hdr,
+                    "Authorization": f"API {SOLIS_API_KEY}:{sign}",
+                }
+                try:
+                    r = requests.post(
+                        SOLIS_BASE_URL + path,
+                        data=bj, headers=headers, timeout=15)
+                    print(f"\n  Body: {body}")
+                    print(f"  HTTP: {r.status_code}")
+
+                    if r.status_code == 200:
+                        try:
+                            resp = r.json()
+                            code = resp.get("code")
+                            msg  = resp.get("msg")
+                            data = resp.get("data")
+                            print(f"  code={code} msg={msg}")
+                            if data is not None:
+                                print(f"  data type: {type(data).__name__}")
+                                if isinstance(data, dict):
+                                    print(f"  data keys: {list(data.keys())}")
+                                    for k, v in data.items():
+                                        if isinstance(v, list):
+                                            print(f"    '{k}': list of {len(v)}, first 3: {v[:3]}")
+                                        elif isinstance(v, dict):
+                                            print(f"    '{k}': dict keys={list(v.keys())[:8]}")
+                                            for k2, v2 in v.items():
+                                                if isinstance(v2, list):
+                                                    print(f"      '{k2}': list of {len(v2)}, first 3: {v2[:3]}")
+                                        else:
+                                            print(f"    '{k}': {str(v)[:80]}")
+                                elif isinstance(data, list):
+                                    print(f"  data: list of {len(data)}")
+                                    if data:
+                                        print(f"  first item: {str(data[0])[:200]}")
+                            else:
+                                print(f"  FULL RESPONSE: {json.dumps(resp, default=str)[:500]}")
+                        except Exception as pe:
+                            print(f"  JSON parse error: {pe}")
+                            print(f"  Raw text: {r.text[:300]}")
+                    else:
+                        print(f"  Error text: {r.text[:200]}")
+
+                except Exception as e:
+                    print(f"  Request error: {e}")

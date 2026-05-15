@@ -1,47 +1,88 @@
+# import os
+# import streamlit as st
+
+
+# def _s(key, default=""):
+#     # 1. Try Streamlit secrets (works inside Streamlit Cloud and local with secrets.toml)
+#     try:
+#         val = st.secrets[key]
+#         if val:
+#             return val
+#     except Exception:
+#         pass
+#     # 2. Fall back to environment variables (works in GitHub Actions / collector.py)
+#     return os.environ.get(key, default)
+
+
+# # ── Solis ────────────────────────────────────────────────────
+# SOLIS_API_KEY    = _s("SOLIS_API_KEY",    "")
+# SOLIS_API_SECRET = _s("SOLIS_API_SECRET", "")
+# SOLIS_BASE_URL   = _s("SOLIS_BASE_URL",   "https://www.soliscloud.com:13333")
+
+# # ── Growatt ──────────────────────────────────────────────────
+# GROWATT_USERNAME = _s("GROWATT_USERNAME", "")
+# GROWATT_PASSWORD = _s("GROWATT_PASSWORD", "")
+# GROWATT_BASE_URL = _s("GROWATT_BASE_URL", "https://oss.growatt.com")
+
+# # ── Sungrow ──────────────────────────────────────────────────
+# SUNGROW_APP_KEY    = _s("SUNGROW_APP_KEY",    "")
+# SUNGROW_ACCESS_KEY = _s("SUNGROW_ACCESS_KEY", "")
+# SUNGROW_BASE_URL   = _s("SUNGROW_BASE_URL",   "https://gateway.isolarcloud.com.hk")
+
+# # ── Email Alerts ─────────────────────────────────────────────
+# EMAIL_USER     = _s("EMAIL_USER",     "")
+# EMAIL_PASSWORD = _s("EMAIL_PASSWORD", "")
+# _to_raw        = _s("TO_EMAILS", "")
+# TO_EMAILS      = [e.strip() for e in _to_raw.split(",") if e.strip()]
+
+# # ── App Settings ─────────────────────────────────────────────
+# REFRESH_INTERVAL_SECONDS = int(_s("REFRESH_INTERVAL_SECONDS", "300"))
+# DB_PATH                  = _s("DB_PATH", "data/solar_data.db")  # kept for legacy reference
+
+# # ── Neon PostgreSQL ───────────────────────────────────────────
+# NEON_DATABASE_URL = _s("NEON_DATABASE_URL", "")
+# try:
+#     RATE_PER_KWH = float(_s("RATE_PER_KWH", "8.0"))
+# except Exception:
+#     RATE_PER_KWH = 8.0
+
 import os
-import streamlit as st
 
-
-def _s(key, default=""):
-    # 1. Try Streamlit secrets (works inside Streamlit Cloud and local with secrets.toml)
+def _get(key, default=""):
+    val = os.environ.get(key)
+    if val:
+        return val
     try:
-        val = st.secrets[key]
-        if val:
-            return val
+        import streamlit as st
+        return st.secrets.get(key, default)
     except Exception:
-        pass
-    # 2. Fall back to environment variables (works in GitHub Actions / collector.py)
-    return os.environ.get(key, default)
+        return default
 
+EMAIL_PASS     = _get("EMAIL_PASS", "")
+EMAIL_PASSWORD = EMAIL_PASS
 
 # ── Solis ────────────────────────────────────────────────────
-SOLIS_API_KEY    = _s("SOLIS_API_KEY",    "")
-SOLIS_API_SECRET = _s("SOLIS_API_SECRET", "")
-SOLIS_BASE_URL   = _s("SOLIS_BASE_URL",   "https://www.soliscloud.com:13333")
+SOLIS_API_KEY    = _get("SOLIS_API_KEY")
+SOLIS_API_SECRET = _get("SOLIS_API_SECRET")
+SOLIS_BASE_URL   = _get("SOLIS_BASE_URL", "https://www.soliscloud.com:13333")
 
 # ── Growatt ──────────────────────────────────────────────────
-GROWATT_USERNAME = _s("GROWATT_USERNAME", "")
-GROWATT_PASSWORD = _s("GROWATT_PASSWORD", "")
-GROWATT_BASE_URL = _s("GROWATT_BASE_URL", "https://oss.growatt.com")
+GROWATT_USERNAME = _get("GROWATT_USERNAME")
+GROWATT_PASSWORD = _get("GROWATT_PASSWORD")
 
 # ── Sungrow ──────────────────────────────────────────────────
-SUNGROW_APP_KEY    = _s("SUNGROW_APP_KEY",    "")
-SUNGROW_ACCESS_KEY = _s("SUNGROW_ACCESS_KEY", "")
-SUNGROW_BASE_URL   = _s("SUNGROW_BASE_URL",   "https://gateway.isolarcloud.com.hk")
+SUNGROW_APP_KEY    = _get("SUNGROW_APP_KEY")
+SUNGROW_ACCESS_KEY = _get("SUNGROW_ACCESS_KEY")
+SUNGROW_BASE_URL   = _get("SUNGROW_BASE_URL", "https://gateway.isolarcloud.com.hk")
 
-# ── Email Alerts ─────────────────────────────────────────────
-EMAIL_USER     = _s("EMAIL_USER",     "")
-EMAIL_PASSWORD = _s("EMAIL_PASSWORD", "")
-_to_raw        = _s("TO_EMAILS", "")
-TO_EMAILS      = [e.strip() for e in _to_raw.split(",") if e.strip()]
+# ── App settings ─────────────────────────────────────────────
+REFRESH_INTERVAL_SECONDS = int(_get("REFRESH_INTERVAL_SECONDS", "300"))
+RATE_PER_KWH             = float(_get("RATE_PER_KWH", "8.0"))
 
-# ── App Settings ─────────────────────────────────────────────
-REFRESH_INTERVAL_SECONDS = int(_s("REFRESH_INTERVAL_SECONDS", "300"))
-DB_PATH                  = _s("DB_PATH", "data/solar_data.db")  # kept for legacy reference
+# ── Email alerts ─────────────────────────────────────────────
+EMAIL_USER = _get("EMAIL_USER")
+EMAIL_PASS = _get("EMAIL_PASS")
+TO_EMAILS  = [e.strip() for e in _get("TO_EMAILS", "").split(",") if e.strip()]
 
-# ── Neon PostgreSQL ───────────────────────────────────────────
-NEON_DATABASE_URL = _s("NEON_DATABASE_URL", "")
-try:
-    RATE_PER_KWH = float(_s("RATE_PER_KWH", "8.0"))
-except Exception:
-    RATE_PER_KWH = 8.0
+# ── Database ─────────────────────────────────────────────────
+NEON_DATABASE_URL = _get("NEON_DATABASE_URL")
